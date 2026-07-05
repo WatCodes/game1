@@ -1,0 +1,32 @@
+@import './tokens.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-display);
+  overscroll-behavior: none;
+}
+
+/* Meter tick: a faint sweep behind the live power readout */
+@keyframes meter-sweep {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(100%); }
+}
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.toast-enter {
+  animation: toast-in 180ms ease-out;
+}
+
+.stage-lit {
+  box-shadow: 0 0 8px var(--cyan);
+}

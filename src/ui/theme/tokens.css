@@ -1,0 +1,30 @@
+/* Control-room palette (GAME_DESIGN §7): deep grid-blue-black, electric cyan
+   for live current, voltage amber for power, violet for ascension. */
+:root {
+  --bg: #04070e;
+  --bg-panel: #0a101c;
+  --bg-raised: #111a2c;
+  --grid-line: #1a2842;
+
+  --cyan: #22d3ee;
+  --cyan-dim: #0e7490;
+  --amber: #fbbf24;
+  --amber-dim: #92610a;
+  --violet: #a78bfa;
+
+  --text: #cbd5e1;
+  --text-dim: #64748b;
+  --ok: #34d399;
+  --danger: #f87171;
+
+  --font-mono: 'Cascadia Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --font-display: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

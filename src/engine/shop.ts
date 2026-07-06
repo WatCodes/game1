@@ -19,11 +19,17 @@ export function dailyReward(streak: number): Num {
   return Math.round(table[idx] * (1 + CONFIG.DAILY_STREAK_BONUS * weeks));
 }
 
-/** Claim today's reward. Consecutive days grow the streak; a miss resets it. */
+/**
+ * Claim today's reward. Consecutive days grow the streak, and a single missed
+ * day is forgiven (grace day) — punishing one bad day is how idle games lose
+ * players. Two or more missed days reset to day 1.
+ */
 export function claimDaily(s: GameState, nowMs: number): Num {
   if (!canClaimDaily(s, nowMs)) return 0;
   const yesterday = dayKey(nowMs - 86_400_000);
-  s.daily.streak = s.daily.lastClaimDay === yesterday ? s.daily.streak + 1 : 1;
+  const dayBefore = dayKey(nowMs - 2 * 86_400_000);
+  const continues = s.daily.lastClaimDay === yesterday || s.daily.lastClaimDay === dayBefore;
+  s.daily.streak = continues ? s.daily.streak + 1 : 1;
   s.daily.lastClaimDay = dayKey(nowMs);
   const reward = dailyReward(s.daily.streak);
   s.credits += reward;

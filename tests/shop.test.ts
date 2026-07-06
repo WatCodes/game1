@@ -37,13 +37,16 @@ describe('daily streak', () => {
     expect(s.daily.streak).toBe(1);
   });
 
-  it('consecutive days grow the streak, a miss resets it', () => {
+  it('consecutive days grow the streak; one missed day is forgiven', () => {
     const s = createInitialState(0);
     claimDaily(s, NOON);
     expect(claimDaily(s, NOON + DAY)).toBe(CONFIG.DAILY_REWARDS[1]);
     expect(s.daily.streak).toBe(2);
-    // skip a day
-    expect(claimDaily(s, NOON + 3 * DAY)).toBe(CONFIG.DAILY_REWARDS[0]);
+    // skip one day — grace holds the streak
+    expect(claimDaily(s, NOON + 3 * DAY)).toBe(CONFIG.DAILY_REWARDS[2]);
+    expect(s.daily.streak).toBe(3);
+    // skip two days — reset
+    expect(claimDaily(s, NOON + 6 * DAY)).toBe(CONFIG.DAILY_REWARDS[0]);
     expect(s.daily.streak).toBe(1);
   });
 

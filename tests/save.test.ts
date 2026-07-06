@@ -1,7 +1,18 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { SAVE_VERSION, createInitialState } from '../src/engine/state';
 import { buyResearch } from '../src/engine/research';
-import { exportSave, hydrate, importSave, migrate, serialize, validateSave } from '../src/store/save';
+import {
+  backupInfo,
+  exportSave,
+  hydrate,
+  importSave,
+  loadBackup,
+  migrate,
+  resetBackupCache,
+  saveToStorage,
+  serialize,
+  validateSave,
+} from '../src/store/save';
 
 function playedState() {
   const s = createInitialState(1000);
@@ -172,5 +183,47 @@ describe('export / import', () => {
     const save = serialize(playedState());
     (save as { power: number }).power = -5;
     expect(() => validateSave(save)).toThrow(/negative/);
+  });
+});
+
+describe('rolling backup', () => {
+  // Node has no localStorage — shim one for the storage layer
+  function installStorage() {
+    const store = new Map<string, string>();
+    (globalThis as Record<string, unknown>).localStorage = {
+      getItem: (k: string) => store.get(k) ?? null,
+      setItem: (k: string, v: string) => void store.set(k, v),
+      removeItem: (k: string) => void store.delete(k),
+    };
+    resetBackupCache();
+    return store;
+  }
+
+  afterEach(() => {
+    delete (globalThis as Record<string, unknown>).localStorage;
+    resetBackupCache();
+  });
+
+  it('tracks the main save while progress rises', () => {
+    installStorage();
+    const s = playedState();
+    saveToStorage(s, 1000);
+    expect(backupInfo()?.lifetimePower).toBe(s.stats.lifetimePower);
+  });
+
+  it('a lower-progress state never clobbers the backup (wipe protection)', () => {
+    installStorage();
+    const progressed = playedState();
+    progressed.stats.lifetimePower = 5e10;
+    saveToStorage(progressed, 1000);
+    // simulate the bug class we hit: a fresh state autosaving over everything
+    const fresh = createInitialState(2000);
+    saveToStorage(fresh, 2000);
+    // main save is fresh, but the backup still holds the progressed run
+    expect(backupInfo()?.lifetimePower).toBe(5e10);
+    const recovered = loadBackup();
+    expect(recovered).not.toBeNull();
+    expect(recovered!.stats.lifetimePower).toBe(5e10);
+    expect(recovered!.sources['battery-bank'].owned).toBe(42);
   });
 });

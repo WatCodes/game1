@@ -1,13 +1,17 @@
 import { useState } from 'react';
 import { useGame } from '../../store/gameStore';
+import { backupInfo } from '../../store/save';
+import { formatTime } from '../../engine/format';
 
 /** Export / import / hard reset — lives at the bottom of the Ascend tab. */
 export function DataControls() {
   const exportSaveString = useGame((s) => s.actions.exportSaveString);
   const importSaveString = useGame((s) => s.actions.importSaveString);
+  const restoreFromBackup = useGame((s) => s.actions.restoreFromBackup);
   const hardReset = useGame((s) => s.actions.hardReset);
   const [field, setField] = useState('');
   const [armReset, setArmReset] = useState(false);
+  const backup = backupInfo();
 
   const btn = 'rounded border border-line px-2.5 py-1.5 text-[11px] text-ink-dim transition-colors hover:bg-raised hover:text-ink';
 
@@ -33,6 +37,15 @@ export function DataControls() {
         >
           Import
         </button>
+        {backup && (
+          <button
+            className={btn}
+            title={`Backup from ${formatTime((Date.now() - backup.lastSaved) / 1000)} ago`}
+            onClick={restoreFromBackup}
+          >
+            Restore backup
+          </button>
+        )}
         <span className="flex-1" />
         {armReset ? (
           <>

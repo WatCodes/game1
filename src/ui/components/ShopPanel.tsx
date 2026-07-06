@@ -95,6 +95,7 @@ export function ShopPanel() {
             Claimed — next reward after local midnight (+{shop.nextReward} CR)
           </p>
         )}
+        <p className="mt-1.5 text-center text-[10px] text-ink-dim">One missed day is forgiven; two resets the streak.</p>
       </div>
 
       <ItemCard

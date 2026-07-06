@@ -61,6 +61,7 @@ import {
   clearStorage,
   exportSave,
   importSave,
+  loadBackup,
   loadFromStorage,
   saveToStorage,
 } from './save';
@@ -267,9 +268,12 @@ function buildDisplay(s: GameState): DisplaySnapshot {
 function buildShopView(s: GameState): DisplaySnapshot['shop'] {
   const now = Date.now();
   const claimable = canClaimDaily(s, now);
-  // The streak the NEXT claim will pay out at: continues if yesterday was
-  // claimed (or today already was), otherwise restarts at 1.
-  const continues = s.daily.lastClaimDay === dayKey(now - 86_400_000) || !claimable;
+  // The streak the NEXT claim will pay out at: continues if the last claim was
+  // within the grace window (yesterday or the day before), or today already.
+  const continues =
+    !claimable ||
+    s.daily.lastClaimDay === dayKey(now - 86_400_000) ||
+    s.daily.lastClaimDay === dayKey(now - 2 * 86_400_000);
   return {
     canClaimDaily: claimable,
     streak: s.daily.streak,
@@ -330,6 +334,7 @@ interface GameStore {
     dismissToast: (id: number) => void;
     exportSaveString: () => string;
     importSaveString: (encoded: string) => boolean;
+    restoreFromBackup: () => boolean;
     hardReset: () => void;
   };
 }
@@ -489,6 +494,18 @@ export const useGame = create<GameStore>((set) => {
           pushToast('error', err instanceof Error ? err.message : 'Import failed');
           return false;
         }
+      },
+      restoreFromBackup: () => {
+        const restored = loadBackup();
+        if (!restored) {
+          pushToast('error', 'No usable backup found');
+          return false;
+        }
+        Object.assign(game, restored);
+        saveToStorage(game);
+        refresh();
+        pushToast('info', 'Backup restored');
+        return true;
       },
       hardReset: () => {
         clearStorage();

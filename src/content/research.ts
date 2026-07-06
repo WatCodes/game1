@@ -11,9 +11,9 @@ const FLAVOR: (string | null)[][] = [
   ['Steam Cycles', 'Brayton Cycle', 'Advanced Chemistry', 'Turbo-Alternators', 'Grid Telemetry', 'Battery Management AI', 'Genset Dispatcher', 'Prefab Substations', 'Night-Shift Crews', 'Fuel Injection'],
   ['Deep Hydro', 'Enhanced Geothermal', 'Perovskite Cells', 'HVDC Backbone', 'Forecast Models', 'Solar Trackers', 'Turbine Yaw AI', 'Modular Converters', null, 'Predictive Maintenance'],
   ['Ignition Milestone', null, 'High-Flux Cores', 'Superconducting Grid', 'Plasma Diagnostics', 'Reactor Autopilot', null, 'Tokamak Mass Production', 'Autonomous Ops', 'Closed Fuel Cycle'],
-  ['Penning Traps', null, 'Thin-Film Arrays', 'Orbital Logistics', 'Deep Space Network', 'Station-Keeping AI', null, 'Mass Driver Exports', null, 'Self-Healing Panels'],
+  ['Penning Traps', null, 'Thin-Film Arrays', 'Orbital Logistics', 'Deep Space Network', 'Station-Keeping AI', null, 'Mass Driver Exports', 'Autonomous Relays', 'Self-Healing Panels'],
   ['Swarm Coordination', null, 'Chromospheric Mining', 'Statite Lattice', 'Stellar Cartography', 'Autonomous Foundries', null, 'Self-Replicating Fabs', null, 'Zero-Loss Relays'],
-  ['Nested Shells', null, 'Ergosphere Tuning', 'Exotic Matter Refinery', 'Singularity Lab', 'Accretion Autopilot', null, 'Frame-Drag Anchors', null, 'Entropy Recycling'],
+  ['Nested Shells', null, 'Ergosphere Tuning', 'Exotic Matter Refinery', 'Singularity Lab', 'Accretion Autopilot', null, 'Frame-Drag Anchors', 'Deep-Time Buffers', 'Entropy Recycling'],
   ['Relay Lattice', null, 'Magnetar Harnessing', 'Galactic Logistics Web', 'SETI Archives', 'Von Neumann Fleets', null, 'Warp-Lane Freight', null, 'Lossless Lanes'],
   ['False Vacuum Baffles', null, 'Casimir Amplifiers', 'Planck-Scale Engineering', 'Omega Archive', 'Acausal Schedulers', null, 'Spacetime Scaffolds', null, 'Perpetual Bearings'],
 ];

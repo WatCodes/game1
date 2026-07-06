@@ -220,10 +220,57 @@ export function validateSave(raw: unknown): SaveV3 {
   return m as unknown as SaveV3;
 }
 
+const BACKUP_KEY = 'kardashev:backup';
+let backupLifetime = -1; // lazily learned from storage on first save
+
 export function saveToStorage(s: GameState, now: number = Date.now()): void {
   if (typeof localStorage === 'undefined') return;
   s.lastSaved = now;
   localStorage.setItem(SAVE_KEY, JSON.stringify(serialize(s)));
+  maybeBackup(s);
+}
+
+/**
+ * Rolling second save with a monotonic guard: a state with LESS lifetime
+ * power than the backup never overwrites it. If a code bug ever wipes the
+ * main save to a fresh state again, the backup survives indefinitely.
+ */
+function maybeBackup(s: GameState): void {
+  if (backupLifetime < 0) {
+    backupLifetime = backupInfo()?.lifetimePower ?? 0;
+  }
+  if (s.stats.lifetimePower >= backupLifetime) {
+    localStorage.setItem(BACKUP_KEY, JSON.stringify(serialize(s)));
+    backupLifetime = s.stats.lifetimePower;
+  }
+}
+
+export function backupInfo(): { lastSaved: number; lifetimePower: Num } | null {
+  if (typeof localStorage === 'undefined') return null;
+  const raw = localStorage.getItem(BACKUP_KEY);
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as SaveV3;
+    return { lastSaved: parsed.lastSaved ?? 0, lifetimePower: parsed.stats?.lifetimePower ?? 0 };
+  } catch {
+    return null;
+  }
+}
+
+export function loadBackup(): GameState | null {
+  if (typeof localStorage === 'undefined') return null;
+  const raw = localStorage.getItem(BACKUP_KEY);
+  if (!raw) return null;
+  try {
+    return hydrate(validateSave(JSON.parse(raw)));
+  } catch {
+    return null;
+  }
+}
+
+/** Test seam: forget the cached backup watermark. */
+export function resetBackupCache(): void {
+  backupLifetime = -1;
 }
 
 const RECOVERY_KEY = 'kardashev:recovery';

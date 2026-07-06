@@ -11,7 +11,7 @@ export const CONFIG = {
   KP_GAIN_K: 3, // scales ascension payout
   KP_RP_BONUS: 0.05, // flat RP/s added per KP
   BASE_RESEARCH_RATE: 0.5, // RP/sec at start
-  OFFLINE_CAP_SECONDS: 14400, // 4h base, raised by research
+  OFFLINE_CAP_SECONDS: 28800, // 8h base, raised by research — idle games punish absence at their peril
   OFFLINE_MIN_SECONDS: 30, // gaps shorter than this aren't worth a summary
   // Dispatch: charge builds over time; firing early is weak, firing at full
   // charge (or inside a peak-demand window) is the payoff.

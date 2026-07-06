@@ -12,6 +12,7 @@ import {
 import { researchModifiers, type ResearchModifiers } from './research';
 import { authorizedBoundary, megaprojectMult } from './megaproject';
 import { boostPowerMult } from './shop';
+import { achievementMult } from './achievements';
 
 export function isSourceUnlocked(s: GameState, src: PowerSource, mods?: ResearchModifiers): boolean {
   const gate = src.unlockedBy;
@@ -64,7 +65,8 @@ export function powerPerSec(s: GameState, mods: ResearchModifiers = researchModi
     prestigeMult(s.kp) *
     mods.globalMult *
     megaprojectMult(s, mods) *
-    boostPowerMult(s)
+    boostPowerMult(s) *
+    achievementMult(s)
   );
 }
 

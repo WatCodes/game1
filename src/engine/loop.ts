@@ -4,6 +4,7 @@ import { routeIncome } from './megaproject';
 import { researchModifiers, researchRate } from './research';
 import { runSolvers } from './puzzle';
 import { tickBoosts } from './shop';
+import { checkAchievements } from './achievements';
 
 /**
  * Advance the simulation by dt seconds. Pure state mutation — no React, no
@@ -22,4 +23,5 @@ export function tick(s: GameState, dt: number, rand: () => number = Math.random)
   tickDispatch(s, dt, rand);
   runSolvers(s, dt);
   tickBoosts(s, dt);
+  checkAchievements(s);
 }

@@ -55,6 +55,8 @@ import {
   solverCost,
 } from '../engine/shop';
 import { puzzleSkin } from '../content/puzzles';
+import { ACHIEVEMENTS } from '../content/achievements';
+import { achievementMult } from '../engine/achievements';
 import {
   clearStorage,
   exportSave,
@@ -164,6 +166,9 @@ export interface DisplaySnapshot {
     solverCost: number;
     solvers: number;
   };
+  achievements: { id: Id; name: string; desc: string; earned: boolean }[];
+  achievementMult: number;
+  lifetimePower: Num;
 }
 
 export interface Toast {
@@ -253,6 +258,9 @@ function buildDisplay(s: GameState): DisplaySnapshot {
     boosts: { ...s.boosts },
     puzzle: buildPuzzleView(s),
     shop: buildShopView(s),
+    achievements: ACHIEVEMENTS.map((a) => ({ id: a.id, name: a.name, desc: a.desc, earned: s.achievements.includes(a.id) })),
+    achievementMult: achievementMult(s),
+    lifetimePower: s.stats.lifetimePower,
   };
 }
 
@@ -352,6 +360,11 @@ function detectTransitions(prev: DisplaySnapshot, next: DisplaySnapshot): void {
   }
   if (next.dispatch.peakActive && !prev.dispatch.peakActive) {
     pushToast('info', `⚡ PEAK DEMAND — dispatch pays ×${CONFIG.PEAK_MULT} for ${CONFIG.PEAK_DURATION_SECONDS}s`);
+  }
+  for (const a of next.achievements) {
+    if (a.earned && !prev.achievements.find((p) => p.id === a.id)?.earned) {
+      pushToast('ascend', `🏆 Record: ${a.name} — output +${Math.round(CONFIG.ACHIEVEMENT_BONUS * 100)}%`);
+    }
   }
 }
 

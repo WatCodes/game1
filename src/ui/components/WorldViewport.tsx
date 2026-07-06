@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useGame } from '../../store/gameStore';
+import { transmissionFor } from '../../content/transmissions';
 
 // The living world: one panel that redraws from game state and levels up with
 // each ascension. Every scene is driven by data the display already carries.
@@ -260,6 +261,7 @@ export function WorldViewport() {
   const mega = useGame((s) => s.display.mega);
   const boosts = useGame((s) => s.display.boosts);
   const pps = useGame((s) => s.display.pps);
+  const lifetimePower = useGame((s) => s.display.lifetimePower);
 
   const toggle = () => {
     localStorage.setItem('kardashev:ui:viewport', collapsed ? '1' : '0');
@@ -286,9 +288,12 @@ export function WorldViewport() {
         {collapsed ? '▾ world' : '▴'}
       </button>
       {!collapsed && (
-        <svg viewBox="0 0 360 110" className="block w-full" role="img" aria-label="Your civilization, drawn live from the grid">
-          <Scene {...scene} />
-        </svg>
+        <>
+          <svg viewBox="0 0 360 110" className="block w-full" role="img" aria-label="Your civilization, drawn live from the grid">
+            <Scene {...scene} />
+          </svg>
+          <p className="px-3 pb-1.5 text-center text-[10px] italic text-ink-dim">{transmissionFor(lifetimePower)}</p>
+        </>
       )}
     </div>
   );

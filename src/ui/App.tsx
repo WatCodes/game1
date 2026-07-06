@@ -10,6 +10,7 @@ import { PuzzlePanel } from './components/PuzzlePanel';
 import { ShopPanel } from './components/ShopPanel';
 import { AscendPanel } from './components/AscendPanel';
 import { DataControls } from './components/DataControls';
+import { AchievementsList } from './components/AchievementsList';
 import { Tabs, type TabId } from './components/Tabs';
 import { Toasts } from './components/Toasts';
 import { OfflineModal } from './components/OfflineModal';
@@ -80,7 +81,8 @@ export default function App() {
         {tab === 'ascend' && (
           <>
             <AscendPanel />
-            <div className="px-3 pb-3">
+            <div className="flex flex-col gap-2 px-3 pb-3">
+              <AchievementsList />
               <DataControls />
             </div>
           </>

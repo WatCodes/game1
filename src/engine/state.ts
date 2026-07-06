@@ -5,7 +5,7 @@ import { buildMegaproject } from '../content/megaprojects';
 import { buildResearch } from '../content/research';
 import { newPuzzle } from './puzzle';
 
-export const SAVE_VERSION = 3;
+export const SAVE_VERSION = 4;
 
 export function createInitialState(now: number = Date.now(), rand: () => number = Math.random): GameState {
   const s: GameState = {
@@ -26,6 +26,7 @@ export function createInitialState(now: number = Date.now(), rand: () => number 
     solverProgress: 0,
     boosts: { surgeLeft: 0, powerLeft: 0, rpLeft: 0 },
     daily: { lastClaimDay: '', streak: 0 },
+    achievements: [],
     lastSaved: now,
     stats: { lifetimePower: 0, ascensions: 0, startedAt: now, puzzlesSolved: 0 },
   };

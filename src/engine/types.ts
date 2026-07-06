@@ -106,6 +106,7 @@ export interface GameState {
     rpLeft: number; // seconds of shop ×2 RP boost
   };
   daily: { lastClaimDay: string; streak: number }; // local YYYY-MM-DD
+  achievements: Id[]; // earned records — permanent, +bonus each
   lastSaved: number; // epoch ms
   stats: { lifetimePower: Num; ascensions: number; startedAt: number; puzzlesSolved: number };
 }

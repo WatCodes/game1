@@ -4,6 +4,7 @@ import { reapplyPurchasedEffects } from '../engine/research';
 import { isSolved, newPuzzle, puzzleSize } from '../engine/puzzle';
 import { buildSources } from '../content/sources';
 import { buildMegaproject } from '../content/megaprojects';
+import { ACHIEVEMENTS } from '../content/achievements';
 
 const SAVE_KEY = 'kardashev:v1';
 
@@ -28,6 +29,7 @@ export interface SaveV3 {
   solverProgress: number;
   boosts: { surgeLeft: number; powerLeft: number; rpLeft: number };
   daily: { lastClaimDay: string; streak: number };
+  achievements: Id[];
   lastSaved: number;
   stats: { lifetimePower: Num; ascensions: number; startedAt: number; puzzlesSolved: number };
 }
@@ -54,6 +56,7 @@ export function serialize(s: GameState): SaveV3 {
     solverProgress: s.solverProgress,
     boosts: { ...s.boosts },
     daily: { ...s.daily },
+    achievements: [...s.achievements],
     lastSaved: s.lastSaved,
     stats: { ...s.stats },
   };
@@ -120,6 +123,8 @@ export function hydrate(save: SaveV3): GameState {
     lastClaimDay: typeof save.daily?.lastClaimDay === 'string' ? save.daily.lastClaimDay : '',
     streak: Math.max(0, Math.floor(save.daily?.streak ?? 0)),
   };
+  const knownAchievements = new Set(ACHIEVEMENTS.map((a) => a.id));
+  s.achievements = save.achievements.filter((id) => knownAchievements.has(id));
   if (isValidPuzzle(save.puzzle, save.tier)) {
     s.puzzle = {
       tier: save.tier,
@@ -187,6 +192,9 @@ export function migrate(raw: Record<string, unknown>): Record<string, unknown> {
       stats: { ...stats, puzzlesSolved: 0 },
     };
   }
+  if ((save.version as number) < 4) {
+    save = { ...save, version: 4, achievements: [] };
+  }
   return save;
 }
 
@@ -208,6 +216,7 @@ export function validateSave(raw: unknown): SaveV3 {
   if (!isRecord(m.dispatch)) throw new Error('Save field "dispatch" is invalid');
   if (!isRecord(m.boosts)) throw new Error('Save field "boosts" is invalid');
   if (!isRecord(m.daily)) throw new Error('Save field "daily" is invalid');
+  if (!Array.isArray(m.achievements)) throw new Error('Save field "achievements" is invalid');
   return m as unknown as SaveV3;
 }
 
@@ -217,6 +226,8 @@ export function saveToStorage(s: GameState, now: number = Date.now()): void {
   localStorage.setItem(SAVE_KEY, JSON.stringify(serialize(s)));
 }
 
+const RECOVERY_KEY = 'kardashev:recovery';
+
 export function loadFromStorage(): GameState | null {
   if (typeof localStorage === 'undefined') return null;
   const raw = localStorage.getItem(SAVE_KEY);
@@ -224,7 +235,14 @@ export function loadFromStorage(): GameState | null {
   try {
     return hydrate(validateSave(JSON.parse(raw)));
   } catch (err) {
-    console.error('Failed to load save — starting fresh', err);
+    // NEVER lose a save to a load bug: stash the raw payload so it can be
+    // recovered (import it, or a fixed build can re-read it), then start fresh.
+    console.error('Failed to load save — preserved under kardashev:recovery', err);
+    try {
+      localStorage.setItem(`${RECOVERY_KEY}:${Date.now()}`, raw);
+    } catch {
+      /* storage full — nothing more we can do */
+    }
     return null;
   }
 }

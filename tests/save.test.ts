@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createInitialState } from '../src/engine/state';
+import { SAVE_VERSION, createInitialState } from '../src/engine/state';
 import { buyResearch } from '../src/engine/research';
 import { exportSave, hydrate, importSave, migrate, serialize, validateSave } from '../src/store/save';
 
@@ -19,6 +19,7 @@ function playedState() {
   s.solverProgress = 0.4;
   s.boosts.surgeLeft = 45;
   s.daily = { lastClaimDay: '2026-7-5', streak: 3 };
+  s.achievements = ['first-spark', 'first-rack'];
   s.puzzle.tiles[0].rot = (s.puzzle.tiles[0].rot + 1) % 4;
   s.puzzle.moves = 5;
   s.lastSaved = 555_000;
@@ -44,6 +45,7 @@ describe('round trip', () => {
     expect(restored.solverProgress).toBe(0.4);
     expect(restored.boosts.surgeLeft).toBe(45);
     expect(restored.daily).toEqual({ lastClaimDay: '2026-7-5', streak: 3 });
+    expect(restored.achievements).toEqual(['first-spark', 'first-rack']);
     expect(restored.puzzle.tiles.map((t) => t.rot)).toEqual(s.puzzle.tiles.map((t) => t.rot));
     expect(restored.puzzle.moves).toBe(5);
   });
@@ -82,7 +84,7 @@ describe('migration', () => {
       lastSaved: 42,
     };
     const migrated = validateSave(v0);
-    expect(migrated.version).toBe(3);
+    expect(migrated.version).toBe(SAVE_VERSION);
     expect(migrated.routePct).toBe(0);
     expect(migrated.stats.lifetimePower).toBe(500);
     expect(migrated.stats.ascensions).toBe(0);
@@ -109,7 +111,7 @@ describe('migration', () => {
       stats: { lifetimePower: 500, ascensions: 0, startedAt: 42 },
     };
     const migrated = validateSave(v1);
-    expect(migrated.version).toBe(3);
+    expect(migrated.version).toBe(SAVE_VERSION);
     expect('dispatchReadyAt' in migrated).toBe(false);
     const restored = hydrate(migrated);
     // 210k / 350k = 60% → stages 1–3 worth of progress stays reachable

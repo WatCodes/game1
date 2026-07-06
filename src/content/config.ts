@@ -46,6 +46,7 @@ export const CONFIG = {
   // Daily streak calendar: 7-day cycle, +10% per completed week, miss = reset
   DAILY_REWARDS: [50, 75, 100, 150, 200, 300, 500],
   DAILY_STREAK_BONUS: 0.1,
+  ACHIEVEMENT_BONUS: 0.01, // +1% global output per record earned
   STARTING_POWER: 15, // enough for the first battery within seconds
   ASCEND_SEED_UNITS: 2, // ascending grants 2× the new tier's cheapest source cost
   AUTOSAVE_INTERVAL_MS: 8000,

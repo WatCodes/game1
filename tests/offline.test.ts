@@ -56,6 +56,34 @@ describe('creditOffline', () => {
     expect(s.power).toBe(0);
   });
 
+  it('auto-solvers grind circuits offline, capped like power', () => {
+    const s = producing(0);
+    s.solvers = 2;
+    const summary = creditOffline(s, 100 * HOUR_MS)!; // way past the 4h cap
+    const expectedSolves = Math.floor((2 * CONFIG.OFFLINE_CAP_SECONDS) / CONFIG.SOLVER_SECONDS);
+    expect(summary.puzzlesSolved).toBe(expectedSolves);
+    expect(summary.creditsGained).toBe(expectedSolves * Math.round(CONFIG.PUZZLE_BASE_REWARD * CONFIG.SOLVER_REWARD_FACTOR));
+    expect(s.credits).toBe(summary.creditsGained);
+  });
+
+  it('boosts expire before the window is credited (no 15-min boost × 4h exploit)', () => {
+    const s = producing(0);
+    s.boosts.powerLeft = CONFIG.BOOST_SECONDS;
+    const basePps = 0.5; // 1 battery, no boost
+    creditOffline(s, HOUR_MS);
+    expect(s.power).toBeCloseTo(basePps * 3600);
+    expect(s.boosts.powerLeft).toBe(0);
+  });
+
+  it('reports solver income even with zero power production', () => {
+    const s = createInitialState(0); // owns nothing
+    s.solvers = 1;
+    const summary = creditOffline(s, HOUR_MS);
+    expect(summary).not.toBeNull();
+    expect(summary!.powerGained).toBe(0);
+    expect(summary!.creditsGained).toBeGreaterThan(0);
+  });
+
   it('routes the configured share to the megaproject', () => {
     const s = producing(0);
     s.routePct = 0.5;

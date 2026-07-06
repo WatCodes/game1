@@ -18,6 +18,11 @@ export function OfflineModal() {
         {offline.projectGained > 0 && (
           <p className="mt-1 font-mono text-xs text-volt">+{formatPower(offline.projectGained)} routed to construction</p>
         )}
+        {offline.puzzlesSolved > 0 && (
+          <p className="mt-1 font-mono text-xs text-ink-dim">
+            Auto-Solvers finished {offline.puzzlesSolved} circuits: <span className="text-volt">+{offline.creditsGained} CR</span>
+          </p>
+        )}
         <button
           className="mt-4 w-full rounded border border-current-dim px-3 py-2 text-sm text-current transition-colors hover:bg-raised"
           onClick={dismissOffline}

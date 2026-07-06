@@ -292,10 +292,18 @@ function buildPuzzleView(s: GameState): DisplaySnapshot['puzzle'] {
 
 // --- Store ---
 
+export interface Cinematic {
+  era: string;
+  scaleCopy: string;
+  kardashevLabel?: string;
+  kpGained: number;
+}
+
 interface GameStore {
   display: DisplaySnapshot;
   toasts: Toast[];
   offline: OfflineSummary | null;
+  cinematic: Cinematic | null;
   actions: {
     buySource: (id: Id, count: number | 'max') => void;
     buyResearchNode: (id: Id) => void;
@@ -310,6 +318,7 @@ interface GameStore {
     buyShopSolver: () => void;
     buyShopBoost: (kind: 'power' | 'rp' | 'dispatch') => void;
     dismissOffline: () => void;
+    dismissCinematic: () => void;
     dismissToast: (id: number) => void;
     exportSaveString: () => string;
     importSaveString: (encoded: string) => boolean;
@@ -361,6 +370,7 @@ export const useGame = create<GameStore>((set) => {
     display: buildDisplay(game),
     toasts: [],
     offline: initialOffline,
+    cinematic: null,
     actions: {
       buySource: (id, count) => {
         if (buy(game, id, count) > 0) refresh();
@@ -403,7 +413,10 @@ export const useGame = create<GameStore>((set) => {
         const before = game.tier;
         const gained = ascend(game);
         if (game.tier !== before) {
-          pushToast('ascend', `⚡ ENERGIZED — +${gained} Kardashev Points`);
+          const t = getTier(game.tier);
+          set({
+            cinematic: { era: t.era, scaleCopy: t.scaleCopy, kardashevLabel: t.kardashevLabel, kpGained: gained },
+          });
           saveToStorage(game);
           refresh();
         }
@@ -448,6 +461,7 @@ export const useGame = create<GameStore>((set) => {
         }
       },
       dismissOffline: () => set({ offline: null }),
+      dismissCinematic: () => set({ cinematic: null }),
       dismissToast: (id) => set((st) => ({ toasts: st.toasts.filter((t) => t.id !== id) })),
       exportSaveString: () => exportSave(game),
       importSaveString: (encoded) => {

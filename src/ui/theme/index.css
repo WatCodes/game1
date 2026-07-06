@@ -197,6 +197,45 @@ button:not(:disabled):active {
   animation: toast-in 180ms ease-out;
 }
 
+/* World viewport ambience */
+@keyframes turbine-rotate {
+  to { transform: rotate(360deg); }
+}
+.turbine-spin {
+  animation: turbine-rotate 3.5s linear infinite;
+}
+
+@keyframes lattice-throb {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+.lattice-pulse {
+  animation: lattice-throb 1.8s ease-in-out infinite;
+}
+
+/* Ascension title card */
+@keyframes cine-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes cine-rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.cine-bg {
+  background:
+    radial-gradient(ellipse 90% 60% at 50% 40%, rgba(167, 139, 250, 0.16), transparent 65%),
+    rgba(4, 7, 14, 0.96);
+  animation: cine-fade 400ms ease-out;
+}
+.cine-item {
+  opacity: 0;
+  animation: cine-rise 600ms ease-out forwards;
+}
+.cine-title {
+  letter-spacing: 0.08em;
+}
+
 .stage-lit {
   box-shadow: 0 0 8px var(--cyan);
 }

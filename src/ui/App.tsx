@@ -13,6 +13,8 @@ import { DataControls } from './components/DataControls';
 import { Tabs, type TabId } from './components/Tabs';
 import { Toasts } from './components/Toasts';
 import { OfflineModal } from './components/OfflineModal';
+import { WorldViewport } from './components/WorldViewport';
+import { AscensionOverlay } from './components/AscensionOverlay';
 
 function DispatchBar() {
   const dispatch = useGame((s) => s.display.dispatch);
@@ -66,6 +68,7 @@ export default function App() {
       <header className="shrink-0">
         <PowerMeter />
         <ResourceBar />
+        <WorldViewport />
       </header>
 
       <main className="min-h-0 flex-1 overflow-y-auto">
@@ -91,6 +94,7 @@ export default function App() {
 
       <Toasts />
       <OfflineModal />
+      <AscensionOverlay />
     </div>
   );
 }

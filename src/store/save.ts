@@ -1,6 +1,7 @@
-import type { GameState, Id, Num } from '../engine/types';
+import type { GameState, Id, Num, PuzzleState } from '../engine/types';
 import { SAVE_VERSION, createInitialState } from '../engine/state';
 import { reapplyPurchasedEffects } from '../engine/research';
+import { isSolved, newPuzzle, puzzleSize } from '../engine/puzzle';
 import { buildSources } from '../content/sources';
 import { buildMegaproject } from '../content/megaprojects';
 
@@ -8,7 +9,7 @@ const SAVE_KEY = 'kardashev:v1';
 
 // Saves persist runtime state only — content (definitions, names, costs) is
 // rehydrated from src/content so rebalancing never invalidates a save.
-export interface SaveV2 {
+export interface SaveV3 {
   version: number;
   tier: number;
   power: Num;
@@ -21,11 +22,17 @@ export interface SaveV2 {
   stagesAuthorized: number;
   routePct: number;
   dispatch: { charge: number; peakLeft: number; nextPeakIn: number };
+  credits: number;
+  puzzle: PuzzleState | null; // null → deal a fresh circuit on load
+  solvers: number;
+  solverProgress: number;
+  boosts: { surgeLeft: number; powerLeft: number; rpLeft: number };
+  daily: { lastClaimDay: string; streak: number };
   lastSaved: number;
-  stats: { lifetimePower: Num; ascensions: number; startedAt: number };
+  stats: { lifetimePower: Num; ascensions: number; startedAt: number; puzzlesSolved: number };
 }
 
-export function serialize(s: GameState): SaveV2 {
+export function serialize(s: GameState): SaveV3 {
   const owned: Record<Id, number> = {};
   for (const src of Object.values(s.sources)) if (src.owned > 0) owned[src.id] = src.owned;
   return {
@@ -41,13 +48,31 @@ export function serialize(s: GameState): SaveV2 {
     stagesAuthorized: s.megaproject.stagesAuthorized,
     routePct: s.routePct,
     dispatch: { ...s.dispatch },
+    credits: s.credits,
+    puzzle: { ...s.puzzle, tiles: s.puzzle.tiles.map((t) => ({ ...t })) },
+    solvers: s.solvers,
+    solverProgress: s.solverProgress,
+    boosts: { ...s.boosts },
+    daily: { ...s.daily },
     lastSaved: s.lastSaved,
     stats: { ...s.stats },
   };
 }
 
+const TILE_KINDS = new Set(['stub', 'straight', 'corner', 'tee', 'cross']);
+const TILE_ROLES = new Set(['source', 'sink', 'wire']);
+
+/** A saved puzzle must be structurally sound or we deal a fresh one. */
+function isValidPuzzle(p: PuzzleState | null | undefined, tier: number): p is PuzzleState {
+  if (!p || typeof p.size !== 'number' || !Array.isArray(p.tiles)) return false;
+  if (p.size !== puzzleSize(tier) || p.tiles.length !== p.size * p.size) return false;
+  return p.tiles.every(
+    (t) => t && TILE_KINDS.has(t.kind) && TILE_ROLES.has(t.role) && typeof t.rot === 'number',
+  );
+}
+
 /** Rebuild a full GameState from content + a validated save's runtime values. */
-export function hydrate(save: SaveV2): GameState {
+export function hydrate(save: SaveV3): GameState {
   const s = createInitialState(save.lastSaved);
   s.tier = save.tier;
   s.power = save.power;
@@ -83,6 +108,32 @@ export function hydrate(save: SaveV2): GameState {
       : Math.max(1, Math.min(n, Math.floor((save.committed / s.megaproject.totalCost) * n) + 1));
   s.megaproject.committed = Math.max(0, Math.min(save.committed, s.megaproject.totalCost));
   s.routePct = Math.max(0, Math.min(1, save.routePct));
+  s.credits = Math.max(0, save.credits);
+  s.solvers = Math.max(0, Math.floor(save.solvers));
+  s.solverProgress = Math.max(0, save.solverProgress);
+  s.boosts = {
+    surgeLeft: Math.max(0, save.boosts?.surgeLeft ?? 0),
+    powerLeft: Math.max(0, save.boosts?.powerLeft ?? 0),
+    rpLeft: Math.max(0, save.boosts?.rpLeft ?? 0),
+  };
+  s.daily = {
+    lastClaimDay: typeof save.daily?.lastClaimDay === 'string' ? save.daily.lastClaimDay : '',
+    streak: Math.max(0, Math.floor(save.daily?.streak ?? 0)),
+  };
+  if (isValidPuzzle(save.puzzle, save.tier)) {
+    s.puzzle = {
+      tier: save.tier,
+      size: save.puzzle.size,
+      tiles: save.puzzle.tiles.map((t) => ({ kind: t.kind, rot: ((t.rot % 4) + 4) % 4, role: t.role })),
+      moves: Math.max(0, Math.floor(save.puzzle.moves ?? 0)),
+      par: Math.max(0, Math.floor(save.puzzle.par ?? 0)),
+      solved: !!save.puzzle.solved,
+    };
+    // never trust the latch blindly — recompute so a stale flag can't farm
+    s.puzzle.solved = s.puzzle.solved && isSolved(s.puzzle);
+  } else {
+    s.puzzle = newPuzzle(save.tier);
+  }
   reapplyPurchasedEffects(s); // restore automation managers
   return s;
 }
@@ -122,14 +173,31 @@ export function migrate(raw: Record<string, unknown>): Record<string, unknown> {
       stagesAuthorized: -1, // sentinel: hydrate derives it from committed progress
     };
   }
+  if ((save.version as number) < 3) {
+    const stats = isRecord(save.stats) ? save.stats : {};
+    save = {
+      ...save,
+      version: 3,
+      credits: 0,
+      puzzle: null, // hydrate deals a fresh circuit
+      solvers: 0,
+      solverProgress: 0,
+      boosts: { surgeLeft: 0, powerLeft: 0, rpLeft: 0 },
+      daily: { lastClaimDay: '', streak: 0 },
+      stats: { ...stats, puzzlesSolved: 0 },
+    };
+  }
   return save;
 }
 
 /** Migrate then structurally validate — reject anything that would corrupt state. */
-export function validateSave(raw: unknown): SaveV2 {
+export function validateSave(raw: unknown): SaveV3 {
   if (!isRecord(raw)) throw new Error('Save is not an object');
   const m = migrate(raw);
-  const numFields = ['tier', 'power', 'runPower', 'rp', 'kp', 'committed', 'stagesAuthorized', 'routePct', 'lastSaved'] as const;
+  const numFields = [
+    'tier', 'power', 'runPower', 'rp', 'kp', 'committed', 'stagesAuthorized',
+    'routePct', 'lastSaved', 'credits', 'solvers', 'solverProgress',
+  ] as const;
   for (const f of numFields) {
     if (typeof m[f] !== 'number' || !isFinite(m[f] as number)) throw new Error(`Save field "${f}" is invalid`);
   }
@@ -138,7 +206,9 @@ export function validateSave(raw: unknown): SaveV2 {
   if (!Array.isArray(m.purchased)) throw new Error('Save field "purchased" is invalid');
   if (!isRecord(m.stats)) throw new Error('Save field "stats" is invalid');
   if (!isRecord(m.dispatch)) throw new Error('Save field "dispatch" is invalid');
-  return m as unknown as SaveV2;
+  if (!isRecord(m.boosts)) throw new Error('Save field "boosts" is invalid');
+  if (!isRecord(m.daily)) throw new Error('Save field "daily" is invalid');
+  return m as unknown as SaveV3;
 }
 
 export function saveToStorage(s: GameState, now: number = Date.now()): void {

@@ -42,6 +42,19 @@ import {
 } from '../engine/megaproject';
 import { ascend, canAscend, projectedKp } from '../engine/ascension';
 import { creditOffline, type OfflineSummary } from '../engine/offline';
+import { newPuzzle, poweredSet, puzzleReward, rotateTile } from '../engine/puzzle';
+import {
+  buyDispatchRecharge,
+  buyPowerBoost,
+  buyRpBoost,
+  buySolver,
+  canClaimDaily,
+  claimDaily,
+  dailyReward,
+  dayKey,
+  solverCost,
+} from '../engine/shop';
+import { puzzleSkin } from '../content/puzzles';
 import {
   clearStorage,
   exportSave,
@@ -128,6 +141,29 @@ export interface DisplaySnapshot {
   };
   ascend: { can: boolean; projected: number; nextEra: string; nextScale: string };
   dispatch: { charge: number; canFire: boolean; peakActive: boolean; peakLeft: number };
+  credits: number;
+  boosts: { surgeLeft: number; powerLeft: number; rpLeft: number };
+  puzzle: {
+    name: string;
+    flavor: string;
+    size: number;
+    tiles: { kind: string; rot: number; role: string; powered: boolean }[];
+    moves: number;
+    par: number;
+    solved: boolean;
+    reward: number; // payout if solved on the current move count
+    bonusEligible: boolean;
+    solvers: number;
+    solverProgress: number;
+    solveEverySeconds: number;
+  };
+  shop: {
+    canClaimDaily: boolean;
+    streak: number;
+    nextReward: number; // today's claim (or tomorrow's if already claimed)
+    solverCost: number;
+    solvers: number;
+  };
 }
 
 export interface Toast {
@@ -213,6 +249,44 @@ function buildDisplay(s: GameState): DisplaySnapshot {
       peakActive: s.dispatch.peakLeft > 0,
       peakLeft: s.dispatch.peakLeft,
     },
+    credits: s.credits,
+    boosts: { ...s.boosts },
+    puzzle: buildPuzzleView(s),
+    shop: buildShopView(s),
+  };
+}
+
+function buildShopView(s: GameState): DisplaySnapshot['shop'] {
+  const now = Date.now();
+  const claimable = canClaimDaily(s, now);
+  // The streak the NEXT claim will pay out at: continues if yesterday was
+  // claimed (or today already was), otherwise restarts at 1.
+  const continues = s.daily.lastClaimDay === dayKey(now - 86_400_000) || !claimable;
+  return {
+    canClaimDaily: claimable,
+    streak: s.daily.streak,
+    nextReward: dailyReward(continues ? s.daily.streak + 1 : 1),
+    solverCost: solverCost(s.solvers),
+    solvers: s.solvers,
+  };
+}
+
+function buildPuzzleView(s: GameState): DisplaySnapshot['puzzle'] {
+  const skin = puzzleSkin(s.tier);
+  const powered = poweredSet(s.puzzle);
+  return {
+    name: skin.name,
+    flavor: skin.flavor,
+    size: s.puzzle.size,
+    tiles: s.puzzle.tiles.map((t, i) => ({ kind: t.kind, rot: t.rot, role: t.role, powered: powered.has(i) })),
+    moves: s.puzzle.moves,
+    par: s.puzzle.par,
+    solved: s.puzzle.solved,
+    reward: puzzleReward(s.puzzle.tier, s.puzzle.moves, s.puzzle.par),
+    bonusEligible: s.puzzle.moves <= s.puzzle.par + CONFIG.PUZZLE_BONUS_SLACK,
+    solvers: s.solvers,
+    solverProgress: s.solverProgress,
+    solveEverySeconds: s.solvers > 0 ? CONFIG.SOLVER_SECONDS / s.solvers : 0,
   };
 }
 
@@ -230,6 +304,11 @@ interface GameStore {
     setRoutePct: (pct: number) => void;
     doDispatch: () => void;
     doAscend: () => void;
+    rotatePuzzleTile: (idx: number) => void;
+    dealNewPuzzle: () => void;
+    claimDailyReward: () => void;
+    buyShopSolver: () => void;
+    buyShopBoost: (kind: 'power' | 'rp' | 'dispatch') => void;
     dismissOffline: () => void;
     dismissToast: (id: number) => void;
     exportSaveString: () => string;
@@ -325,6 +404,45 @@ export const useGame = create<GameStore>((set) => {
         const gained = ascend(game);
         if (game.tier !== before) {
           pushToast('ascend', `⚡ ENERGIZED — +${gained} Kardashev Points`);
+          saveToStorage(game);
+          refresh();
+        }
+      },
+      rotatePuzzleTile: (idx) => {
+        const result = rotateTile(game, idx);
+        if (result) {
+          const bonus = result.bonus ? ' (efficiency bonus!)' : '';
+          pushToast('milestone', `⚡ Circuit energized — +${result.reward} CR${bonus} · surge extended`);
+          saveToStorage(game);
+        }
+        refresh();
+      },
+      dealNewPuzzle: () => {
+        game.puzzle = newPuzzle(game.tier);
+        refresh();
+      },
+      claimDailyReward: () => {
+        const reward = claimDaily(game, Date.now());
+        if (reward > 0) {
+          pushToast('info', `Daily reward: +${reward} CR — streak ${game.daily.streak}`);
+          saveToStorage(game);
+          refresh();
+        }
+      },
+      buyShopSolver: () => {
+        if (buySolver(game)) {
+          pushToast('info', `Auto-Solver online — ${game.solvers} running`);
+          saveToStorage(game);
+          refresh();
+        }
+      },
+      buyShopBoost: (kind) => {
+        const bought =
+          kind === 'power' ? buyPowerBoost(game) : kind === 'rp' ? buyRpBoost(game) : buyDispatchRecharge(game);
+        if (bought) {
+          const label =
+            kind === 'power' ? '×2 power for 15 min' : kind === 'rp' ? '×2 research for 15 min' : 'dispatch recharged';
+          pushToast('info', `Boost active: ${label}`);
           saveToStorage(game);
           refresh();
         }

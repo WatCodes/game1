@@ -6,6 +6,8 @@ import { ResourceBar } from './components/ResourceBar';
 import { SourcesPanel } from './components/SourcesPanel';
 import { ResearchTree } from './components/ResearchTree';
 import { MegaprojectPanel } from './components/MegaprojectPanel';
+import { PuzzlePanel } from './components/PuzzlePanel';
+import { ShopPanel } from './components/ShopPanel';
 import { AscendPanel } from './components/AscendPanel';
 import { DataControls } from './components/DataControls';
 import { Tabs, type TabId } from './components/Tabs';
@@ -57,6 +59,7 @@ export default function App() {
   useGameTick();
   const [tab, setTab] = useState<TabId>('sources');
   const canAscend = useGame((s) => s.display.ascend.can);
+  const dailyReady = useGame((s) => s.display.shop.canClaimDaily);
 
   return (
     <div className="mx-auto flex h-dvh max-w-md flex-col">
@@ -69,6 +72,8 @@ export default function App() {
         {tab === 'sources' && <SourcesPanel />}
         {tab === 'research' && <ResearchTree />}
         {tab === 'megaproject' && <MegaprojectPanel />}
+        {tab === 'puzzle' && <PuzzlePanel />}
+        {tab === 'shop' && <ShopPanel />}
         {tab === 'ascend' && (
           <>
             <AscendPanel />
@@ -81,7 +86,7 @@ export default function App() {
 
       <footer className="shrink-0">
         <DispatchBar />
-        <Tabs active={tab} onSelect={setTab} badges={{ ascend: canAscend }} />
+        <Tabs active={tab} onSelect={setTab} badges={{ ascend: canAscend, shop: dailyReady }} />
       </footer>
 
       <Toasts />

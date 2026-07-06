@@ -12,6 +12,8 @@ export function PowerMeter() {
   const kardashevLabel = useGame((s) => s.display.kardashevLabel);
   const runPower = useGame((s) => s.display.runPower);
   const nextGlobalAt = useGame((s) => s.display.nextGlobalAt);
+  const surgeLeft = useGame((s) => s.display.boosts.surgeLeft);
+  const powerBoostLeft = useGame((s) => s.display.boosts.powerLeft);
 
   // Log-scale progress toward the next ×1.6 grid milestone (thresholds are
   // ×1000 apart, so a linear ratio would sit at zero forever).
@@ -43,6 +45,8 @@ export function PowerMeter() {
       <div className="mt-1.5 flex items-baseline justify-between font-mono text-xs text-ink-dim">
         <span>
           <span className="text-volt">+{formatPower(pps)}</span>/s
+          {surgeLeft > 0 && <span className="ml-1.5 text-volt">SURGE ×1.5</span>}
+          {powerBoostLeft > 0 && <span className="ml-1.5 text-ok">×2</span>}
         </span>
         <span>Powering: {scaleCopy}</span>
       </div>

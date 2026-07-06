@@ -50,6 +50,8 @@ describe('ascend', () => {
   it('resets the run but keeps permanent progress', () => {
     const s = readyState();
     s.rp = 777;
+    s.credits = 99;
+    s.solvers = 2;
     buyResearch(s, 'unlock-coal-plant'); // 20 RP at tier 0
     const rpAfterPurchase = s.rp;
 
@@ -62,9 +64,14 @@ describe('ascend', () => {
     expect(s.sources['solar-farm'].owned).toBe(0);
     expect(s.megaproject.id).toBe('continental-interconnect');
     expect(s.megaproject.committed).toBe(0);
-    // Keep: KP (asserted above), research, RP, stats
+    // Reset: a fresh circuit dealt for the new tier
+    expect(s.puzzle.tier).toBe(1);
+    expect(s.puzzle.solved).toBe(false);
+    // Keep: KP (asserted above), research, RP, credits/solvers, stats
     expect(s.research['unlock-coal-plant'].purchased).toBe(true);
     expect(s.rp).toBe(rpAfterPurchase);
+    expect(s.credits).toBe(99);
+    expect(s.solvers).toBe(2);
     expect(s.stats.ascensions).toBe(1);
   });
 

@@ -40,11 +40,12 @@ world it powers grow by ~40 orders of magnitude.
 | Resource | Symbol | Role | Source |
 |---|---|---|---|
 | **Power** | W | Main currency + the score. Spent on sources, research feeds off it, megaprojects consume it. | Power sources (W/s) |
-| **Research Points** | RP | Spent in the tech tree. | Trickle: `researchRate` per second (from labs/upgrades) |
+| **Research Points** | RP | Spent in the tech tree + megaproject stage authorizations. | Trickle: `researchRate` per second (from labs/upgrades) |
 | **Kardashev Points** | KP | Permanent global multiplier. | Ascension |
+| **Credits** | CR | Meta-economy for the shop (§3.9). Persists through ascension, like KP. Never gates progression. | Circuit puzzles (§3.8) + daily streak bonus |
 
-MVP keeps it to these three. Megaprojects consume **Power** (no separate construction
-resource) to stay lean. Do not add resources without updating this doc.
+Megaprojects consume **Power** (no separate construction resource) to stay lean.
+Do not add resources without updating this doc.
 
 ---
 
@@ -141,6 +142,36 @@ One signature megaproject per Kardashev tier — the ascension gate.
 - Burst power goes to stored power/run-power; the megaproject's stage-authorization gate is
   what keeps dispatch from rushing ascensions.
 
+### 3.8 Circuit puzzles (`engine/puzzle.ts`, skins in `content/puzzles.ts`)
+
+The active "brain" beat — a logic mini-game, reskinned per tier ("Relay Yard" →
+"Planck Lattice"), never required for progression.
+
+- **Mechanic:** rotate wire tiles on an N×N grid until the source powers every
+  district (sink). Generated as a recursive-backtracker spanning tree (every tile is
+  part of one circuit), then rotation-scrambled with a computed `par`. Powered tiles
+  light up live as you rotate. Grid grows with tier: 4×4 → 7×7 (cap).
+- **Payout per manual solve:** Credits (`PUZZLE_BASE_REWARD + PUZZLE_TIER_REWARD × tier`,
+  ×`PUZZLE_BONUS_MULT` if solved within `par + slack` moves) **plus** a
+  **Grid Surge** — ×`SURGE_MULT` global power for `SURGE_MANUAL_SECONDS` (stacking,
+  capped). The surge is the "strong bonus, never a wall" hook to the main loop.
+- **Auto-Solvers (shop):** each unit solves one circuit per `SOLVER_SECONDS` in the
+  background at `SOLVER_REWARD_FACTOR` of the manual base and a shorter surge. Enough
+  of them (~6) keep the surge lit permanently — the layer plays itself.
+- Free re-deal at any time (no reward). Puzzle re-deals on ascension; Credits,
+  solvers, and streak persist.
+
+### 3.9 Shop & daily rewards (`engine/shop.ts`)
+
+The **Grid Exchange** — Credits only, acceleration only, no progression gates.
+
+- **Daily connection bonus:** one claim per local calendar day. Consecutive days grow a
+  streak through a 7-day reward table (`DAILY_REWARDS`); each completed week adds
+  +`DAILY_STREAK_BONUS`; a missed day resets to day 1.
+- **Auto-Solver:** cost `SOLVER_BASE_COST × SOLVER_COST_GROWTH^owned`.
+- **Boosts:** ×2 power 15 min, ×2 RP 15 min, instant dispatch recharge. Boost timers
+  tick down in game time and stack additively in duration, not multiplier.
+
 ---
 
 ## 4. The Kardashev ladder (content: `content/tiers.ts` + `content/sources.ts`)
@@ -199,6 +230,11 @@ PEAK_MULT               = 3        // peak-demand window bonus
 PEAK_DURATION_SECONDS   = 25
 PEAK_GAP_SECONDS        = 180–360  // rolled per window
 megaproject t0          = 350 kW power + 400 RP authorizations
+PUZZLE_BASE_REWARD      = 10 CR (+6/tier; ×1.5 within par+2 moves)
+SURGE                   = ×1.5 power · +60s/manual solve · +15s/auto · cap 300s
+SOLVER                  = 100 CR base, ×1.35/owned, 1 solve / 90s @ 50% reward
+BOOSTS                  = ×2 power 250 CR · ×2 RP 200 CR · dispatch refill 75 CR (15 min)
+DAILY_REWARDS           = [50,75,100,150,200,300,500] CR, +10%/week streak
 ```
 
 **Pacing targets** (verify in M7): first *buy* within seconds; first source *milestone*

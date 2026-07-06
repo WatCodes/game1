@@ -2,6 +2,8 @@ import type { GameState } from './types';
 import { powerPerSec, runAutomation, tickDispatch } from './economy';
 import { routeIncome } from './megaproject';
 import { researchModifiers, researchRate } from './research';
+import { runSolvers } from './puzzle';
+import { tickBoosts } from './shop';
 
 /**
  * Advance the simulation by dt seconds. Pure state mutation — no React, no
@@ -18,4 +20,6 @@ export function tick(s: GameState, dt: number, rand: () => number = Math.random)
   s.rp += researchRate(s) * dt;
   runAutomation(s, mods);
   tickDispatch(s, dt, rand);
+  runSolvers(s, dt);
+  tickBoosts(s, dt);
 }

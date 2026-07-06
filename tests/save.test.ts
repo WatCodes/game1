@@ -14,6 +14,13 @@ function playedState() {
   buyResearch(s, 'auto-battery-bank');
   s.megaproject.committed = 12345;
   s.routePct = 0.35;
+  s.credits = 321;
+  s.solvers = 2;
+  s.solverProgress = 0.4;
+  s.boosts.surgeLeft = 45;
+  s.daily = { lastClaimDay: '2026-7-5', streak: 3 };
+  s.puzzle.tiles[0].rot = (s.puzzle.tiles[0].rot + 1) % 4;
+  s.puzzle.moves = 5;
   s.lastSaved = 555_000;
   return s;
 }
@@ -32,6 +39,13 @@ describe('round trip', () => {
     expect(restored.megaproject.committed).toBe(12345);
     expect(restored.routePct).toBe(0.35);
     expect(restored.lastSaved).toBe(555_000);
+    expect(restored.credits).toBe(321);
+    expect(restored.solvers).toBe(2);
+    expect(restored.solverProgress).toBe(0.4);
+    expect(restored.boosts.surgeLeft).toBe(45);
+    expect(restored.daily).toEqual({ lastClaimDay: '2026-7-5', streak: 3 });
+    expect(restored.puzzle.tiles.map((t) => t.rot)).toEqual(s.puzzle.tiles.map((t) => t.rot));
+    expect(restored.puzzle.moves).toBe(5);
   });
 
   it('rebuilds the saved tier, not tier 0', () => {
@@ -68,11 +82,14 @@ describe('migration', () => {
       lastSaved: 42,
     };
     const migrated = validateSave(v0);
-    expect(migrated.version).toBe(2);
+    expect(migrated.version).toBe(3);
     expect(migrated.routePct).toBe(0);
     expect(migrated.stats.lifetimePower).toBe(500);
     expect(migrated.stats.ascensions).toBe(0);
+    expect(migrated.stats.puzzlesSolved).toBe(0);
     expect(migrated.dispatch).toEqual({ charge: 0, peakLeft: 0, nextPeakIn: 240 });
+    expect(migrated.credits).toBe(0);
+    expect(migrated.puzzle).toBeNull();
   });
 
   it('upgrades a v1 save: cooldown dispatch dropped, stages derived from progress', () => {
@@ -92,12 +109,41 @@ describe('migration', () => {
       stats: { lifetimePower: 500, ascensions: 0, startedAt: 42 },
     };
     const migrated = validateSave(v1);
-    expect(migrated.version).toBe(2);
+    expect(migrated.version).toBe(3);
     expect('dispatchReadyAt' in migrated).toBe(false);
     const restored = hydrate(migrated);
     // 210k / 350k = 60% → stages 1–3 worth of progress stays reachable
     expect(restored.megaproject.stagesAuthorized).toBe(4);
     expect(restored.megaproject.committed).toBe(210_000);
+    // v3 additions get sane defaults, including a freshly dealt circuit
+    expect(restored.credits).toBe(0);
+    expect(restored.puzzle.tiles.length).toBe(restored.puzzle.size ** 2);
+  });
+
+  it('upgrades a v2 save: puzzle/shop economy seeded with defaults', () => {
+    const v2 = {
+      version: 2,
+      tier: 1,
+      power: 100,
+      runPower: 500,
+      rp: 10,
+      kp: 3,
+      owned: { 'solar-farm': 4 },
+      purchased: [],
+      committed: 0,
+      stagesAuthorized: 1,
+      routePct: 0,
+      dispatch: { charge: 0.5, peakLeft: 0, nextPeakIn: 100 },
+      lastSaved: 42,
+      stats: { lifetimePower: 500, ascensions: 1, startedAt: 42 },
+    };
+    const restored = hydrate(validateSave(v2));
+    expect(restored.credits).toBe(0);
+    expect(restored.solvers).toBe(0);
+    expect(restored.daily).toEqual({ lastClaimDay: '', streak: 0 });
+    expect(restored.boosts).toEqual({ surgeLeft: 0, powerLeft: 0, rpLeft: 0 });
+    expect(restored.puzzle.tier).toBe(1); // dealt for the saved tier
+    expect(restored.sources['solar-farm'].owned).toBe(4);
   });
 
   it('rejects saves from a newer build', () => {

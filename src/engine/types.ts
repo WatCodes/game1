@@ -53,6 +53,23 @@ export interface Megaproject {
   stagesAuthorized: number; // stages cleared to receive power (starts at 1)
 }
 
+export type TileKind = 'stub' | 'straight' | 'corner' | 'tee' | 'cross';
+
+export interface PuzzleTile {
+  kind: TileKind;
+  rot: number; // quarter-turns, 0..3
+  role: 'source' | 'sink' | 'wire';
+}
+
+export interface PuzzleState {
+  tier: number;
+  size: number;
+  tiles: PuzzleTile[]; // size×size, row-major
+  moves: number;
+  par: number; // minimal turns from the scrambled deal
+  solved: boolean; // latched until a new circuit is dealt
+}
+
 export interface KardashevTier {
   index: number;
   era: string;
@@ -78,6 +95,17 @@ export interface GameState {
     peakLeft: number; // seconds remaining of an active peak-demand window
     nextPeakIn: number; // seconds until the next window opens
   };
+  // Puzzle & shop meta-economy — persists through ascension, like KP
+  credits: number;
+  puzzle: PuzzleState; // current tier's circuit, regenerated on ascend
+  solvers: number; // auto-solver units owned
+  solverProgress: number; // fractional solves banked by auto-solvers
+  boosts: {
+    surgeLeft: number; // seconds of ×SURGE_MULT power from puzzle solves
+    powerLeft: number; // seconds of shop ×2 power boost
+    rpLeft: number; // seconds of shop ×2 RP boost
+  };
+  daily: { lastClaimDay: string; streak: number }; // local YYYY-MM-DD
   lastSaved: number; // epoch ms
-  stats: { lifetimePower: Num; ascensions: number; startedAt: number };
+  stats: { lifetimePower: Num; ascensions: number; startedAt: number; puzzlesSolved: number };
 }

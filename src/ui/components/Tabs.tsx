@@ -1,9 +1,11 @@
-export type TabId = 'sources' | 'research' | 'megaproject' | 'ascend';
+export type TabId = 'sources' | 'research' | 'megaproject' | 'puzzle' | 'shop' | 'ascend';
 
 const TABS: { id: TabId; label: string }[] = [
-  { id: 'sources', label: 'Sources' },
-  { id: 'research', label: 'Research' },
+  { id: 'sources', label: 'Grid' },
+  { id: 'research', label: 'Lab' },
   { id: 'megaproject', label: 'Project' },
+  { id: 'puzzle', label: 'Works' },
+  { id: 'shop', label: 'Shop' },
   { id: 'ascend', label: 'Ascend' },
 ];
 
@@ -17,11 +19,11 @@ export function Tabs({
   badges?: Partial<Record<TabId, boolean>>;
 }) {
   return (
-    <nav className="grid grid-cols-4 border-t border-line bg-panel" aria-label="Game sections">
+    <nav className="grid grid-cols-6 border-t border-line bg-panel" aria-label="Game sections">
       {TABS.map((t) => (
         <button
           key={t.id}
-          className={`relative py-2.5 text-xs uppercase tracking-wider transition-colors ${
+          className={`relative py-2.5 text-[10px] uppercase tracking-wide transition-colors ${
             active === t.id ? 'text-current' : 'text-ink-dim hover:text-ink'
           }`}
           aria-current={active === t.id ? 'page' : undefined}

@@ -3,6 +3,7 @@ import { CONFIG } from '../content/config';
 import { kpGain, sourceCost } from './formulas';
 import { isMegaprojectComplete } from './megaproject';
 import { reapplyPurchasedEffects } from './research';
+import { newPuzzle } from './puzzle';
 import { getTier } from '../content/tiers';
 import { buildSources } from '../content/sources';
 import { buildMegaproject } from '../content/megaprojects';
@@ -22,10 +23,11 @@ function seedPower(tier: number): number {
 }
 
 /**
- * Reset: sources, power, runPower, megaproject (per-run milestones are derived,
- * so they reset with runPower/owned). Keep: KP, purchased research, RP, stats.
+ * Reset: sources, power, runPower, megaproject, current puzzle (per-run
+ * milestones are derived, so they reset with runPower/owned). Keep: KP,
+ * purchased research, RP, Credits, solvers, daily streak, stats.
  */
-export function ascend(s: GameState): number {
+export function ascend(s: GameState, rand: () => number = Math.random): number {
   if (!canAscend(s)) return 0;
   const gained = projectedKp(s);
   s.kp += gained;
@@ -35,6 +37,7 @@ export function ascend(s: GameState): number {
   s.sources = {};
   for (const src of buildSources(s.tier)) s.sources[src.id] = src;
   s.megaproject = buildMegaproject(s.tier);
+  s.puzzle = newPuzzle(s.tier, rand);
   s.stats.ascensions += 1;
   reapplyPurchasedEffects(s); // restore managers for any automation research
   return gained;

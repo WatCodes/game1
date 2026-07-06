@@ -58,7 +58,8 @@ export function researchModifiers(s: GameState): ResearchModifiers {
 }
 
 export function researchRate(s: GameState): number {
-  return CONFIG.BASE_RESEARCH_RATE * researchModifiers(s).rpMult + s.kp * CONFIG.KP_RP_BONUS;
+  const boost = s.boosts.rpLeft > 0 ? CONFIG.BOOST_MULT : 1;
+  return (CONFIG.BASE_RESEARCH_RATE * researchModifiers(s).rpMult + s.kp * CONFIG.KP_RP_BONUS) * boost;
 }
 
 export function prereqsMet(s: GameState, node: ResearchNode): boolean {

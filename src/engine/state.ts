@@ -3,10 +3,11 @@ import { CONFIG } from '../content/config';
 import { buildSources } from '../content/sources';
 import { buildMegaproject } from '../content/megaprojects';
 import { buildResearch } from '../content/research';
+import { newPuzzle } from './puzzle';
 
-export const SAVE_VERSION = 2;
+export const SAVE_VERSION = 3;
 
-export function createInitialState(now: number = Date.now()): GameState {
+export function createInitialState(now: number = Date.now(), rand: () => number = Math.random): GameState {
   const s: GameState = {
     version: SAVE_VERSION,
     tier: 0,
@@ -19,8 +20,14 @@ export function createInitialState(now: number = Date.now()): GameState {
     megaproject: buildMegaproject(0),
     routePct: 0,
     dispatch: { charge: 0, peakLeft: 0, nextPeakIn: 240 },
+    credits: 0,
+    puzzle: newPuzzle(0, rand),
+    solvers: 0,
+    solverProgress: 0,
+    boosts: { surgeLeft: 0, powerLeft: 0, rpLeft: 0 },
+    daily: { lastClaimDay: '', streak: 0 },
     lastSaved: now,
-    stats: { lifetimePower: 0, ascensions: 0, startedAt: now },
+    stats: { lifetimePower: 0, ascensions: 0, startedAt: now, puzzlesSolved: 0 },
   };
   for (const src of buildSources(0)) s.sources[src.id] = src;
   for (const node of buildResearch()) s.research[node.id] = node;

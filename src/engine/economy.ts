@@ -11,6 +11,7 @@ import {
 } from './formulas';
 import { researchModifiers, type ResearchModifiers } from './research';
 import { authorizedBoundary, megaprojectMult } from './megaproject';
+import { boostPowerMult } from './shop';
 
 export function isSourceUnlocked(s: GameState, src: PowerSource, mods?: ResearchModifiers): boolean {
   const gate = src.unlockedBy;
@@ -50,7 +51,8 @@ export function nextUnitNet(src: PowerSource, mods: ResearchModifiers): Num {
 
 /**
  * Multiplier order is fixed (ARCHITECTURE §7): per-source (milestones × research
- * − upkeep) → global milestone → era → prestige → research global → megaproject.
+ * − upkeep) → global milestone → era → prestige → research global → megaproject
+ * → surge/shop boosts.
  */
 export function powerPerSec(s: GameState, mods: ResearchModifiers = researchModifiers(s)): Num {
   let sum = 0;
@@ -61,7 +63,8 @@ export function powerPerSec(s: GameState, mods: ResearchModifiers = researchModi
     eraMult(s.tier) *
     prestigeMult(s.kp) *
     mods.globalMult *
-    megaprojectMult(s, mods)
+    megaprojectMult(s, mods) *
+    boostPowerMult(s)
   );
 }
 

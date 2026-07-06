@@ -167,10 +167,33 @@ The **Grid Exchange** — Credits only, acceleration only, no progression gates.
 
 - **Daily connection bonus:** one claim per local calendar day. Consecutive days grow a
   streak through a 7-day reward table (`DAILY_REWARDS`); each completed week adds
-  +`DAILY_STREAK_BONUS`; a missed day resets to day 1.
+  +`DAILY_STREAK_BONUS`. **One missed day is forgiven (grace day); two resets** — hard
+  FOMO windows are the genre's most-hated pattern (AdVenture Communist post-mortems).
 - **Auto-Solver:** cost `SOLVER_BASE_COST × SOLVER_COST_GROWTH^owned`.
 - **Boosts:** ×2 power 15 min, ×2 RP 15 min, instant dispatch recharge. Boost timers
   tick down in game time and stack additively in duration, not multiplier.
+
+### 3.10 Records (achievements, `engine/achievements.ts`)
+
+17 achievements spanning ownership counts, lifetime power, research, tiers, puzzles,
+streaks, and solvers. Each grants a permanent global ×(1+`ACHIEVEMENT_BONUS`). Earned
+list persists through ascension; shown as a grid in the Ascend tab, toast on earn.
+
+### 3.11 World viewport & transmissions (`ui/WorldViewport.tsx`, `content/transmissions.ts`)
+
+A live SVG scene under the resource bar — one per tier (city → planet → Dyson rings →
+galaxy → lattice) driven entirely by existing display data (sources owned, milestones,
+megaproject stages, surge). Dyson rings mirror stage authorization state 1:1. A
+transmission flavor line under the scene reacts to lifetime power. Ascension plays a
+title-card overlay (era, Kardashev badge, +KP) instead of a toast.
+
+### 3.12 Save safety
+
+Saves that fail to load are preserved under `kardashev:recovery:*`, never discarded.
+A rolling backup (`kardashev:backup`) is written on autosave with a **monotonic
+lifetime-power guard** — a lower-progress state can never overwrite it — and is
+restorable from the Ascend tab. (Lesson learned the hard way + CIFI's serialization
+complaints.)
 
 ---
 
@@ -221,7 +244,8 @@ ERA_MULT_BASE           = 4        // baseline ×4 per tier
 KP_RATE                 = 0.02     // +2% global per Kardashev Point
 KP_GAIN_K               = 3        // scales ascension payout
 BASE_RESEARCH_RATE      = 0.5      // RP/sec at start
-OFFLINE_CAP_SECONDS     = 14400    // 4h, +research
+OFFLINE_CAP_SECONDS     = 28800    // 8h, +research (t0/t2/t3/t5 nodes)
+ACHIEVEMENT_BONUS       = 0.01     // +1% global per record
 UPKEEP_FACTOR           = 0.05     // baseUpkeep = baseOutput × this
 DISPATCH_SECONDS        = 30       // burst = pps × this × charge × demand
 DISPATCH_CHARGE_SECONDS = 90       // 0→100% charge time
@@ -274,6 +298,11 @@ Each subsequent tier should feel faster to re-climb thanks to KP.
 
 ## 8. Explicitly out of scope for v1
 
-Multiplayer/leaderboards, accounts/cloud save, monetization, audio (optional stretch),
-prestige-of-prestige layers beyond KP, and any resource beyond Power/RP/KP. Note anything you
+Multiplayer/leaderboards, accounts/cloud save, monetization,
+prestige-of-prestige layers beyond KP. Note anything you
 want to add in this section rather than building it mid-milestone.
+
+**Known design risk (from genre analysis):** later tiers currently rescale the same
+mechanics ("skin replication" — Cat Snack Bar's core criticism). Candidate fix for a
+future milestone: one small mechanical twist per tier (e.g. T3 launch windows, T5
+accretion risk/reward, T6 relay routing) rather than new systems.

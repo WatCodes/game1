@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useGame } from '../../store/gameStore';
 import { transmissionFor } from '../../content/transmissions';
+import { audioEnabled, setAudioEnabled } from '../audio';
 
 // The living world: one panel that redraws from game state and levels up with
 // each ascension. Every scene is driven by data the display already carries.
@@ -278,6 +279,12 @@ export function WorldViewport() {
   };
   const Scene = SCENES[Math.min(tier, SCENES.length - 1)];
 
+  const [sound, setSound] = useState(audioEnabled);
+  const toggleSound = () => {
+    setAudioEnabled(!sound);
+    setSound(!sound);
+  };
+
   return (
     <div className="relative border-b border-line bg-panel/60">
       <button
@@ -286,6 +293,13 @@ export function WorldViewport() {
         aria-label={collapsed ? 'Expand world view' : 'Collapse world view'}
       >
         {collapsed ? '▾ world' : '▴'}
+      </button>
+      <button
+        className={`absolute right-10 top-1 z-10 px-1 font-mono text-[10px] ${sound ? 'text-current' : 'text-ink-dim'} hover:text-ink`}
+        onClick={toggleSound}
+        aria-label={sound ? 'Mute audio' : 'Enable audio'}
+      >
+        {sound ? '♪ on' : '♪ off'}
       </button>
       {!collapsed && (
         <>

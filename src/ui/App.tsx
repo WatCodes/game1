@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useGameTick } from './hooks/useGameTick';
 import { useGame } from '../store/gameStore';
+import { prime, setHum } from './audio';
 import { PowerMeter } from './components/PowerMeter';
 import { ResourceBar } from './components/ResourceBar';
 import { SourcesPanel } from './components/SourcesPanel';
@@ -63,6 +64,14 @@ export default function App() {
   const [tab, setTab] = useState<TabId>('sources');
   const canAscend = useGame((s) => s.display.ascend.can);
   const dailyReady = useGame((s) => s.display.shop.canClaimDaily);
+  const pps = useGame((s) => s.display.pps);
+
+  useEffect(() => {
+    const start = () => prime();
+    window.addEventListener('pointerdown', start, { once: true });
+    return () => window.removeEventListener('pointerdown', start);
+  }, []);
+  useEffect(() => setHum(pps), [pps]);
 
   return (
     <div className="mx-auto flex h-dvh max-w-md flex-col">

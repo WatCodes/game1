@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useGame, type Toast } from '../../store/gameStore';
+import { blip } from '../audio';
 
 const KIND_STYLE: Record<Toast['kind'], string> = {
   milestone: 'border-volt-dim text-volt',
@@ -14,9 +15,10 @@ function ToastCard({ toast }: { toast: Toast }) {
   const dismissToast = useGame((s) => s.actions.dismissToast);
 
   useEffect(() => {
+    blip(toast.kind);
     const t = setTimeout(() => dismissToast(toast.id), 4000);
     return () => clearTimeout(t);
-  }, [toast.id, dismissToast]);
+  }, [toast.id, toast.kind, dismissToast]);
 
   return (
     <button

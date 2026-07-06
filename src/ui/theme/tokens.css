@@ -17,6 +17,13 @@
   --ok: #34d399;
   --danger: #f87171;
 
+  /* glow ingredients (rgba so they can layer on any bg) */
+  --cyan-glow: rgba(34, 211, 238, 0.55);
+  --cyan-haze: rgba(34, 211, 238, 0.14);
+  --amber-glow: rgba(251, 191, 36, 0.5);
+  --violet-glow: rgba(167, 139, 250, 0.55);
+  --grid-ink: rgba(34, 211, 238, 0.035);
+
   --font-mono: 'Cascadia Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   --font-display: 'Segoe UI', system-ui, -apple-system, sans-serif;
 }

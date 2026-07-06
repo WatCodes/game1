@@ -29,17 +29,17 @@ export function MegaprojectPanel() {
           {formatPower(mega.committed)} / {formatPower(mega.total)} committed
         </p>
 
-        {/* Stage segments — the Dyson rings lighting up */}
+        {/* Stage segments — the Dyson rings lighting up, filling in real time */}
         <div className="mt-3 flex gap-1.5" role="img" aria-label={`${pct}% complete`}>
           {mega.stages.map((st, i) => {
             const authorized = i < mega.stagesAuthorized;
+            const fill = Math.max(0, Math.min(1, mega.progress * mega.stages.length - i));
+            const filling = fill > 0 && fill < 1;
             return (
               <div key={i} className="flex-1">
-                <div
-                  className={`h-2.5 rounded-sm transition-all duration-500 ${
-                    st.complete ? 'bg-current stage-lit' : authorized ? 'bg-raised' : 'bg-raised opacity-40'
-                  }`}
-                />
+                <div className={`stage-cell ${st.complete ? 'done' : ''} ${filling ? 'filling' : ''} ${!authorized ? 'striped opacity-50' : ''}`}>
+                  <span style={{ width: `${fill * 100}%` }} />
+                </div>
                 <div
                   className={`mt-1 text-center text-[9px] leading-tight ${
                     st.complete ? 'text-current' : authorized ? 'text-ink-dim' : 'text-ink-dim opacity-60'

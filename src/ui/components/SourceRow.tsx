@@ -7,26 +7,34 @@ export const SourceRow = memo(function SourceRow({ src, power }: { src: SourceVi
 
   if (!src.unlocked) {
     return (
-      <div className="rounded border border-line bg-panel/50 px-3 py-2 text-xs text-ink-dim">
-        <span className="font-semibold">{src.name}</span> — locked. Unlock it in Research.
+      <div className="striped rounded border border-line bg-panel/50 px-3 py-2 text-xs text-ink-dim">
+        <span className="font-semibold">🔒 {src.name}</span> — locked. Unlock it in Research.
       </div>
     );
   }
 
   const btn =
-    'rounded border px-2 py-1 font-mono text-[11px] leading-tight transition-colors disabled:opacity-40 disabled:cursor-not-allowed';
+    'rounded border px-2 py-1 font-mono text-[11px] leading-tight transition-all disabled:opacity-40 disabled:cursor-not-allowed';
   const canBuy1 = power >= src.cost1;
   const canBuy10 = power >= src.cost10;
+  const producing = src.output > 0;
+  const warn = src.nextUnitNet <= 0 && src.owned > 0;
+  const milestoneFrac = Math.min(1, src.owned / src.nextMilestoneAt);
 
   return (
-    <div className="rounded border border-line bg-panel px-3 py-2">
+    <div className="relative rounded border border-line bg-panel px-3 py-2 pl-4">
+      <span className={`source-rail ${warn ? 'warn' : producing ? 'on' : ''}`} aria-hidden />
       <div className="flex items-baseline justify-between">
         <span className="text-sm font-semibold">
           {src.name}
-          {src.automated && <span className="ml-1.5 text-[10px] uppercase text-ok" title="Manager active">auto</span>}
+          {src.automated && (
+            <span className="ml-1.5 rounded border border-ok/40 px-1 text-[9px] uppercase tracking-wider text-ok" title="Manager active">
+              auto
+            </span>
+          )}
         </span>
         <span className="font-mono text-xs text-ink-dim">
-          ×{formatShort(src.milestoneMult)} · owned <span className="text-ink">{src.owned}</span>
+          ×{formatShort(src.milestoneMult)} · <span className="text-ink">{src.owned}</span> owned
         </span>
       </div>
       <div className="mt-0.5 flex items-baseline justify-between font-mono text-[11px] text-ink-dim">
@@ -35,12 +43,15 @@ export const SourceRow = memo(function SourceRow({ src, power }: { src: SourceVi
           {src.upkeep > 0 && <span className="ml-1.5 text-danger/80">−{formatPower(src.upkeep)}/s upkeep</span>}
         </span>
         <span>
-          {src.toNextMilestone} to ×2 (at {src.nextMilestoneAt})
+          {src.toNextMilestone} to ×2
         </span>
       </div>
-      {src.nextUnitNet <= 0 && src.owned > 0 && (
+      <div className="milestone-strip mt-1.5" aria-hidden>
+        <span style={{ width: `${milestoneFrac * 100}%` }} />
+      </div>
+      {warn && (
         <p className="mt-1 font-mono text-[10px] text-danger/90">
-          ⚠ next unit curtails — output won't rise until the ×2 milestone or efficiency research
+          ⚠ next unit curtails — push to the ×2 milestone or research efficiency
         </p>
       )}
       <div className="mt-1.5 grid grid-cols-3 gap-1.5">

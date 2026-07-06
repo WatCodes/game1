@@ -12,15 +12,185 @@ body {
   overscroll-behavior: none;
 }
 
-/* Meter tick: a faint sweep behind the live power readout */
+/* Control-room atmosphere: blueprint grid + a faint cyan vignette up top */
+body {
+  background-image:
+    radial-gradient(ellipse 120% 50% at 50% -10%, var(--cyan-haze), transparent 60%),
+    linear-gradient(var(--grid-ink) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-ink) 1px, transparent 1px);
+  background-size: 100% 100%, 28px 28px, 28px 28px;
+  background-attachment: fixed;
+}
+
+/* ---------- keyframes ---------- */
+
 @keyframes meter-sweep {
   from { transform: translateX(-100%); }
-  to { transform: translateX(100%); }
+  to { transform: translateX(350%); }
 }
 
 @keyframes toast-in {
   from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes breathe {
+  0%, 100% { box-shadow: 0 0 6px var(--amber-glow); }
+  50% { box-shadow: 0 0 18px var(--amber-glow); }
+}
+
+@keyframes peak-pulse {
+  0%, 100% { box-shadow: 0 0 8px var(--violet-glow); }
+  50% { box-shadow: 0 0 26px var(--violet-glow), 0 0 60px rgba(167, 139, 250, 0.25); }
+}
+
+@keyframes stage-filling {
+  0%, 100% { opacity: 0.65; }
+  50% { opacity: 1; }
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+
+/* ---------- instrument pieces ---------- */
+
+/* The big number: glowing like a backlit meter face */
+.readout {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--cyan);
+  text-shadow: 0 0 14px var(--cyan-glow), 0 0 44px var(--cyan-haze);
+  letter-spacing: 0.01em;
+}
+
+/* Animated sweep line under the readout — the "instrument is alive" tick */
+.sweep-track {
+  position: relative;
+  height: 2px;
+  overflow: hidden;
+  background: var(--grid-line);
+  border-radius: 999px;
+}
+.sweep-track::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  width: 30%;
+  background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+  animation: meter-sweep 2.6s linear infinite;
+}
+
+/* LED segment bar (global-milestone progress in the header) */
+.led {
+  height: 4px;
+  flex: 1;
+  border-radius: 1px;
+  background: var(--bg-raised);
+  transition: background 300ms, box-shadow 300ms;
+}
+.led.lit {
+  background: var(--cyan);
+  box-shadow: 0 0 6px var(--cyan-glow);
+}
+.led.lit.hot {
+  background: var(--amber);
+  box-shadow: 0 0 6px var(--amber-glow);
+}
+
+/* Blinking LIVE dot */
+.live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--ok);
+  box-shadow: 0 0 6px rgba(52, 211, 153, 0.7);
+  animation: blink 2s ease-in-out infinite;
+}
+
+/* Source rows: colored accent rail + milestone progress strip */
+.source-rail {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  border-radius: 3px 0 0 3px;
+  background: var(--grid-line);
+  transition: background 300ms, box-shadow 300ms;
+}
+.source-rail.on {
+  background: var(--cyan);
+  box-shadow: 0 0 8px var(--cyan-glow);
+}
+.source-rail.warn {
+  background: var(--danger);
+  box-shadow: 0 0 8px rgba(248, 113, 113, 0.5);
+}
+
+.milestone-strip {
+  height: 3px;
+  border-radius: 999px;
+  background: var(--bg-raised);
+  overflow: hidden;
+}
+.milestone-strip > span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--cyan-dim), var(--cyan));
+  transition: width 300ms ease-out;
+}
+
+/* Locked things get blueprint stripes */
+.striped {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    transparent 0 6px,
+    rgba(34, 211, 238, 0.05) 6px 7px
+  );
+}
+
+/* Megaproject stage cells */
+.stage-cell {
+  height: 12px;
+  border-radius: 3px;
+  background: var(--bg-raised);
+  overflow: hidden;
+  position: relative;
+}
+.stage-cell > span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--cyan-dim), var(--cyan));
+  transition: width 400ms ease-out;
+}
+.stage-cell.done > span {
+  background: linear-gradient(90deg, var(--cyan), #7dd3fc);
+  box-shadow: 0 0 10px var(--cyan-glow);
+}
+.stage-cell.filling > span {
+  animation: stage-filling 1.6s ease-in-out infinite;
+}
+
+/* Dispatch button states */
+.dispatch-ready {
+  animation: breathe 2.4s ease-in-out infinite;
+}
+.dispatch-peak {
+  animation: peak-pulse 1.1s ease-in-out infinite;
+}
+
+/* Ascend call-to-action */
+.ascend-ready {
+  box-shadow: 0 0 14px var(--violet-glow);
+  text-shadow: 0 0 10px var(--violet-glow);
+}
+
+/* Buttons feel physical */
+button:not(:disabled):active {
+  transform: translateY(1px);
 }
 
 .toast-enter {

@@ -22,10 +22,12 @@ function DispatchBar() {
       <button
         className={`relative w-full overflow-hidden rounded border py-2 font-mono text-xs uppercase tracking-widest transition-colors ${
           dispatch.peakActive
-            ? 'border-ascend text-ascend'
-            : dispatch.canFire
-              ? 'border-volt text-volt hover:bg-volt/10'
-              : 'border-line text-ink-dim cursor-not-allowed'
+            ? 'dispatch-peak border-ascend text-ascend'
+            : dispatch.charge >= 1
+              ? 'dispatch-ready border-volt text-volt hover:bg-volt/10'
+              : dispatch.canFire
+                ? 'border-volt text-volt hover:bg-volt/10'
+                : 'border-line text-ink-dim cursor-not-allowed'
         }`}
         disabled={!dispatch.canFire}
         onClick={doDispatch}

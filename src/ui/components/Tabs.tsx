@@ -29,9 +29,15 @@ export function Tabs({
         >
           {t.label}
           {badges?.[t.id] && (
-            <span className="absolute right-2 top-1.5 h-1.5 w-1.5 rounded-full bg-ascend" aria-label="attention" />
+            <span
+              className="absolute right-2 top-1.5 h-1.5 w-1.5 rounded-full bg-ascend"
+              style={{ boxShadow: '0 0 6px var(--violet-glow)' }}
+              aria-label="attention"
+            />
           )}
-          {active === t.id && <span className="absolute inset-x-3 bottom-0 h-0.5 bg-current" />}
+          {active === t.id && (
+            <span className="absolute inset-x-3 bottom-0 h-0.5 bg-current" style={{ boxShadow: '0 0 8px var(--cyan-glow)' }} />
+          )}
         </button>
       ))}
     </nav>

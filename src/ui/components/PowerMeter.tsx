@@ -1,6 +1,8 @@
 import { useGame } from '../../store/gameStore';
 import { formatPower } from '../../engine/format';
 
+const LED_COUNT = 24;
+
 /** The signature element: a live meter that ticks like a real instrument. */
 export function PowerMeter() {
   const power = useGame((s) => s.display.power);
@@ -8,25 +10,56 @@ export function PowerMeter() {
   const era = useGame((s) => s.display.era);
   const scaleCopy = useGame((s) => s.display.scaleCopy);
   const kardashevLabel = useGame((s) => s.display.kardashevLabel);
+  const runPower = useGame((s) => s.display.runPower);
+  const nextGlobalAt = useGame((s) => s.display.nextGlobalAt);
+
+  // Log-scale progress toward the next ×1.6 grid milestone (thresholds are
+  // ×1000 apart, so a linear ratio would sit at zero forever).
+  const prevAt = nextGlobalAt / 1000;
+  const frac =
+    runPower <= prevAt ? 0 : Math.min(1, Math.log(runPower / prevAt) / Math.log(1000));
+  const lit = Math.floor(frac * LED_COUNT);
 
   return (
-    <div className="relative overflow-hidden border-b border-line bg-panel px-4 py-3">
-      <div className="flex items-baseline justify-between">
-        <span className="text-[11px] uppercase tracking-widest text-ink-dim">{era}</span>
+    <div className="relative overflow-hidden border-b border-line bg-panel/90 px-4 pb-2.5 pt-3">
+      <div className="flex items-center justify-between">
+        <span className="flex items-center gap-2 text-[11px] uppercase tracking-widest text-ink-dim">
+          <span className="live-dot" aria-hidden />
+          {era}
+        </span>
         {kardashevLabel && (
           <span className="rounded border border-ascend/40 px-1.5 py-0.5 text-[10px] uppercase tracking-widest text-ascend">
             {kardashevLabel}
           </span>
         )}
       </div>
-      <div className="mt-1 font-mono text-4xl font-semibold tabular-nums text-current" aria-live="off">
+
+      <div className="readout mt-1 text-4xl font-semibold" aria-live="off">
         {formatPower(power)}
       </div>
-      <div className="mt-0.5 flex items-baseline justify-between font-mono text-xs text-ink-dim">
+
+      <div className="sweep-track mt-2" aria-hidden />
+
+      <div className="mt-1.5 flex items-baseline justify-between font-mono text-xs text-ink-dim">
         <span>
           <span className="text-volt">+{formatPower(pps)}</span>/s
         </span>
         <span>Powering: {scaleCopy}</span>
+      </div>
+
+      <div
+        className="mt-2 flex gap-[3px]"
+        role="progressbar"
+        aria-valuenow={Math.round(frac * 100)}
+        aria-label="Progress to next grid milestone"
+      >
+        {Array.from({ length: LED_COUNT }, (_, i) => (
+          <span key={i} className={`led ${i < lit ? 'lit' : ''} ${i < lit && i >= LED_COUNT - 4 ? 'hot' : ''}`} />
+        ))}
+      </div>
+      <div className="mt-1 flex justify-between font-mono text-[9px] uppercase tracking-wider text-ink-dim">
+        <span>grid milestone</span>
+        <span>×1.6 at {formatPower(nextGlobalAt)}</span>
       </div>
     </div>
   );

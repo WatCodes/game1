@@ -65,10 +65,10 @@ export function AscendPanel() {
           </div>
         ) : (
           <button
-            className="mt-3 w-full rounded border border-ascend px-3 py-2 text-sm font-semibold text-ascend transition-colors hover:bg-ascend/10"
+            className="ascend-ready mt-3 w-full rounded border border-ascend px-3 py-2 text-sm font-semibold text-ascend transition-colors hover:bg-ascend/10"
             onClick={() => setConfirming(true)}
           >
-            Ascend — +{formatShort(ascendView.projected)} KP
+            ⚡ Ascend — +{formatShort(ascendView.projected)} KP
           </button>
         )}
       </div>

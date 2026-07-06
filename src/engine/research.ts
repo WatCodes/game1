@@ -7,6 +7,7 @@ export interface ResearchModifiers {
   globalMult: number;
   rpMult: number;
   megaCostMult: number; // 0..1, applied to megaproject totalCost
+  upkeepMult: number; // 0..1, applied to all source upkeep
   offlineBonusSeconds: number;
   unlockedSources: Set<Id>;
   automatedSources: Set<Id>;
@@ -18,6 +19,7 @@ export function researchModifiers(s: GameState): ResearchModifiers {
     globalMult: 1,
     rpMult: 1,
     megaCostMult: 1,
+    upkeepMult: 1,
     offlineBonusSeconds: 0,
     unlockedSources: new Set(),
     automatedSources: new Set(),
@@ -40,6 +42,9 @@ export function researchModifiers(s: GameState): ResearchModifiers {
         break;
       case 'reduceMegaprojectCost':
         mods.megaCostMult *= 1 - e.x;
+        break;
+      case 'reduceUpkeep':
+        mods.upkeepMult *= 1 - e.x;
         break;
       case 'increaseOfflineCap':
         mods.offlineBonusSeconds += e.seconds;

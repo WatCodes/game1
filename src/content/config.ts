@@ -13,8 +13,16 @@ export const CONFIG = {
   BASE_RESEARCH_RATE: 0.5, // RP/sec at start
   OFFLINE_CAP_SECONDS: 14400, // 4h base, raised by research
   OFFLINE_MIN_SECONDS: 30, // gaps shorter than this aren't worth a summary
-  DISPATCH_COOLDOWN_MS: 30000,
-  DISPATCH_SECONDS: 45,
+  // Dispatch: charge builds over time; firing early is weak, firing at full
+  // charge (or inside a peak-demand window) is the payoff.
+  DISPATCH_SECONDS: 30, // burst = pps × this × charge × demand
+  DISPATCH_CHARGE_SECONDS: 90, // time to reach full charge
+  DISPATCH_MIN_CHARGE: 0.25, // can't fire below this
+  PEAK_MULT: 3, // burst multiplier inside a peak-demand window
+  PEAK_DURATION_SECONDS: 25,
+  PEAK_GAP_MIN_SECONDS: 180, // window cadence (rolled randomly in this range)
+  PEAK_GAP_MAX_SECONDS: 360,
+  UPKEEP_FACTOR: 0.05, // baseUpkeep = baseOutput × this; unit k drags baseUpkeep×(k−1)
   STARTING_POWER: 15, // enough for the first battery within seconds
   ASCEND_SEED_UNITS: 2, // ascending grants 2× the new tier's cheapest source cost
   AUTOSAVE_INTERVAL_MS: 8000,

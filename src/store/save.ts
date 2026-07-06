@@ -8,7 +8,7 @@ const SAVE_KEY = 'kardashev:v1';
 
 // Saves persist runtime state only — content (definitions, names, costs) is
 // rehydrated from src/content so rebalancing never invalidates a save.
-export interface SaveV1 {
+export interface SaveV2 {
   version: number;
   tier: number;
   power: Num;
@@ -18,13 +18,14 @@ export interface SaveV1 {
   owned: Record<Id, number>;
   purchased: Id[];
   committed: Num;
+  stagesAuthorized: number;
   routePct: number;
-  dispatchReadyAt: number;
+  dispatch: { charge: number; peakLeft: number; nextPeakIn: number };
   lastSaved: number;
   stats: { lifetimePower: Num; ascensions: number; startedAt: number };
 }
 
-export function serialize(s: GameState): SaveV1 {
+export function serialize(s: GameState): SaveV2 {
   const owned: Record<Id, number> = {};
   for (const src of Object.values(s.sources)) if (src.owned > 0) owned[src.id] = src.owned;
   return {
@@ -37,22 +38,27 @@ export function serialize(s: GameState): SaveV1 {
     owned,
     purchased: Object.values(s.research).filter((n) => n.purchased).map((n) => n.id),
     committed: s.megaproject.committed,
+    stagesAuthorized: s.megaproject.stagesAuthorized,
     routePct: s.routePct,
-    dispatchReadyAt: s.dispatchReadyAt,
+    dispatch: { ...s.dispatch },
     lastSaved: s.lastSaved,
     stats: { ...s.stats },
   };
 }
 
 /** Rebuild a full GameState from content + a validated save's runtime values. */
-export function hydrate(save: SaveV1): GameState {
+export function hydrate(save: SaveV2): GameState {
   const s = createInitialState(save.lastSaved);
   s.tier = save.tier;
   s.power = save.power;
   s.runPower = save.runPower;
   s.rp = save.rp;
   s.kp = save.kp;
-  s.dispatchReadyAt = save.dispatchReadyAt;
+  s.dispatch = {
+    charge: Math.max(0, Math.min(1, save.dispatch.charge)),
+    peakLeft: Math.max(0, save.dispatch.peakLeft),
+    nextPeakIn: Math.max(0, save.dispatch.nextPeakIn),
+  };
   s.lastSaved = save.lastSaved;
   s.stats = { ...save.stats };
   if (save.tier !== 0) {
@@ -68,6 +74,13 @@ export function hydrate(save: SaveV1): GameState {
     const node = s.research[id];
     if (node) node.purchased = true;
   }
+  const n = s.megaproject.stages.length;
+  // stagesAuthorized < 0 = "derive from progress" sentinel set by the v1→v2
+  // migration, which had no way to know the project's totalCost.
+  s.megaproject.stagesAuthorized =
+    save.stagesAuthorized >= 0
+      ? Math.max(1, Math.min(n, Math.floor(save.stagesAuthorized)))
+      : Math.max(1, Math.min(n, Math.floor((save.committed / s.megaproject.totalCost) * n) + 1));
   s.megaproject.committed = Math.max(0, Math.min(save.committed, s.megaproject.totalCost));
   s.routePct = Math.max(0, Math.min(1, save.routePct));
   reapplyPurchasedEffects(s); // restore automation managers
@@ -80,7 +93,8 @@ function isRecord(v: unknown): v is Record<string, unknown> {
 
 /**
  * Upgrade chain for old saves — never break one silently. v0 (pre-release)
- * lacked stats/dispatch/routing; synthesize defaults.
+ * lacked stats/routing; v1 had a cooldown-based dispatch and no stage
+ * authorization. Synthesize defaults at each step.
  */
 export function migrate(raw: Record<string, unknown>): Record<string, unknown> {
   const version = typeof raw.version === 'number' ? raw.version : 0;
@@ -91,7 +105,6 @@ export function migrate(raw: Record<string, unknown>): Record<string, unknown> {
       ...save,
       version: 1,
       routePct: save.routePct ?? 0,
-      dispatchReadyAt: save.dispatchReadyAt ?? 0,
       stats: save.stats ?? {
         lifetimePower: typeof save.runPower === 'number' ? save.runPower : 0,
         ascensions: 0,
@@ -99,14 +112,24 @@ export function migrate(raw: Record<string, unknown>): Record<string, unknown> {
       },
     };
   }
+  if ((save.version as number) < 2) {
+    const rest = { ...save };
+    delete rest.dispatchReadyAt; // v1's cooldown model is gone
+    save = {
+      ...rest,
+      version: 2,
+      dispatch: { charge: 0, peakLeft: 0, nextPeakIn: 240 },
+      stagesAuthorized: -1, // sentinel: hydrate derives it from committed progress
+    };
+  }
   return save;
 }
 
 /** Migrate then structurally validate — reject anything that would corrupt state. */
-export function validateSave(raw: unknown): SaveV1 {
+export function validateSave(raw: unknown): SaveV2 {
   if (!isRecord(raw)) throw new Error('Save is not an object');
   const m = migrate(raw);
-  const numFields = ['tier', 'power', 'runPower', 'rp', 'kp', 'committed', 'routePct', 'lastSaved'] as const;
+  const numFields = ['tier', 'power', 'runPower', 'rp', 'kp', 'committed', 'stagesAuthorized', 'routePct', 'lastSaved'] as const;
   for (const f of numFields) {
     if (typeof m[f] !== 'number' || !isFinite(m[f] as number)) throw new Error(`Save field "${f}" is invalid`);
   }
@@ -114,7 +137,8 @@ export function validateSave(raw: unknown): SaveV1 {
   if (!isRecord(m.owned)) throw new Error('Save field "owned" is invalid');
   if (!Array.isArray(m.purchased)) throw new Error('Save field "purchased" is invalid');
   if (!isRecord(m.stats)) throw new Error('Save field "stats" is invalid');
-  return m as unknown as SaveV1;
+  if (!isRecord(m.dispatch)) throw new Error('Save field "dispatch" is invalid');
+  return m as unknown as SaveV2;
 }
 
 export function saveToStorage(s: GameState, now: number = Date.now()): void {

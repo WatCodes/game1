@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useGameTick } from './hooks/useGameTick';
 import { useGame } from '../store/gameStore';
-import { formatTime } from '../engine/format';
 import { PowerMeter } from './components/PowerMeter';
 import { ResourceBar } from './components/ResourceBar';
 import { SourcesPanel } from './components/SourcesPanel';
@@ -14,22 +13,39 @@ import { Toasts } from './components/Toasts';
 import { OfflineModal } from './components/OfflineModal';
 
 function DispatchBar() {
-  const readyIn = useGame((s) => s.display.dispatchReadyIn);
+  const dispatch = useGame((s) => s.display.dispatch);
   const doDispatch = useGame((s) => s.actions.doDispatch);
-  const ready = readyIn <= 0;
+  const pct = Math.floor(dispatch.charge * 100);
 
   return (
     <div className="border-t border-line bg-panel px-3 py-2">
       <button
-        className={`w-full rounded border py-2 font-mono text-xs uppercase tracking-widest transition-colors ${
-          ready
-            ? 'border-volt text-volt hover:bg-volt/10'
-            : 'border-line text-ink-dim cursor-not-allowed'
+        className={`relative w-full overflow-hidden rounded border py-2 font-mono text-xs uppercase tracking-widest transition-colors ${
+          dispatch.peakActive
+            ? 'border-ascend text-ascend'
+            : dispatch.canFire
+              ? 'border-volt text-volt hover:bg-volt/10'
+              : 'border-line text-ink-dim cursor-not-allowed'
         }`}
-        disabled={!ready}
+        disabled={!dispatch.canFire}
         onClick={doDispatch}
+        aria-label={`Dispatch, ${pct}% charged${dispatch.peakActive ? ', peak demand active' : ''}`}
       >
-        {ready ? '⚡ Dispatch — surge the grid' : `Dispatch ready in ${formatTime(readyIn)}`}
+        {/* charge fill behind the label */}
+        <span
+          className={`absolute inset-y-0 left-0 transition-[width] duration-300 ${
+            dispatch.peakActive ? 'bg-ascend/15' : 'bg-volt/10'
+          }`}
+          style={{ width: `${pct}%` }}
+          aria-hidden
+        />
+        <span className="relative">
+          {dispatch.peakActive
+            ? `⚡ PEAK ×3 — fire now! (${Math.ceil(dispatch.peakLeft)}s)`
+            : dispatch.canFire
+              ? `⚡ Dispatch — ${pct}% charge`
+              : `Dispatch charging — ${pct}%`}
+        </span>
       </button>
     </div>
   );

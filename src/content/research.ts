@@ -3,19 +3,19 @@ import { sourceNamesForTier } from './sources';
 
 // RP cost baseline per tier. RP income compounds via multRpRate nodes, so later
 // tiers cost more but idle time between ascensions covers the gap.
-const RP_BASE = [20, 150, 800, 4000, 2e4, 1e5, 5e5, 2.5e6];
+export const RP_BASE = [20, 150, 800, 4000, 2e4, 1e5, 5e5, 2.5e6];
 
 // Flavor per tier for the formulaic node kinds:
-// [unlock3, unlock4, boostFirst, global, rp, auto0, auto1, mega, offline?]
+// [unlock3, unlock4, boostFirst, global, rp, auto0, auto1, mega, offline?, efficiency]
 const FLAVOR: (string | null)[][] = [
-  ['Steam Cycles', 'Brayton Cycle', 'Advanced Chemistry', 'Turbo-Alternators', 'Grid Telemetry', 'Battery Management AI', 'Genset Dispatcher', 'Prefab Substations', 'Night-Shift Crews'],
-  ['Deep Hydro', 'Enhanced Geothermal', 'Perovskite Cells', 'HVDC Backbone', 'Forecast Models', 'Solar Trackers', 'Turbine Yaw AI', 'Modular Converters', null],
-  ['Ignition Milestone', null, 'High-Flux Cores', 'Superconducting Grid', 'Plasma Diagnostics', 'Reactor Autopilot', null, 'Tokamak Mass Production', 'Autonomous Ops'],
-  ['Penning Traps', null, 'Thin-Film Arrays', 'Orbital Logistics', 'Deep Space Network', 'Station-Keeping AI', null, 'Mass Driver Exports', null],
-  ['Swarm Coordination', null, 'Chromospheric Mining', 'Statite Lattice', 'Stellar Cartography', 'Autonomous Foundries', null, 'Self-Replicating Fabs', null],
-  ['Nested Shells', null, 'Ergosphere Tuning', 'Exotic Matter Refinery', 'Singularity Lab', 'Accretion Autopilot', null, 'Frame-Drag Anchors', null],
-  ['Relay Lattice', null, 'Magnetar Harnessing', 'Galactic Logistics Web', 'SETI Archives', 'Von Neumann Fleets', null, 'Warp-Lane Freight', null],
-  ['False Vacuum Baffles', null, 'Casimir Amplifiers', 'Planck-Scale Engineering', 'Omega Archive', 'Acausal Schedulers', null, 'Spacetime Scaffolds', null],
+  ['Steam Cycles', 'Brayton Cycle', 'Advanced Chemistry', 'Turbo-Alternators', 'Grid Telemetry', 'Battery Management AI', 'Genset Dispatcher', 'Prefab Substations', 'Night-Shift Crews', 'Fuel Injection'],
+  ['Deep Hydro', 'Enhanced Geothermal', 'Perovskite Cells', 'HVDC Backbone', 'Forecast Models', 'Solar Trackers', 'Turbine Yaw AI', 'Modular Converters', null, 'Predictive Maintenance'],
+  ['Ignition Milestone', null, 'High-Flux Cores', 'Superconducting Grid', 'Plasma Diagnostics', 'Reactor Autopilot', null, 'Tokamak Mass Production', 'Autonomous Ops', 'Closed Fuel Cycle'],
+  ['Penning Traps', null, 'Thin-Film Arrays', 'Orbital Logistics', 'Deep Space Network', 'Station-Keeping AI', null, 'Mass Driver Exports', null, 'Self-Healing Panels'],
+  ['Swarm Coordination', null, 'Chromospheric Mining', 'Statite Lattice', 'Stellar Cartography', 'Autonomous Foundries', null, 'Self-Replicating Fabs', null, 'Zero-Loss Relays'],
+  ['Nested Shells', null, 'Ergosphere Tuning', 'Exotic Matter Refinery', 'Singularity Lab', 'Accretion Autopilot', null, 'Frame-Drag Anchors', null, 'Entropy Recycling'],
+  ['Relay Lattice', null, 'Magnetar Harnessing', 'Galactic Logistics Web', 'SETI Archives', 'Von Neumann Fleets', null, 'Warp-Lane Freight', null, 'Lossless Lanes'],
+  ['False Vacuum Baffles', null, 'Casimir Amplifiers', 'Planck-Scale Engineering', 'Omega Archive', 'Acausal Schedulers', null, 'Spacetime Scaffolds', null, 'Perpetual Bearings'],
 ];
 
 /** The full permanent tech tree, tiers 0–7. */
@@ -24,7 +24,7 @@ export function buildResearch(): ResearchNode[] {
   for (let tier = 0; tier < FLAVOR.length; tier++) {
     const R = RP_BASE[tier];
     const srcs = sourceNamesForTier(tier);
-    const [unlock3, unlock4, boost, global, rp, auto0, auto1, mega, offline] = FLAVOR[tier];
+    const [unlock3, unlock4, boost, global, rp, auto0, auto1, mega, offline, efficiency] = FLAVOR[tier];
     const [id0, name0] = srcs[0];
     const [id1, name1] = srcs[1];
     const [id2, name2] = srcs[2];
@@ -81,6 +81,11 @@ export function buildResearch(): ResearchNode[] {
         effect: { kind: 'increaseOfflineCap', seconds: 14400 },
       });
     }
+    nodes.push({
+      id: `eff-t${tier}`, name: efficiency!, tier, cost: 2 * R, prereqs: [],
+      desc: 'All upkeep −50%.',
+      effect: { kind: 'reduceUpkeep', x: 0.5 },
+    });
   }
   return nodes;
 }

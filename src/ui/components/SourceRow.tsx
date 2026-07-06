@@ -30,11 +30,19 @@ export const SourceRow = memo(function SourceRow({ src, power }: { src: SourceVi
         </span>
       </div>
       <div className="mt-0.5 flex items-baseline justify-between font-mono text-[11px] text-ink-dim">
-        <span className="text-volt">+{formatPower(src.output)}/s</span>
+        <span>
+          <span className="text-volt">+{formatPower(src.output)}/s</span>
+          {src.upkeep > 0 && <span className="ml-1.5 text-danger/80">−{formatPower(src.upkeep)}/s upkeep</span>}
+        </span>
         <span>
           {src.toNextMilestone} to ×2 (at {src.nextMilestoneAt})
         </span>
       </div>
+      {src.nextUnitNet <= 0 && src.owned > 0 && (
+        <p className="mt-1 font-mono text-[10px] text-danger/90">
+          ⚠ next unit curtails — output won't rise until the ×2 milestone or efficiency research
+        </p>
+      )}
       <div className="mt-1.5 grid grid-cols-3 gap-1.5">
         <button
           className={`${btn} ${canBuy1 ? 'border-current-dim text-current hover:bg-raised' : 'border-line text-ink-dim'}`}

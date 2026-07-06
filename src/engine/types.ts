@@ -7,7 +7,8 @@ export interface PowerSource {
   tier: number;
   baseCost: Num;
   costGrowth: number;
-  baseOutput: Num; // W/s per unit
+  baseOutput: Num; // W/s per unit, gross
+  baseUpkeep: Num; // W/s of fuel/maintenance drag; unit k costs baseUpkeep×(k−1)
   owned: number;
   unlockedBy?: Id | { tier: number }; // research id or tier gate
   automated?: boolean; // manager purchased (via research)
@@ -19,6 +20,7 @@ export type ResearchEffect =
   | { kind: 'multGlobal'; x: number }
   | { kind: 'multRpRate'; x: number }
   | { kind: 'reduceMegaprojectCost'; x: number } // 0..1, fraction removed
+  | { kind: 'reduceUpkeep'; x: number } // 0..1, fraction removed from all upkeep
   | { kind: 'increaseOfflineCap'; seconds: number }
   | { kind: 'unlockAutomation'; sourceId: Id };
 
@@ -43,9 +45,12 @@ export interface Megaproject {
   name: string;
   tier: number;
   totalCost: Num; // Power to complete (before research reductions)
+  rpCost: Num; // total RP to authorize stages 2..n (stage 1 is free)
   stages: MegaprojectStage[];
+  stageResearch: (Id | null)[]; // research required before a stage can be authorized
   completionReward: number; // global mult while complete (this run)
   committed: Num; // runtime progress
+  stagesAuthorized: number; // stages cleared to receive power (starts at 1)
 }
 
 export interface KardashevTier {
@@ -68,7 +73,11 @@ export interface GameState {
   research: Record<Id, ResearchNode>; // all tiers — purchases are permanent
   megaproject: Megaproject; // current tier's project
   routePct: number; // % of income diverted to megaproject (0..1)
-  dispatchReadyAt: number; // epoch ms
+  dispatch: {
+    charge: number; // 0..1, builds over time; firing spends it
+    peakLeft: number; // seconds remaining of an active peak-demand window
+    nextPeakIn: number; // seconds until the next window opens
+  };
   lastSaved: number; // epoch ms
   stats: { lifetimePower: Num; ascensions: number; startedAt: number };
 }

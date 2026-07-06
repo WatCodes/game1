@@ -16,11 +16,11 @@ export function unitOutput(tier: number): number {
 }
 
 export function megaCost(tier: number): number {
-  return 1.5e5 * Math.pow(MEGA_STEP, tier);
+  return 3.5e5 * Math.pow(MEGA_STEP, tier);
 }
 
 export function kpDivisor(tier: number): number {
-  return 7e4 * Math.pow(KP_DIV_STEP, tier);
+  return 1.2e5 * Math.pow(KP_DIV_STEP, tier);
 }
 
 const TIERS: Omit<KardashevTier, 'baseCostMult' | 'kpDivisor'>[] = [

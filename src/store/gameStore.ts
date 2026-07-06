@@ -5,12 +5,15 @@ import { getTier } from '../content/tiers';
 import { createInitialState } from '../engine/state';
 import {
   buy,
-  dispatch,
+  fireDispatch,
   isSourceUnlocked,
   maxAffordable,
+  maxSafeCommit,
   nextCost,
+  nextUnitNet,
   powerPerSec,
-  sourceOutput,
+  sourceNet,
+  sourceUpkeep,
 } from '../engine/economy';
 import {
   nextGlobalMilestone,
@@ -26,10 +29,15 @@ import {
   researchRate,
 } from '../engine/research';
 import {
+  authorizeStage,
+  authorizedBoundary,
+  canAuthorizeStage,
   commitPower,
   effectiveCost,
   isMegaprojectComplete,
   megaprojectProgress,
+  nextStageResearchBlock,
+  stageRpCost,
   stagesCompleted,
 } from '../engine/megaproject';
 import { ascend, canAscend, projectedKp } from '../engine/ascension';
@@ -62,7 +70,9 @@ export interface SourceView {
   cost10: Num;
   maxCount: number;
   maxCost: Num;
-  output: Num; // this line's W/s before global mults
+  output: Num; // net W/s of this line before global mults
+  upkeep: Num; // W/s lost to fuel/maintenance
+  nextUnitNet: Num; // net gain of buying one more; ≤0 = curtails
   milestoneMult: number;
   toNextMilestone: number;
   nextMilestoneAt: number;
@@ -105,13 +115,19 @@ export interface DisplaySnapshot {
     name: string;
     committed: Num;
     total: Num;
+    boundary: Num; // authorized power ceiling
     progress: number;
     stages: StageView[];
+    stagesAuthorized: number;
+    nextStageRp: Num;
+    canAuthorize: boolean;
+    authBlockedBy: string | null; // research name blocking the next stage
     complete: boolean;
     routePct: number;
+    maxCommit: Num; // safe lump-sum limit (anti-softlock)
   };
   ascend: { can: boolean; projected: number; nextEra: string; nextScale: string };
-  dispatchReadyIn: number; // seconds; 0 = ready
+  dispatch: { charge: number; canFire: boolean; peakActive: boolean; peakLeft: number };
 }
 
 export interface Toast {
@@ -120,11 +136,12 @@ export interface Toast {
   text: string;
 }
 
-function buildDisplay(s: GameState, now: number): DisplaySnapshot {
+function buildDisplay(s: GameState): DisplaySnapshot {
   const mods = researchModifiers(s);
   const tier = getTier(s.tier);
   const next = getTier(s.tier + 1);
   const done = stagesCompleted(s, mods);
+  const authBlock = nextStageResearchBlock(s);
   return {
     power: s.power,
     pps: powerPerSec(s, mods),
@@ -148,7 +165,9 @@ function buildDisplay(s: GameState, now: number): DisplaySnapshot {
       cost10: nextCost(src, 10),
       maxCount: maxAffordable(src, s.power),
       maxCost: nextCost(src, Math.max(1, maxAffordable(src, s.power))),
-      output: sourceOutput(src, mods),
+      output: sourceNet(src, mods),
+      upkeep: sourceUpkeep(src, mods),
+      nextUnitNet: nextUnitNet(src, mods),
       milestoneMult: sourceMilestoneMult(src.owned),
       toNextMilestone: nextSourceMilestone(src.owned) - src.owned,
       nextMilestoneAt: nextSourceMilestone(src.owned),
@@ -171,10 +190,16 @@ function buildDisplay(s: GameState, now: number): DisplaySnapshot {
       name: s.megaproject.name,
       committed: s.megaproject.committed,
       total: effectiveCost(s, mods),
+      boundary: authorizedBoundary(s, mods),
       progress: megaprojectProgress(s, mods),
       stages: s.megaproject.stages.map((st, i) => ({ ...st, complete: i < done })),
+      stagesAuthorized: s.megaproject.stagesAuthorized,
+      nextStageRp: stageRpCost(s),
+      canAuthorize: canAuthorizeStage(s),
+      authBlockedBy: authBlock ? (s.research[authBlock]?.name ?? authBlock) : null,
       complete: isMegaprojectComplete(s, mods),
       routePct: s.routePct,
+      maxCommit: maxSafeCommit(s, mods),
     },
     ascend: {
       can: canAscend(s),
@@ -182,7 +207,12 @@ function buildDisplay(s: GameState, now: number): DisplaySnapshot {
       nextEra: next.era,
       nextScale: next.scaleCopy,
     },
-    dispatchReadyIn: Math.max(0, (s.dispatchReadyAt - now) / 1000),
+    dispatch: {
+      charge: s.dispatch.charge,
+      canFire: s.dispatch.charge >= CONFIG.DISPATCH_MIN_CHARGE,
+      peakActive: s.dispatch.peakLeft > 0,
+      peakLeft: s.dispatch.peakLeft,
+    },
   };
 }
 
@@ -196,6 +226,7 @@ interface GameStore {
     buySource: (id: Id, count: number | 'max') => void;
     buyResearchNode: (id: Id) => void;
     commitStoredPower: (fraction: number) => void;
+    authorizeNextStage: () => void;
     setRoutePct: (pct: number) => void;
     doDispatch: () => void;
     doAscend: () => void;
@@ -231,12 +262,15 @@ function detectTransitions(prev: DisplaySnapshot, next: DisplaySnapshot): void {
   if (next.mega.complete && !prev.mega.complete && prev.mega.name === next.mega.name) {
     pushToast('ascend', `${next.mega.name} complete — Ascension available`);
   }
+  if (next.dispatch.peakActive && !prev.dispatch.peakActive) {
+    pushToast('info', `⚡ PEAK DEMAND — dispatch pays ×${CONFIG.PEAK_MULT} for ${CONFIG.PEAK_DURATION_SECONDS}s`);
+  }
 }
 
 /** Snapshot the authoritative state into React. The loop calls this at ~12 Hz. */
 export function publishDisplay(): void {
   const prev = useGame.getState().display;
-  const next = buildDisplay(game, Date.now());
+  const next = buildDisplay(game);
   detectTransitions(prev, next);
   useGame.setState({ display: next });
 }
@@ -245,7 +279,7 @@ export const useGame = create<GameStore>((set) => {
   const refresh = publishDisplay;
 
   return {
-    display: buildDisplay(game, Date.now()),
+    display: buildDisplay(game),
     toasts: [],
     offline: initialOffline,
     actions: {
@@ -261,18 +295,28 @@ export const useGame = create<GameStore>((set) => {
         }
       },
       commitStoredPower: (fraction) => {
-        const amount = game.power * Math.max(0, Math.min(1, fraction));
+        const wanted = game.power * Math.max(0, Math.min(1, fraction));
+        // Clamp to the safe limit: never leave a dead grid with no buyable source
+        const amount = Math.min(wanted, maxSafeCommit(game));
         if (commitPower(game, amount) > 0) refresh();
+      },
+      authorizeNextStage: () => {
+        const stage = game.megaproject.stages[game.megaproject.stagesAuthorized];
+        if (authorizeStage(game)) {
+          pushToast('stage', `Stage authorized: ${stage.label}`);
+          saveToStorage(game);
+          refresh();
+        }
       },
       setRoutePct: (pct) => {
         game.routePct = Math.max(0, Math.min(1, pct));
         refresh();
       },
       doDispatch: () => {
-        const result = dispatch(game, Date.now());
+        const result = fireDispatch(game);
         if (result) {
-          const spike = result.demand > 1.25 ? 'Peak demand! ' : '';
-          pushToast('info', `${spike}Dispatch: +${formatPower(result.gained)}`);
+          const label = result.peak ? `PEAK ×${CONFIG.PEAK_MULT}! ` : '';
+          pushToast('info', `${label}Dispatch: +${formatPower(result.gained)}`);
           refresh();
         }
       },

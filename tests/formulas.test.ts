@@ -11,6 +11,7 @@ import {
   sourceCost,
   sourceMilestoneCount,
   sourceMilestoneMult,
+  upkeepFor,
 } from '../src/engine/formulas';
 import { formatPower, formatShort, formatTime } from '../src/engine/format';
 
@@ -109,6 +110,22 @@ describe('kp', () => {
   it('prestige is +2% per KP', () => {
     expect(prestigeMult(0)).toBe(1);
     expect(prestigeMult(50)).toBeCloseTo(2);
+  });
+});
+
+describe('upkeepFor', () => {
+  it('is zero for zero or one unit', () => {
+    expect(upkeepFor(0.025, 0)).toBe(0);
+    expect(upkeepFor(0.025, 1)).toBe(0);
+  });
+
+  it('grows quadratically: unit k drags baseUpkeep×(k−1)', () => {
+    expect(upkeepFor(0.025, 2)).toBeCloseTo(0.025); // 0 + 1
+    expect(upkeepFor(0.025, 5)).toBeCloseTo(0.025 * 10); // 0+1+2+3+4
+  });
+
+  it('scales with the efficiency multiplier', () => {
+    expect(upkeepFor(0.025, 10, 0.5)).toBeCloseTo(upkeepFor(0.025, 10) / 2);
   });
 });
 

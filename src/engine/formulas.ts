@@ -80,3 +80,14 @@ export function kpGain(runPower: Num, kpDivisor: Num): number {
 export function offlineSeconds(elapsedMs: number, capSeconds: number): number {
   return Math.max(0, Math.min(elapsedMs / 1000, capSeconds));
 }
+
+/**
+ * Fuel/maintenance drag for a source. Unit k costs baseUpkeep×(k−1), so total
+ * upkeep is quadratic while gross output is linear-times-milestones: overbuying
+ * a source past its efficient band stops paying. Efficiency research scales it.
+ */
+export function upkeepFor(baseUpkeep: Num, owned: number, upkeepMult = 1): Num {
+  if (owned <= 1) return 0;
+  return baseUpkeep * upkeepMult * ((owned * (owned - 1)) / 2);
+}
+

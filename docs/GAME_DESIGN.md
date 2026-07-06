@@ -58,6 +58,12 @@ Each **power source** is a buyable generator.
   `unlockedBy` (research id or tier), plus computed multipliers.
 - **Cost of the next unit:** `baseCost * costGrowth^owned` (`costGrowth` ≈ 1.12–1.15).
 - **Buy 1 / Buy 10 / Buy Max.** Buy Max solves the geometric sum for affordable count.
+- **Fuel & upkeep:** each source has `baseUpkeep = baseOutput × UPKEEP_FACTOR`; unit *k*
+  drags `baseUpkeep × (k−1)`, so total upkeep is quadratic while gross output is linear ×
+  milestones. Past a source's efficient band the next unit is a net **loss** — buy-max is no
+  longer always right. Net output floors at 0 ("fully curtailed"): an overbought source
+  idles, it never drains the grid. Milestone ×2s rescue overbought bands; per-tier
+  efficiency research (`reduceUpkeep`) halves upkeep. Managers stop buying at the band edge.
 - **Count milestones:** at `owned` ∈ {25, 50, 100, 150, 200, 300, 400, 500, 750, 1000...}
   the source's output ×2 (permanent, this run). This is the AdCap dopamine beat — surface
   "3 more to ×2" in the UI.
@@ -84,11 +90,19 @@ Each **power source** is a buyable generator.
 
 One signature megaproject per Kardashev tier — the ascension gate.
 
-- Fields: `id`, `name`, `tier`, `totalCost` (Power), `stages` (e.g., 4–8), optional `rpCost`,
+- Fields: `id`, `name`, `tier`, `totalCost` (Power), `rpCost`, `stages`, `stageResearch`,
   `stageRewards` (per-stage multiplier bonuses), `completionReward`.
 - **Building:** the player **commits Power** to it — either lump-sum deposits or by diverting
   a chosen % of income (a slider: "route X% of grid output to construction"). Progress =
   `committedPower / totalCost`.
+- **Stage authorization (the research gate):** stage 1 is free; each later stage must be
+  **authorized** for `rpCost / (stages−1)` RP before power can fill it, and stages 3/4/5
+  additionally require the tier's key research nodes (`rp-t*`, `global-t*`, `mega-t*`).
+  Power clamps at the authorized boundary — raw income can never rush the gate, so research
+  is mandatory for every ascension.
+- **Anti-softlock:** lump-sum commits are capped so that with zero income the player always
+  keeps enough power to buy the cheapest unlocked source. You cannot brick a run by
+  committing your last watts.
 - **Stages** fill sequentially; each completed stage grants a small permanent multiplier and a
   visual beat (a Dyson ring lights up, etc.). Full completion **unlocks Ascend** for the tier.
 - This is the Soda-Dungeon "run": set it going, watch it build, collect the payoff.
@@ -117,11 +131,15 @@ One signature megaproject per Kardashev tier — the ascension gate.
 - On load: `elapsed = min(now − lastSaved, offlineCap)`; credit `powerPerSec × elapsed`.
 - `offlineCap` starts at **4h**, raised by research. Show a "while you were away" summary.
 
-### 3.7 Dispatch (optional active beat, `engine/economy.ts`)
+### 3.7 Dispatch (active risk/reward beat, `engine/economy.ts`)
 
-- A button on a ~30s cooldown that grants a burst = `powerPerSec × 45 × demand`, where
-  `demand` is a random 0.75–1.45 spike (occasional "peak demand!" flavor). Pure active
-  engagement for players who want to lean in. Ship in M6 if time allows.
+- **Charge model:** dispatch charge builds 0→100% over `DISPATCH_CHARGE_SECONDS`; firing
+  spends it. Burst = `powerPerSec × DISPATCH_SECONDS × charge × demand` (demand 0.9–1.2).
+  Can't fire below `DISPATCH_MIN_CHARGE`.
+- **Peak-demand windows:** every 3–6 min a `PEAK_DURATION_SECONDS` window opens where the
+  burst pays ×`PEAK_MULT`. The decision: fire early and often, or bank charge for a peak.
+- Burst power goes to stored power/run-power; the megaproject's stage-authorization gate is
+  what keeps dispatch from rushing ascensions.
 
 ---
 
@@ -164,22 +182,29 @@ up a civilization.
 ## 5. Balancing constants (starting values — live in content/config)
 
 ```
-COST_GROWTH            = 1.13     // per-source cost multiplier
-SOURCE_MILESTONES      = [25,50,100,150,200,300,400,500,750,1000, ...]  // each ×2
-GLOBAL_MILESTONE_STEP  = 1000     // every ×1000 run-power
-GLOBAL_MILESTONE_MULT  = 1.6
-ERA_MULT_BASE          = 4        // baseline ×4 per tier
-KP_RATE                = 0.02     // +2% global per Kardashev Point
-KP_GAIN_K              = 3        // scales ascension payout
-BASE_RESEARCH_RATE     = 0.5      // RP/sec at start
-OFFLINE_CAP_SECONDS    = 14400    // 4h, +research
-DISPATCH_COOLDOWN_MS   = 30000
-DISPATCH_SECONDS       = 45
+COST_GROWTH             = 1.13     // per-source cost multiplier
+SOURCE_MILESTONES       = [25,50,100,150,200,300,400,500,750,1000, ...]  // each ×2
+GLOBAL_MILESTONE_STEP   = 1000     // every ×1000 run-power
+GLOBAL_MILESTONE_MULT   = 1.6
+ERA_MULT_BASE           = 4        // baseline ×4 per tier
+KP_RATE                 = 0.02     // +2% global per Kardashev Point
+KP_GAIN_K               = 3        // scales ascension payout
+BASE_RESEARCH_RATE      = 0.5      // RP/sec at start
+OFFLINE_CAP_SECONDS     = 14400    // 4h, +research
+UPKEEP_FACTOR           = 0.05     // baseUpkeep = baseOutput × this
+DISPATCH_SECONDS        = 30       // burst = pps × this × charge × demand
+DISPATCH_CHARGE_SECONDS = 90       // 0→100% charge time
+DISPATCH_MIN_CHARGE     = 0.25
+PEAK_MULT               = 3        // peak-demand window bonus
+PEAK_DURATION_SECONDS   = 25
+PEAK_GAP_SECONDS        = 180–360  // rolled per window
+megaproject t0          = 350 kW power + 400 RP authorizations
 ```
 
 **Pacing targets** (verify in M7): first *buy* within seconds; first source *milestone*
-~1 min; first *research node* ~2 min; first *megaproject complete* ~8–12 min; first
-*ascension* right after. Each subsequent tier should feel faster to re-climb thanks to KP.
+~1 min; first *research node* ~2 min; first *megaproject complete + ascension* **~30–45 min**
+(the RP authorization gate and stage research locks set the floor — raw power can't rush it).
+Each subsequent tier should feel faster to re-climb thanks to KP.
 
 ---
 

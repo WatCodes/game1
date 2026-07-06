@@ -36,6 +36,7 @@ export function buildSources(tier: number): PowerSource[] {
     baseCost: unitCost(tier) * COST_MULTS[i],
     costGrowth: CONFIG.COST_GROWTH,
     baseOutput: unitOutput(tier) * OUTPUT_MULTS[i],
+    baseUpkeep: unitOutput(tier) * OUTPUT_MULTS[i] * CONFIG.UPKEEP_FACTOR,
     owned: 0,
     unlockedBy: i < 2 || tier >= SOURCE_NAMES.length ? { tier } : `unlock-${id}`,
     automated: false,

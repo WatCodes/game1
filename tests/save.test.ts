@@ -68,10 +68,36 @@ describe('migration', () => {
       lastSaved: 42,
     };
     const migrated = validateSave(v0);
-    expect(migrated.version).toBe(1);
+    expect(migrated.version).toBe(2);
     expect(migrated.routePct).toBe(0);
     expect(migrated.stats.lifetimePower).toBe(500);
     expect(migrated.stats.ascensions).toBe(0);
+    expect(migrated.dispatch).toEqual({ charge: 0, peakLeft: 0, nextPeakIn: 240 });
+  });
+
+  it('upgrades a v1 save: cooldown dispatch dropped, stages derived from progress', () => {
+    const v1 = {
+      version: 1,
+      tier: 0,
+      power: 100,
+      runPower: 500,
+      rp: 10,
+      kp: 0,
+      owned: {},
+      purchased: [],
+      committed: 210_000, // 60% of the old-style project
+      routePct: 0.5,
+      dispatchReadyAt: 12345,
+      lastSaved: 42,
+      stats: { lifetimePower: 500, ascensions: 0, startedAt: 42 },
+    };
+    const migrated = validateSave(v1);
+    expect(migrated.version).toBe(2);
+    expect('dispatchReadyAt' in migrated).toBe(false);
+    const restored = hydrate(migrated);
+    // 210k / 350k = 60% → stages 1–3 worth of progress stays reachable
+    expect(restored.megaproject.stagesAuthorized).toBe(4);
+    expect(restored.megaproject.committed).toBe(210_000);
   });
 
   it('rejects saves from a newer build', () => {

@@ -1,6 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import { createInitialState } from '../src/engine/state';
-import { buy, dispatch, isSourceUnlocked, powerPerSec, runAutomation, sourceOutput } from '../src/engine/economy';
+import {
+  buy,
+  fireDispatch,
+  isSourceUnlocked,
+  nextUnitNet,
+  powerPerSec,
+  runAutomation,
+  sourceGross,
+  sourceNet,
+  sourceUpkeep,
+  tickDispatch,
+} from '../src/engine/economy';
 import { buyResearch, researchModifiers } from '../src/engine/research';
 import { sourceCost, globalMilestoneMult, prestigeMult } from '../src/engine/formulas';
 import { CONFIG } from '../src/content/config';
@@ -48,15 +59,61 @@ describe('buy', () => {
 });
 
 describe('milestones flip output', () => {
-  it('doubles a source line at 25 owned', () => {
+  it('doubles a source line at 25 owned (gross)', () => {
     const s = state();
     const mods = researchModifiers(s);
-    s.sources['battery-bank'].owned = 24;
-    const at24 = sourceOutput(s.sources['battery-bank'], mods);
-    s.sources['battery-bank'].owned = 25;
-    const at25 = sourceOutput(s.sources['battery-bank'], mods);
+    const src = s.sources['battery-bank'];
+    src.owned = 24;
+    const at24 = sourceGross(src, mods);
+    src.owned = 25;
+    const at25 = sourceGross(src, mods);
     // 25/24 units × the ×2 milestone
     expect(at25 / at24).toBeCloseTo((25 / 24) * 2);
+  });
+});
+
+describe('fuel & upkeep', () => {
+  it('net = gross − quadratic upkeep, floored at zero', () => {
+    const s = state();
+    const mods = researchModifiers(s);
+    const src = s.sources['battery-bank'];
+    src.owned = 30; // past the ×2 milestone
+    const gross = 30 * 0.5 * 2;
+    const upkeep = src.baseUpkeep * ((30 * 29) / 2);
+    expect(sourceUpkeep(src, mods)).toBeCloseTo(upkeep);
+    expect(sourceNet(src, mods)).toBeCloseTo(gross - upkeep);
+  });
+
+  it('a single unit pays no upkeep', () => {
+    const s = state();
+    const src = s.sources['battery-bank'];
+    src.owned = 1;
+    expect(sourceUpkeep(src, researchModifiers(s))).toBe(0);
+  });
+
+  it('overbuying curtails: the next unit can be a net loss', () => {
+    const s = state();
+    const mods = researchModifiers(s);
+    const src = s.sources['battery-bank'];
+    // marginal ≈ baseOutput×mult − baseUpkeep×owned; with mult 4 (50..99) it
+    // crosses zero at owned = 4×0.5/0.025 = 80
+    src.owned = 79;
+    expect(nextUnitNet(src, mods)).toBeGreaterThan(0);
+    src.owned = 85;
+    expect(nextUnitNet(src, mods)).toBeLessThan(0);
+    // ...but the ×2 at 100 rescues it: buying unit 100 jumps output
+    src.owned = 99;
+    expect(nextUnitNet(src, mods)).toBeGreaterThan(0);
+  });
+
+  it('efficiency research halves upkeep', () => {
+    const s = state();
+    const src = s.sources['battery-bank'];
+    src.owned = 30;
+    const before = sourceUpkeep(src, researchModifiers(s));
+    s.rp = 1e9;
+    buyResearch(s, 'eff-t0');
+    expect(sourceUpkeep(src, researchModifiers(s))).toBeCloseTo(before / 2);
   });
 });
 
@@ -91,13 +148,52 @@ describe('automation', () => {
 });
 
 describe('dispatch', () => {
-  it('grants a demand-scaled burst and starts the cooldown', () => {
+  function generating() {
     const s = state();
-    s.sources['battery-bank'].owned = 10; // 5 W/s
-    const result = dispatch(s, 1000, () => 0.5); // demand = 0.75 + 0.35 = 1.1
+    s.sources['battery-bank'].owned = 10;
+    return s;
+  }
+
+  it('cannot fire below minimum charge', () => {
+    const s = generating();
+    s.dispatch.charge = CONFIG.DISPATCH_MIN_CHARGE - 0.01;
+    expect(fireDispatch(s, () => 0.5)).toBeNull();
+  });
+
+  it('burst scales with charge and demand, then resets charge', () => {
+    const s = generating();
+    s.dispatch.charge = 0.5;
+    const pps = powerPerSec(s);
+    const result = fireDispatch(s, () => 0.5); // demand = 0.9 + 0.15 = 1.05
     expect(result).not.toBeNull();
-    expect(result!.gained).toBeCloseTo(powerPerSec(s) * CONFIG.DISPATCH_SECONDS * 1.1);
-    expect(s.dispatchReadyAt).toBe(1000 + CONFIG.DISPATCH_COOLDOWN_MS);
-    expect(dispatch(s, 2000, () => 0.5)).toBeNull(); // still cooling down
+    expect(result!.peak).toBe(false);
+    expect(result!.gained).toBeCloseTo(pps * CONFIG.DISPATCH_SECONDS * 0.5 * 1.05);
+    expect(s.dispatch.charge).toBe(0);
+    expect(fireDispatch(s, () => 0.5)).toBeNull(); // spent
+  });
+
+  it('peak windows multiply the burst', () => {
+    const s = generating();
+    s.dispatch.charge = 1;
+    s.dispatch.peakLeft = 10;
+    const pps = powerPerSec(s);
+    const result = fireDispatch(s, () => 0.5)!;
+    expect(result.peak).toBe(true);
+    expect(result.gained).toBeCloseTo(pps * CONFIG.DISPATCH_SECONDS * 1 * 1.05 * CONFIG.PEAK_MULT);
+  });
+
+  it('charge builds over time and peak windows open on schedule', () => {
+    const s = generating();
+    tickDispatch(s, CONFIG.DISPATCH_CHARGE_SECONDS / 2, () => 0.5);
+    expect(s.dispatch.charge).toBeCloseTo(0.5);
+    tickDispatch(s, CONFIG.DISPATCH_CHARGE_SECONDS * 2, () => 0.5);
+    expect(s.dispatch.charge).toBe(1); // clamped
+    // burn down to the next peak window
+    s.dispatch.nextPeakIn = 1;
+    tickDispatch(s, 1.5, () => 0.5);
+    expect(s.dispatch.peakLeft).toBe(CONFIG.PEAK_DURATION_SECONDS);
+    expect(s.dispatch.nextPeakIn).toBeCloseTo(
+      CONFIG.PEAK_GAP_MIN_SECONDS + 0.5 * (CONFIG.PEAK_GAP_MAX_SECONDS - CONFIG.PEAK_GAP_MIN_SECONDS),
+    );
   });
 });

@@ -4,7 +4,7 @@ import { buildSources } from '../content/sources';
 import { buildMegaproject } from '../content/megaprojects';
 import { buildResearch } from '../content/research';
 
-export const SAVE_VERSION = 1;
+export const SAVE_VERSION = 2;
 
 export function createInitialState(now: number = Date.now()): GameState {
   const s: GameState = {
@@ -18,7 +18,7 @@ export function createInitialState(now: number = Date.now()): GameState {
     research: {},
     megaproject: buildMegaproject(0),
     routePct: 0,
-    dispatchReadyAt: 0,
+    dispatch: { charge: 0, peakLeft: 0, nextPeakIn: 240 },
     lastSaved: now,
     stats: { lifetimePower: 0, ascensions: 0, startedAt: now },
   };

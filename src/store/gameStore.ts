@@ -107,6 +107,7 @@ export interface SourceView {
   toNextMilestone: number;
   nextMilestoneAt: number;
   automated: boolean;
+  autoPaused: boolean;
 }
 
 export interface ResearchView {
@@ -243,6 +244,7 @@ function buildDisplay(s: GameState): DisplaySnapshot {
       toNextMilestone: nextSourceMilestone(src.owned) - src.owned,
       nextMilestoneAt: nextSourceMilestone(src.owned),
       automated: !!src.automated,
+      autoPaused: !!src.autoPaused,
     })),
     research: Object.values(s.research)
       .filter((n) => n.tier <= s.tier)
@@ -412,6 +414,7 @@ interface GameStore {
   cinematic: Cinematic | null;
   actions: {
     buySource: (id: Id, count: number | 'max') => void;
+    toggleAutomation: (id: Id) => void;
     buyGridLane: (lane: GridLane) => void;
     buyResearchNode: (id: Id) => void;
     commitStoredPower: (fraction: number) => void;
@@ -490,6 +493,13 @@ export const useGame = create<GameStore>((set) => {
     actions: {
       buySource: (id, count) => {
         if (buy(game, id, count) > 0) refresh();
+      },
+      toggleAutomation: (id) => {
+        const src = game.sources[id];
+        if (!src?.automated) return;
+        src.autoPaused = !src.autoPaused;
+        saveToStorage(game);
+        refresh();
       },
       buyGridLane: (lane) => {
         if (buyGridUpgrade(game, lane)) {

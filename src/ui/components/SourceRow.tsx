@@ -4,6 +4,7 @@ import { formatPower, formatShort } from '../../engine/format';
 
 export const SourceRow = memo(function SourceRow({ src, power }: { src: SourceView; power: number }) {
   const buySource = useGame((s) => s.actions.buySource);
+  const toggleAutomation = useGame((s) => s.actions.toggleAutomation);
 
   if (!src.unlocked) {
     return (
@@ -28,9 +29,19 @@ export const SourceRow = memo(function SourceRow({ src, power }: { src: SourceVi
         <span className="text-sm font-semibold">
           {src.name}
           {src.automated && (
-            <span className="ml-1.5 rounded border border-ok/40 px-1 text-[9px] uppercase tracking-wider text-ok" title="Manager active">
-              auto
-            </span>
+            <button
+              className={`ml-1.5 rounded border px-1 text-[9px] uppercase tracking-wider transition-colors ${
+                src.autoPaused
+                  ? 'border-line text-ink-dim hover:text-ink'
+                  : 'border-ok/40 text-ok hover:bg-raised'
+              }`}
+              title={src.autoPaused ? 'Manager paused — tap to resume auto-buying' : 'Manager active — tap to pause auto-buying'}
+              aria-pressed={!src.autoPaused}
+              aria-label={`Auto-buy for ${src.name}: ${src.autoPaused ? 'paused' : 'active'}`}
+              onClick={() => toggleAutomation(src.id)}
+            >
+              {src.autoPaused ? 'auto ⏸' : 'auto'}
+            </button>
           )}
         </span>
         <span className="font-mono text-xs text-ink-dim">

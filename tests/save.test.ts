@@ -23,6 +23,7 @@ function playedState() {
   s.sources['battery-bank'].owned = 42;
   buyResearch(s, 'unlock-coal-plant');
   buyResearch(s, 'auto-battery-bank');
+  s.sources['battery-bank'].autoPaused = true;
   s.megaproject.committed = 12345;
   s.routePct = 0.35;
   s.credits = 321;
@@ -51,6 +52,7 @@ describe('round trip', () => {
     expect(restored.kp).toBe(s.kp);
     expect(restored.sources['battery-bank'].owned).toBe(42);
     expect(restored.sources['battery-bank'].automated).toBe(true); // via reapply
+    expect(restored.sources['battery-bank'].autoPaused).toBe(true); // player's pause survives reload
     expect(restored.research['unlock-coal-plant'].purchased).toBe(true);
     expect(restored.megaproject.committed).toBe(12345);
     expect(restored.routePct).toBe(0.35);

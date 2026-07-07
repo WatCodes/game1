@@ -112,7 +112,7 @@ export function buy(s: GameState, sourceId: Id, count: number | 'max'): number {
 export function runAutomation(s: GameState, mods: ResearchModifiers = researchModifiers(s)): void {
   const mult = launchCostMult(s);
   for (const src of Object.values(s.sources)) {
-    if (!src.automated) continue;
+    if (!src.automated || src.autoPaused) continue;
     if (nextUnitNet(src, mods) <= 0) continue;
     const cost = nextCost(src, 1, mult);
     if (cost <= s.power) {

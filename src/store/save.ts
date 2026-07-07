@@ -22,6 +22,7 @@ export interface SaveData {
   rp: Num;
   kp: number;
   owned: Record<Id, number>;
+  autoPaused?: Id[]; // managers the player toggled off (optional: absence = none paused)
   purchased: Id[];
   committed: Num;
   stagesAuthorized: number;
@@ -53,6 +54,7 @@ export function serialize(s: GameState): SaveData {
     rp: s.rp,
     kp: s.kp,
     owned,
+    autoPaused: Object.values(s.sources).filter((src) => src.autoPaused).map((src) => src.id),
     purchased: Object.values(s.research).filter((n) => n.purchased).map((n) => n.id),
     committed: s.megaproject.committed,
     stagesAuthorized: s.megaproject.stagesAuthorized,
@@ -169,6 +171,12 @@ export function hydrate(save: SaveData): GameState {
     s.puzzle = newPuzzle(save.tier);
   }
   reapplyPurchasedEffects(s); // restore automation managers
+  if (Array.isArray(save.autoPaused)) {
+    for (const id of save.autoPaused) {
+      const src = s.sources[id];
+      if (src) src.autoPaused = true;
+    }
+  }
   if (s.grid.vLevel < 0) {
     // grandfather sentinel from the v4→v5 migration (see migrate)
     s.grid.vLevel = 0;

@@ -12,6 +12,7 @@ export interface PowerSource {
   owned: number;
   unlockedBy?: Id | { tier: number }; // research id or tier gate
   automated?: boolean; // manager purchased (via research)
+  autoPaused?: boolean; // player toggled the manager off (manager still owned)
 }
 
 export type ResearchEffect =

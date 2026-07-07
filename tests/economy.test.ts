@@ -146,6 +146,20 @@ describe('automation', () => {
     runAutomation(s); // third costs 12.77 > remaining
     expect(s.sources['battery-bank'].owned).toBe(2);
   });
+
+  it('a paused manager stops buying; resuming picks back up', () => {
+    const s = state();
+    s.rp = 1e9;
+    buyResearch(s, 'auto-battery-bank');
+    s.power = 1000;
+    s.sources['battery-bank'].autoPaused = true;
+    runAutomation(s);
+    expect(s.sources['battery-bank'].owned).toBe(0);
+    expect(s.power).toBe(1000);
+    s.sources['battery-bank'].autoPaused = false;
+    runAutomation(s);
+    expect(s.sources['battery-bank'].owned).toBe(1);
+  });
 });
 
 describe('dispatch', () => {

@@ -187,6 +187,25 @@ megaproject stages, surge). Dyson rings mirror stage authorization state 1:1. A
 transmission flavor line under the scene reacts to lifetime power. Ascension plays a
 title-card overlay (era, Kardashev badge, +KP) instead of a toast.
 
+### 3.13 Grid physics — the three-lane bottleneck (`engine/grid.ts`, `content/grid.ts`)
+
+The Egg Inc engine (lay rate / habitats / shipping) in electrical terms. Delivered
+power = `min(generation, V×A cap) × (1 − loss)`:
+
+- **Generation** — the existing source economy (gross W).
+- **Transmission** — transformers (voltage class) × conductors (ampacity) set the
+  carried-power cap. Generation above it is stranded ("GRID CONGESTED").
+- **Losses** — I²R drag (`LOSS_BASE` 15% at level 0, floor 0.5%). Voltage upgrades cut
+  losses AND raise the cap (V↑ ⇒ I↓ ⇒ I²R↓↓ — real physics, double value); the
+  superconductor lane is pure efficiency.
+
+Three upgrade lanes per tier, priced in Power, reset on ascension (infrastructure is
+rebuilt each era; per-tier flavor names in `content/grid.ts`). The cap base scales with
+prestige so KP never strands a run — only **within-run** growth (count milestones,
+global milestones) outpaces it, which is the intended pressure. The Transmission panel
+sits atop the Grid tab with the binding constraint highlighted. Pre-v5 saves are
+grandfathered with enough transformer levels to carry their current generation.
+
 ### 3.12 Save safety
 
 Saves that fail to load are preserved under `kardashev:recovery:*`, never discarded.

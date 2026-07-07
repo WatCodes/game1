@@ -3,6 +3,7 @@ import { createInitialState } from '../src/engine/state';
 import {
   buy,
   fireDispatch,
+  generationPerSec,
   isSourceUnlocked,
   nextUnitNet,
   powerPerSec,
@@ -117,7 +118,7 @@ describe('fuel & upkeep', () => {
   });
 });
 
-describe('powerPerSec multiplier order', () => {
+describe('generation multiplier order', () => {
   it('composes source → global milestone → era → prestige → research global', () => {
     const s = state();
     s.sources['battery-bank'].owned = 1; // 0.5 W/s base
@@ -127,7 +128,7 @@ describe('powerPerSec multiplier order', () => {
     buyResearch(s, 'boost-battery-bank'); // battery ×2
     buyResearch(s, 'global-t0'); // global ×1.5
     const expected = 0.5 * 2 * globalMilestoneMult(1e6) * 1 /* era t0 */ * prestigeMult(50) * 1.5;
-    expect(powerPerSec(s)).toBeCloseTo(expected);
+    expect(generationPerSec(s)).toBeCloseTo(expected);
   });
 });
 

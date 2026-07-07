@@ -1,6 +1,7 @@
 import type { Num } from './types';
 
 const POWER_UNITS = ['W', 'kW', 'MW', 'GW', 'TW', 'PW', 'EW', 'ZW', 'YW'];
+const SI_PREFIXES = ['', 'k', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y'];
 
 function sigfig(value: number): string {
   if (value >= 100) return value.toFixed(0);
@@ -27,6 +28,16 @@ export function formatShort(n: Num): string {
   const k = Math.floor(Math.log10(n) / 3);
   if (k < suffixes.length) return sigfig(n / Math.pow(1000, k)) + suffixes[k];
   return n.toExponential(2).replace('e+', 'e');
+}
+
+/** SI-prefixed electrical readouts: volts, amps, ohms… same ladder as power. */
+export function formatUnit(n: Num, unit: string): string {
+  if (!isFinite(n)) return `∞ ${unit}`;
+  if (n < 0) return '-' + formatUnit(-n, unit);
+  if (n < 1000) return (n < 10 ? n.toFixed(1) : Math.floor(n).toString()) + ' ' + unit;
+  const k = Math.floor(Math.log10(n) / 3);
+  if (k < SI_PREFIXES.length) return sigfig(n / Math.pow(1000, k)) + ' ' + SI_PREFIXES[k] + unit;
+  return n.toExponential(2).replace('e+', 'e') + ' ' + unit;
 }
 
 export function formatTime(seconds: number): string {

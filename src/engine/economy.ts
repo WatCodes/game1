@@ -13,6 +13,7 @@ import { researchModifiers, type ResearchModifiers } from './research';
 import { authorizedBoundary, megaprojectMult } from './megaproject';
 import { boostPowerMult } from './shop';
 import { achievementMult } from './achievements';
+import { deliverPower } from './grid';
 
 export function isSourceUnlocked(s: GameState, src: PowerSource, mods?: ResearchModifiers): boolean {
   const gate = src.unlockedBy;
@@ -51,11 +52,11 @@ export function nextUnitNet(src: PowerSource, mods: ResearchModifiers): Num {
 }
 
 /**
- * Multiplier order is fixed (ARCHITECTURE §7): per-source (milestones × research
- * − upkeep) → global milestone → era → prestige → research global → megaproject
- * → surge/shop boosts.
+ * Gross generation. Multiplier order is fixed (ARCHITECTURE §7): per-source
+ * (milestones × research − upkeep) → global milestone → era → prestige →
+ * research global → megaproject → surge/shop boosts → records.
  */
-export function powerPerSec(s: GameState, mods: ResearchModifiers = researchModifiers(s)): Num {
+export function generationPerSec(s: GameState, mods: ResearchModifiers = researchModifiers(s)): Num {
   let sum = 0;
   for (const src of Object.values(s.sources)) sum += sourceNet(src, mods);
   return (
@@ -68,6 +69,14 @@ export function powerPerSec(s: GameState, mods: ResearchModifiers = researchModi
     boostPowerMult(s) *
     achievementMult(s)
   );
+}
+
+/**
+ * What actually lands in the bank: generation clamped to the transmission
+ * cap (V×A), minus I²R losses. The three-lane bottleneck (GAME_DESIGN §3.13).
+ */
+export function powerPerSec(s: GameState, mods: ResearchModifiers = researchModifiers(s)): Num {
+  return deliverPower(s, generationPerSec(s, mods));
 }
 
 export function nextCost(src: PowerSource, count = 1): Num {

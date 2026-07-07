@@ -95,6 +95,8 @@ export interface GameState {
     peakLeft: number; // seconds remaining of an active peak-demand window
     nextPeakIn: number; // seconds until the next window opens
   };
+  // Delivery infrastructure — rebuilt each run, like sources
+  grid: { vLevel: number; aLevel: number; rLevel: number };
   // Puzzle & shop meta-economy — persists through ascension, like KP
   credits: number;
   puzzle: PuzzleState; // current tier's circuit, regenerated on ascend

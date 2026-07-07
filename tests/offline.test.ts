@@ -67,12 +67,13 @@ describe('creditOffline', () => {
   });
 
   it('boosts expire before the window is credited (no 15-min boost × 4h exploit)', () => {
-    const s = producing(0);
-    s.boosts.powerLeft = CONFIG.BOOST_SECONDS;
-    const basePps = 0.5; // 1 battery, no boost
-    creditOffline(s, HOUR_MS);
-    expect(s.power).toBeCloseTo(basePps * 3600);
-    expect(s.boosts.powerLeft).toBe(0);
+    const boosted = producing(0);
+    boosted.boosts.powerLeft = CONFIG.BOOST_SECONDS;
+    creditOffline(boosted, HOUR_MS);
+    const control = producing(0); // identical state, no boost
+    creditOffline(control, HOUR_MS);
+    expect(boosted.power).toBeCloseTo(control.power);
+    expect(boosted.boosts.powerLeft).toBe(0);
   });
 
   it('reports solver income even with zero power production', () => {

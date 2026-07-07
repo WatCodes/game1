@@ -2,6 +2,8 @@ import type { GameState, Id, Num, PuzzleState } from '../engine/types';
 import { SAVE_VERSION, createInitialState } from '../engine/state';
 import { reapplyPurchasedEffects } from '../engine/research';
 import { isSolved, newPuzzle, puzzleSize } from '../engine/puzzle';
+import { generationPerSec } from '../engine/economy';
+import { transmissionCap } from '../engine/grid';
 import { buildSources } from '../content/sources';
 import { buildMegaproject } from '../content/megaprojects';
 import { ACHIEVEMENTS } from '../content/achievements';
@@ -10,7 +12,7 @@ const SAVE_KEY = 'kardashev:v1';
 
 // Saves persist runtime state only — content (definitions, names, costs) is
 // rehydrated from src/content so rebalancing never invalidates a save.
-export interface SaveV3 {
+export interface SaveData {
   version: number;
   tier: number;
   power: Num;
@@ -23,6 +25,7 @@ export interface SaveV3 {
   stagesAuthorized: number;
   routePct: number;
   dispatch: { charge: number; peakLeft: number; nextPeakIn: number };
+  grid: { vLevel: number; aLevel: number; rLevel: number };
   credits: number;
   puzzle: PuzzleState | null; // null → deal a fresh circuit on load
   solvers: number;
@@ -34,7 +37,7 @@ export interface SaveV3 {
   stats: { lifetimePower: Num; ascensions: number; startedAt: number; puzzlesSolved: number };
 }
 
-export function serialize(s: GameState): SaveV3 {
+export function serialize(s: GameState): SaveData {
   const owned: Record<Id, number> = {};
   for (const src of Object.values(s.sources)) if (src.owned > 0) owned[src.id] = src.owned;
   return {
@@ -50,6 +53,7 @@ export function serialize(s: GameState): SaveV3 {
     stagesAuthorized: s.megaproject.stagesAuthorized,
     routePct: s.routePct,
     dispatch: { ...s.dispatch },
+    grid: { ...s.grid },
     credits: s.credits,
     puzzle: { ...s.puzzle, tiles: s.puzzle.tiles.map((t) => ({ ...t })) },
     solvers: s.solvers,
@@ -75,7 +79,7 @@ function isValidPuzzle(p: PuzzleState | null | undefined, tier: number): p is Pu
 }
 
 /** Rebuild a full GameState from content + a validated save's runtime values. */
-export function hydrate(save: SaveV3): GameState {
+export function hydrate(save: SaveData): GameState {
   const s = createInitialState(save.lastSaved);
   s.tier = save.tier;
   s.power = save.power;
@@ -86,6 +90,11 @@ export function hydrate(save: SaveV3): GameState {
     charge: Math.max(0, Math.min(1, save.dispatch.charge)),
     peakLeft: Math.max(0, save.dispatch.peakLeft),
     nextPeakIn: Math.max(0, save.dispatch.nextPeakIn),
+  };
+  s.grid = {
+    vLevel: Math.floor(save.grid?.vLevel ?? 0),
+    aLevel: Math.max(0, Math.floor(save.grid?.aLevel ?? 0)),
+    rLevel: Math.max(0, Math.floor(save.grid?.rLevel ?? 0)),
   };
   s.lastSaved = save.lastSaved;
   s.stats = { ...save.stats };
@@ -140,6 +149,12 @@ export function hydrate(save: SaveV3): GameState {
     s.puzzle = newPuzzle(save.tier);
   }
   reapplyPurchasedEffects(s); // restore automation managers
+  if (s.grid.vLevel < 0) {
+    // grandfather sentinel from the v4→v5 migration (see migrate)
+    s.grid.vLevel = 0;
+    const gen = generationPerSec(s);
+    while (transmissionCap(s) < gen && s.grid.vLevel < 99) s.grid.vLevel += 1;
+  }
   return s;
 }
 
@@ -195,11 +210,19 @@ export function migrate(raw: Record<string, unknown>): Record<string, unknown> {
   if ((save.version as number) < 4) {
     save = { ...save, version: 4, achievements: [] };
   }
+  // Keyed on the field, not just the version: a half-updated client once wrote
+  // a "v5" save without grid, and version-only gating rejected it.
+  if ((save.version as number) < 5 || !isRecord(save.grid)) {
+    // vLevel −1 = "grandfather" sentinel: hydrate fits enough transformer
+    // levels to carry the run's current generation, so the new transmission
+    // mechanic pressures future growth instead of kneecapping an old run.
+    save = { ...save, version: 5, grid: { vLevel: -1, aLevel: 0, rLevel: 0 } };
+  }
   return save;
 }
 
 /** Migrate then structurally validate — reject anything that would corrupt state. */
-export function validateSave(raw: unknown): SaveV3 {
+export function validateSave(raw: unknown): SaveData {
   if (!isRecord(raw)) throw new Error('Save is not an object');
   const m = migrate(raw);
   const numFields = [
@@ -214,10 +237,11 @@ export function validateSave(raw: unknown): SaveV3 {
   if (!Array.isArray(m.purchased)) throw new Error('Save field "purchased" is invalid');
   if (!isRecord(m.stats)) throw new Error('Save field "stats" is invalid');
   if (!isRecord(m.dispatch)) throw new Error('Save field "dispatch" is invalid');
+  if (!isRecord(m.grid)) throw new Error('Save field "grid" is invalid');
   if (!isRecord(m.boosts)) throw new Error('Save field "boosts" is invalid');
   if (!isRecord(m.daily)) throw new Error('Save field "daily" is invalid');
   if (!Array.isArray(m.achievements)) throw new Error('Save field "achievements" is invalid');
-  return m as unknown as SaveV3;
+  return m as unknown as SaveData;
 }
 
 const BACKUP_KEY = 'kardashev:backup';
@@ -250,7 +274,7 @@ export function backupInfo(): { lastSaved: number; lifetimePower: Num } | null {
   const raw = localStorage.getItem(BACKUP_KEY);
   if (!raw) return null;
   try {
-    const parsed = JSON.parse(raw) as SaveV3;
+    const parsed = JSON.parse(raw) as SaveData;
     return { lastSaved: parsed.lastSaved ?? 0, lifetimePower: parsed.stats?.lifetimePower ?? 0 };
   } catch {
     return null;
@@ -263,7 +287,8 @@ export function loadBackup(): GameState | null {
   if (!raw) return null;
   try {
     return hydrate(validateSave(JSON.parse(raw)));
-  } catch {
+  } catch (err) {
+    console.error('Backup failed to load', err);
     return null;
   }
 }

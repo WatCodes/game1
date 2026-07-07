@@ -6,6 +6,7 @@ import { createInitialState } from '../engine/state';
 import {
   buy,
   fireDispatch,
+  generationPerSec,
   isSourceUnlocked,
   maxAffordable,
   maxSafeCommit,
@@ -15,6 +16,17 @@ import {
   sourceNet,
   sourceUpkeep,
 } from '../engine/economy';
+import {
+  bindingConstraint,
+  buyGridUpgrade,
+  displayAmps,
+  displayVolts,
+  gridUpgradeCost,
+  lossFraction,
+  transmissionCap,
+  type GridLane,
+} from '../engine/grid';
+import { gridLaneNames } from '../content/grid';
 import {
   nextGlobalMilestone,
   globalMilestoneCount,
@@ -171,6 +183,15 @@ export interface DisplaySnapshot {
   achievements: { id: Id; name: string; desc: string; earned: boolean }[];
   achievementMult: number;
   lifetimePower: Num;
+  grid: {
+    generation: Num;
+    cap: Num;
+    lossFrac: number;
+    volts: Num;
+    amps: Num;
+    binding: 'generation' | 'transmission';
+    lanes: { lane: 'v' | 'a' | 'r'; name: string; level: number; cost: Num; affordable: boolean }[];
+  };
 }
 
 export interface Toast {
@@ -263,6 +284,25 @@ function buildDisplay(s: GameState): DisplaySnapshot {
     achievements: ACHIEVEMENTS.map((a) => ({ id: a.id, name: a.name, desc: a.desc, earned: s.achievements.includes(a.id) })),
     achievementMult: achievementMult(s),
     lifetimePower: s.stats.lifetimePower,
+    grid: buildGridView(s, mods),
+  };
+}
+
+function buildGridView(s: GameState, mods: ReturnType<typeof researchModifiers>): DisplaySnapshot['grid'] {
+  const generation = generationPerSec(s, mods);
+  const names = gridLaneNames(s.tier);
+  const levels = [s.grid.vLevel, s.grid.aLevel, s.grid.rLevel];
+  return {
+    generation,
+    cap: transmissionCap(s),
+    lossFrac: lossFraction(s),
+    volts: displayVolts(s),
+    amps: displayAmps(s),
+    binding: bindingConstraint(s, generation),
+    lanes: (['v', 'a', 'r'] as const).map((lane, i) => {
+      const cost = gridUpgradeCost(s, lane);
+      return { lane, name: names[i], level: levels[i], cost, affordable: s.power >= cost };
+    }),
   };
 }
 
@@ -331,6 +371,7 @@ interface GameStore {
   cinematic: Cinematic | null;
   actions: {
     buySource: (id: Id, count: number | 'max') => void;
+    buyGridLane: (lane: GridLane) => void;
     buyResearchNode: (id: Id) => void;
     commitStoredPower: (fraction: number) => void;
     authorizeNextStage: () => void;
@@ -406,6 +447,12 @@ export const useGame = create<GameStore>((set) => {
     actions: {
       buySource: (id, count) => {
         if (buy(game, id, count) > 0) refresh();
+      },
+      buyGridLane: (lane) => {
+        if (buyGridUpgrade(game, lane)) {
+          saveToStorage(game);
+          refresh();
+        }
       },
       buyResearchNode: (id) => {
         const node = game.research[id];

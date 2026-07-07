@@ -31,6 +31,7 @@ function playedState() {
   s.boosts.surgeLeft = 45;
   s.daily = { lastClaimDay: '2026-7-5', streak: 3 };
   s.achievements = ['first-spark', 'first-rack'];
+  s.grid = { vLevel: 2, aLevel: 1, rLevel: 1 };
   s.puzzle.tiles[0].rot = (s.puzzle.tiles[0].rot + 1) % 4;
   s.puzzle.moves = 5;
   s.lastSaved = 555_000;
@@ -57,6 +58,7 @@ describe('round trip', () => {
     expect(restored.boosts.surgeLeft).toBe(45);
     expect(restored.daily).toEqual({ lastClaimDay: '2026-7-5', streak: 3 });
     expect(restored.achievements).toEqual(['first-spark', 'first-rack']);
+    expect(restored.grid).toEqual({ vLevel: 2, aLevel: 1, rLevel: 1 });
     expect(restored.puzzle.tiles.map((t) => t.rot)).toEqual(s.puzzle.tiles.map((t) => t.rot));
     expect(restored.puzzle.moves).toBe(5);
   });
@@ -151,6 +153,7 @@ describe('migration', () => {
       stats: { lifetimePower: 500, ascensions: 1, startedAt: 42 },
     };
     const restored = hydrate(validateSave(v2));
+    expect(restored.grid.vLevel).toBeGreaterThanOrEqual(0); // sentinel resolved
     expect(restored.credits).toBe(0);
     expect(restored.solvers).toBe(0);
     expect(restored.daily).toEqual({ lastClaimDay: '', streak: 0 });

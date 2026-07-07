@@ -38,6 +38,7 @@ export function ascend(s: GameState, rand: () => number = Math.random): number {
   for (const src of buildSources(s.tier)) s.sources[src.id] = src;
   s.megaproject = buildMegaproject(s.tier);
   s.puzzle = newPuzzle(s.tier, rand);
+  s.grid = { vLevel: 0, aLevel: 0, rLevel: 0 }; // infrastructure is rebuilt each era
   s.stats.ascensions += 1;
   reapplyPurchasedEffects(s); // restore managers for any automation research
   return gained;

@@ -12,6 +12,31 @@ body {
   overscroll-behavior: none;
 }
 
+/* iOS: game UI shouldn't select, magnify, or double-tap zoom */
+body {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+textarea,
+input {
+  -webkit-user-select: text;
+  user-select: text;
+}
+button,
+[role='grid'] {
+  touch-action: manipulation;
+}
+
+/* Notch / Dynamic Island / home-indicator clearance (viewport-fit=cover) */
+.safe-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
 /* Control-room atmosphere: blueprint grid + a faint cyan vignette up top */
 body {
   background-image:

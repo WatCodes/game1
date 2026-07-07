@@ -43,6 +43,7 @@ import {
 import { ascend, canAscend, projectedKp } from '../engine/ascension';
 import { creditOffline, type OfflineSummary } from '../engine/offline';
 import { newPuzzle, poweredSet, puzzleReward, rotateTile } from '../engine/puzzle';
+import { tick } from '../engine/loop';
 import {
   buyDispatchRecharge,
   buyPowerBoost,
@@ -304,6 +305,18 @@ function buildPuzzleView(s: GameState): DisplaySnapshot['puzzle'] {
 
 // --- Store ---
 
+export type DevCheat =
+  | 'power'
+  | 'rp'
+  | 'credits'
+  | 'kp'
+  | 'mega'
+  | 'dispatch'
+  | 'peak'
+  | 'solve'
+  | 'solver'
+  | 'warp';
+
 export interface Cinematic {
   era: string;
   scaleCopy: string;
@@ -336,6 +349,7 @@ interface GameStore {
     importSaveString: (encoded: string) => boolean;
     restoreFromBackup: () => boolean;
     hardReset: () => void;
+    devCheat: (kind: DevCheat) => void;
   };
 }
 
@@ -512,6 +526,53 @@ export const useGame = create<GameStore>((set) => {
         Object.assign(game, createInitialState());
         refresh();
         pushToast('info', 'Grid reset to zero');
+      },
+      // Dev-only tools — gated in the UI, but harmless if reached: single-player
+      devCheat: (kind) => {
+        switch (kind) {
+          case 'power': {
+            const gain = Math.max(1e4, powerPerSec(game) * 3600);
+            game.power += gain;
+            game.runPower += gain;
+            game.stats.lifetimePower += gain;
+            break;
+          }
+          case 'rp':
+            game.rp += 1000;
+            break;
+          case 'credits':
+            game.credits += 1000;
+            break;
+          case 'kp':
+            game.kp += 25;
+            break;
+          case 'mega':
+            game.megaproject.stagesAuthorized = game.megaproject.stages.length;
+            game.megaproject.committed = game.megaproject.totalCost;
+            break;
+          case 'dispatch':
+            game.dispatch.charge = 1;
+            break;
+          case 'peak':
+            game.dispatch.peakLeft = CONFIG.PEAK_DURATION_SECONDS;
+            break;
+          case 'solve':
+            if (!game.puzzle.solved) {
+              game.puzzle.solved = true;
+              game.credits += puzzleReward(game.puzzle.tier, game.puzzle.par, game.puzzle.par);
+              game.boosts.surgeLeft = Math.min(CONFIG.SURGE_CAP_SECONDS, game.boosts.surgeLeft + CONFIG.SURGE_MANUAL_SECONDS);
+              game.stats.puzzlesSolved += 1;
+            }
+            break;
+          case 'solver':
+            game.solvers += 1;
+            break;
+          case 'warp':
+            for (let i = 0; i < 3600; i++) tick(game, 1);
+            break;
+        }
+        pushToast('info', `[dev] ${kind}`);
+        refresh();
       },
     },
   };

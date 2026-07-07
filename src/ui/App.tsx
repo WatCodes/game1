@@ -12,6 +12,7 @@ import { ShopPanel } from './components/ShopPanel';
 import { AscendPanel } from './components/AscendPanel';
 import { DataControls } from './components/DataControls';
 import { AchievementsList } from './components/AchievementsList';
+import { CheatPanel } from './components/CheatPanel';
 import { Tabs, type TabId } from './components/Tabs';
 import { Toasts } from './components/Toasts';
 import { OfflineModal } from './components/OfflineModal';
@@ -75,7 +76,7 @@ export default function App() {
 
   return (
     <div className="mx-auto flex h-dvh max-w-md flex-col">
-      <header className="shrink-0">
+      <header className="safe-top shrink-0 bg-panel/90">
         <PowerMeter />
         <ResourceBar />
         <WorldViewport />
@@ -93,12 +94,13 @@ export default function App() {
             <div className="flex flex-col gap-2 px-3 pb-3">
               <AchievementsList />
               <DataControls />
+              <CheatPanel />
             </div>
           </>
         )}
       </main>
 
-      <footer className="shrink-0">
+      <footer className="safe-bottom shrink-0 bg-panel">
         <DispatchBar />
         <Tabs active={tab} onSelect={setTab} badges={{ ascend: canAscend, shop: dailyReady }} />
       </footer>

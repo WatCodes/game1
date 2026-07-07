@@ -23,7 +23,7 @@ export function Tabs({
       {TABS.map((t) => (
         <button
           key={t.id}
-          className={`relative py-2.5 text-[10px] uppercase tracking-wide transition-colors ${
+          className={`relative min-h-[44px] py-3 text-[10px] uppercase tracking-wide transition-colors ${
             active === t.id ? 'text-current' : 'text-ink-dim hover:text-ink'
           }`}
           aria-current={active === t.id ? 'page' : undefined}

@@ -29,6 +29,15 @@ button,
   touch-action: manipulation;
 }
 
+/* Scrolling stays, scrollbars go — this is an instrument panel, not a document */
+* {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* legacy Edge */
+}
+*::-webkit-scrollbar {
+  display: none; /* Chrome / Safari */
+}
+
 /* Notch / Dynamic Island / home-indicator clearance (viewport-fit=cover) */
 .safe-top {
   padding-top: env(safe-area-inset-top, 0px);

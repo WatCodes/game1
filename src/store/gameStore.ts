@@ -116,6 +116,7 @@ export interface ResearchView {
   desc: string;
   tier: number;
   cost: Num;
+  prereqs: Id[]; // raw ids, drives graph edges
   purchased: boolean;
   available: boolean;
   affordable: boolean;
@@ -254,6 +255,7 @@ function buildDisplay(s: GameState): DisplaySnapshot {
         desc: n.desc,
         tier: n.tier,
         cost: n.cost,
+        prereqs: n.prereqs,
         purchased: !!n.purchased,
         available: isResearchAvailable(s, n),
         affordable: s.rp >= n.cost,

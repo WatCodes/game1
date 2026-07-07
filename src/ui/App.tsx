@@ -5,7 +5,7 @@ import { prime, setHum } from './audio';
 import { PowerMeter } from './components/PowerMeter';
 import { ResourceBar } from './components/ResourceBar';
 import { SourcesPanel } from './components/SourcesPanel';
-import { ResearchTree } from './components/ResearchTree';
+import { ResearchGraph } from './components/ResearchGraph';
 import { MegaprojectPanel } from './components/MegaprojectPanel';
 import { PuzzlePanel } from './components/PuzzlePanel';
 import { ShopPanel } from './components/ShopPanel';
@@ -92,7 +92,7 @@ export default function App() {
 
         <main className="min-h-0 flex-1 overflow-y-auto">
           {tab === 'sources' && <SourcesPanel />}
-          {tab === 'research' && <ResearchTree />}
+          {tab === 'research' && <ResearchGraph />}
           {tab === 'megaproject' && <MegaprojectPanel />}
           {tab === 'puzzle' && <PuzzlePanel />}
           {tab === 'shop' && <ShopPanel />}

@@ -206,6 +206,28 @@ global milestones) outpaces it, which is the intended pressure. The Transmission
 sits atop the Grid tab with the binding constraint highlighted. Pre-v5 saves are
 grandfathered with enough transformer levels to carry their current generation.
 
+### 3.14 Per-tier mechanical twists (`engine/tierTwists.ts`)
+
+Answers the "skin replication" risk below directly: T3, T5, and T6 each get one small
+distinct mechanic, inert outside their own tier and reset on ascension like grid/puzzle.
+All three fold into the existing `ResearchModifiers` bag (economy/megaproject/offline/
+loop already thread it everywhere) rather than adding new call-site parameters.
+
+- **T3 Orbital — Launch Windows.** A window opens periodically (`LAUNCH_WINDOW_DURATION_
+  SECONDS` every `LAUNCH_GAP_MIN/MAX_SECONDS`); orbital purchases cost normal price inside
+  it, `×LAUNCH_SURCHARGE` outside. Automation still buys off-window, just less
+  efficiently — never a hard wall, only a timing incentive.
+- **T5 Exotic — Accretion Disk.** Player sets a feed rate (0–100%, default 0, a slider
+  like route%): `+ACCRETION_OUTPUT_BONUS` output and `+ACCRETION_UPKEEP_PENALTY` upkeep,
+  both linear in feed rate. Heat fills proportionally and maxing out fires a **flare** —
+  a one-off power burst (`ACCRETION_FLARE_SECONDS` of current output), then resets. Pure
+  upside, timing-based — no RNG punishment.
+- **T6 Galactic — Relay Routing.** A slider (0–100%, default 0) diverts the relay network
+  from power delivery to the research array: `-RELAY_POWER_PENALTY` power,
+  `+RELAY_RP_BONUS` RP rate, both linear in allocation. A straight power↔RP trade (not a
+  raw currency conversion) so it can't silently dominate either resource regardless of
+  what tier-scale the numbers are at.
+
 ### 3.12 Save safety
 
 Saves that fail to load are preserved under `kardashev:recovery:*`, never discarded.
@@ -278,6 +300,9 @@ SURGE                   = ×1.5 power · +60s/manual solve · +15s/auto · cap 3
 SOLVER                  = 100 CR base, ×1.35/owned, 1 solve / 90s @ 50% reward
 BOOSTS                  = ×2 power 250 CR · ×2 RP 200 CR · dispatch refill 75 CR (15 min)
 DAILY_REWARDS           = [50,75,100,150,200,300,500] CR, +10%/week streak
+LAUNCH_WINDOW           = 20s open, 60-120s gap, ×1.4 surcharge off-window (T3)
+ACCRETION               = +60% output / +120% upkeep @ 100% feed, flare = 30s output (T5)
+RELAY_ROUTING           = -35% power / +150% RP @ 100% allocation (T6)
 ```
 
 **Pacing targets** (verify in M7): first *buy* within seconds; first source *milestone*
@@ -321,7 +346,7 @@ Multiplayer/leaderboards, accounts/cloud save, monetization,
 prestige-of-prestige layers beyond KP. Note anything you
 want to add in this section rather than building it mid-milestone.
 
-**Known design risk (from genre analysis):** later tiers currently rescale the same
-mechanics ("skin replication" — Cat Snack Bar's core criticism). Candidate fix for a
-future milestone: one small mechanical twist per tier (e.g. T3 launch windows, T5
-accretion risk/reward, T6 relay routing) rather than new systems.
+**Design risk from genre analysis (addressed):** later tiers used to just rescale the
+same mechanics ("skin replication" — Cat Snack Bar's core criticism). Fixed in §3.14:
+T3/T5/T6 each got one small distinct mechanic. T4/T7/T8+ still ride the base loop only —
+candidates for future twists if the same critique resurfaces there.

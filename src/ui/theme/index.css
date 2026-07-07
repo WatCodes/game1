@@ -29,6 +29,15 @@ button,
   touch-action: manipulation;
 }
 
+/* Keyboard focus: a visible cyan ring on every interactive element, only for
+   keyboard/AT users (:focus-visible skips it on mouse/touch clicks). Themed
+   so it reads as an instrument highlight, not a browser default. */
+:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
 /* Scrolling stays, scrollbars go — this is an instrument panel, not a document */
 * {
   scrollbar-width: none; /* Firefox */

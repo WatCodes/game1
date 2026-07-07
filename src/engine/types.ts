@@ -97,6 +97,11 @@ export interface GameState {
   };
   // Delivery infrastructure — rebuilt each run, like sources
   grid: { vLevel: number; aLevel: number; rLevel: number };
+  // Per-tier mechanical twists (GAME_DESIGN §8) — inert outside their tier,
+  // reset on ascend like grid/puzzle
+  launchWindow: { active: boolean; timeLeft: number; nextIn: number }; // T3
+  accretion: { feedRate: number; heat: number }; // T5
+  relay: { researchAllocation: number }; // T6
   // Puzzle & shop meta-economy — persists through ascension, like KP
   credits: number;
   puzzle: PuzzleState; // current tier's circuit, regenerated on ascend

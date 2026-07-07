@@ -14,6 +14,7 @@ import { authorizedBoundary, megaprojectMult } from './megaproject';
 import { boostPowerMult } from './shop';
 import { achievementMult } from './achievements';
 import { deliverPower } from './grid';
+import { launchCostMult } from './tierTwists';
 
 export function isSourceUnlocked(s: GameState, src: PowerSource, mods?: ResearchModifiers): boolean {
   const gate = src.unlockedBy;
@@ -79,21 +80,23 @@ export function powerPerSec(s: GameState, mods: ResearchModifiers = researchModi
   return deliverPower(s, generationPerSec(s, mods));
 }
 
-export function nextCost(src: PowerSource, count = 1): Num {
-  return sourceCost(src.baseCost, src.costGrowth, src.owned, count);
+/** `costMult` carries the T3 launch-window surcharge (1 everywhere else). */
+export function nextCost(src: PowerSource, count = 1, costMult = 1): Num {
+  return sourceCost(src.baseCost * costMult, src.costGrowth, src.owned, count);
 }
 
-export function maxAffordable(src: PowerSource, budget: Num): number {
-  return buyMaxCount(src.baseCost, src.costGrowth, src.owned, budget);
+export function maxAffordable(src: PowerSource, budget: Num, costMult = 1): number {
+  return buyMaxCount(src.baseCost * costMult, src.costGrowth, src.owned, budget);
 }
 
 /** Buy `count` units ('max' solves the geometric sum). Returns units bought. */
 export function buy(s: GameState, sourceId: Id, count: number | 'max'): number {
   const src = s.sources[sourceId];
   if (!src || !isSourceUnlocked(s, src)) return 0;
-  const n = count === 'max' ? maxAffordable(src, s.power) : count;
+  const mult = launchCostMult(s);
+  const n = count === 'max' ? maxAffordable(src, s.power, mult) : count;
   if (n <= 0) return 0;
-  const cost = nextCost(src, n);
+  const cost = nextCost(src, n, mult);
   if (cost > s.power) return 0;
   s.power -= cost;
   src.owned += n;
@@ -103,12 +106,15 @@ export function buy(s: GameState, sourceId: Id, count: number | 'max'): number {
 /**
  * Managers: automated sources buy one unit per tick while affordable — but
  * never past the efficient band (they stop when the next unit would curtail).
+ * They still buy off-window at T3, just at the surcharged price — automation
+ * never hits a hard wall, only reduced efficiency.
  */
 export function runAutomation(s: GameState, mods: ResearchModifiers = researchModifiers(s)): void {
+  const mult = launchCostMult(s);
   for (const src of Object.values(s.sources)) {
     if (!src.automated) continue;
     if (nextUnitNet(src, mods) <= 0) continue;
-    const cost = nextCost(src, 1);
+    const cost = nextCost(src, 1, mult);
     if (cost <= s.power) {
       s.power -= cost;
       src.owned += 1;
@@ -118,10 +124,11 @@ export function runAutomation(s: GameState, mods: ResearchModifiers = researchMo
 
 /** Cheapest next unit among unlocked sources — the anti-softlock reserve. */
 export function cheapestNextCost(s: GameState, mods: ResearchModifiers = researchModifiers(s)): Num {
+  const mult = launchCostMult(s);
   let min = Infinity;
   for (const src of Object.values(s.sources)) {
     if (!isSourceUnlocked(s, src, mods)) continue;
-    min = Math.min(min, nextCost(src, 1));
+    min = Math.min(min, nextCost(src, 1, mult));
   }
   return isFinite(min) ? min : 0;
 }

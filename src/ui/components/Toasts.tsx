@@ -33,7 +33,11 @@ function ToastCard({ toast }: { toast: Toast }) {
 export function Toasts() {
   const toasts = useGame((s) => s.toasts);
   return (
-    <div className="pointer-events-none fixed inset-x-0 top-2 z-50 mx-auto flex w-full max-w-sm flex-col gap-1.5 px-3">
+    <div
+      className="pointer-events-none fixed inset-x-0 top-2 z-50 mx-auto flex w-full max-w-sm flex-col gap-1.5 px-3"
+      role="status"
+      aria-live="polite"
+    >
       {toasts.map((t) => (
         <ToastCard key={t.id} toast={t} />
       ))}

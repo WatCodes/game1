@@ -66,6 +66,9 @@ export default function App() {
   const canAscend = useGame((s) => s.display.ascend.can);
   const dailyReady = useGame((s) => s.display.shop.canClaimDaily);
   const pps = useGame((s) => s.display.pps);
+  const offline = useGame((s) => s.offline);
+  const cinematic = useGame((s) => s.cinematic);
+  const modalOpen = !!offline || !!cinematic;
 
   useEffect(() => {
     const start = () => prime();
@@ -76,34 +79,40 @@ export default function App() {
 
   return (
     <div className="mx-auto flex h-dvh max-w-md flex-col">
-      <header className="glass safe-top shrink-0">
-        <PowerMeter />
-        <ResourceBar />
-        <WorldViewport />
-      </header>
+      {/* `inert` pulls the whole app out of the tab order and off-limits to
+          hit-testing while a modal is up — the modal's own focus/Escape
+          handling is otherwise not enough, since a sighted mouse/keyboard
+          user could still reach buttons hidden behind it. */}
+      <div className="contents" {...(modalOpen ? { inert: '' } : {})}>
+        <header className="glass safe-top shrink-0">
+          <PowerMeter />
+          <ResourceBar />
+          <WorldViewport />
+        </header>
 
-      <main className="min-h-0 flex-1 overflow-y-auto">
-        {tab === 'sources' && <SourcesPanel />}
-        {tab === 'research' && <ResearchTree />}
-        {tab === 'megaproject' && <MegaprojectPanel />}
-        {tab === 'puzzle' && <PuzzlePanel />}
-        {tab === 'shop' && <ShopPanel />}
-        {tab === 'ascend' && (
-          <>
-            <AscendPanel />
-            <div className="flex flex-col gap-2 px-3 pb-3">
-              <AchievementsList />
-              <DataControls />
-              <CheatPanel />
-            </div>
-          </>
-        )}
-      </main>
+        <main className="min-h-0 flex-1 overflow-y-auto">
+          {tab === 'sources' && <SourcesPanel />}
+          {tab === 'research' && <ResearchTree />}
+          {tab === 'megaproject' && <MegaprojectPanel />}
+          {tab === 'puzzle' && <PuzzlePanel />}
+          {tab === 'shop' && <ShopPanel />}
+          {tab === 'ascend' && (
+            <>
+              <AscendPanel />
+              <div className="flex flex-col gap-2 px-3 pb-3">
+                <AchievementsList />
+                <DataControls />
+                <CheatPanel />
+              </div>
+            </>
+          )}
+        </main>
 
-      <footer className="glass safe-bottom shrink-0">
-        <DispatchBar />
-        <Tabs active={tab} onSelect={setTab} badges={{ ascend: canAscend, shop: dailyReady }} />
-      </footer>
+        <footer className="glass safe-bottom shrink-0">
+          <DispatchBar />
+          <Tabs active={tab} onSelect={setTab} badges={{ ascend: canAscend, shop: dailyReady }} />
+        </footer>
+      </div>
 
       <Toasts />
       <OfflineModal />

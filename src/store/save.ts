@@ -1,9 +1,11 @@
 import type { GameState, Id, Num, PuzzleState } from '../engine/types';
+import { CONFIG } from '../content/config';
 import { SAVE_VERSION, createInitialState } from '../engine/state';
 import { reapplyPurchasedEffects } from '../engine/research';
 import { isSolved, newPuzzle, puzzleSize } from '../engine/puzzle';
 import { generationPerSec } from '../engine/economy';
 import { transmissionCap } from '../engine/grid';
+import { defaultTierTwistState } from '../engine/tierTwists';
 import { buildSources } from '../content/sources';
 import { buildMegaproject } from '../content/megaprojects';
 import { ACHIEVEMENTS } from '../content/achievements';
@@ -26,6 +28,9 @@ export interface SaveData {
   routePct: number;
   dispatch: { charge: number; peakLeft: number; nextPeakIn: number };
   grid: { vLevel: number; aLevel: number; rLevel: number };
+  launchWindow: { active: boolean; timeLeft: number; nextIn: number };
+  accretion: { feedRate: number; heat: number };
+  relay: { researchAllocation: number };
   credits: number;
   puzzle: PuzzleState | null; // null → deal a fresh circuit on load
   solvers: number;
@@ -54,6 +59,9 @@ export function serialize(s: GameState): SaveData {
     routePct: s.routePct,
     dispatch: { ...s.dispatch },
     grid: { ...s.grid },
+    launchWindow: { ...s.launchWindow },
+    accretion: { ...s.accretion },
+    relay: { ...s.relay },
     credits: s.credits,
     puzzle: { ...s.puzzle, tiles: s.puzzle.tiles.map((t) => ({ ...t })) },
     solvers: s.solvers,
@@ -95,6 +103,18 @@ export function hydrate(save: SaveData): GameState {
     vLevel: Math.floor(save.grid?.vLevel ?? 0),
     aLevel: Math.max(0, Math.floor(save.grid?.aLevel ?? 0)),
     rLevel: Math.max(0, Math.floor(save.grid?.rLevel ?? 0)),
+  };
+  s.launchWindow = {
+    active: !!save.launchWindow?.active,
+    timeLeft: Math.max(0, save.launchWindow?.timeLeft ?? 0),
+    nextIn: Math.max(0, save.launchWindow?.nextIn ?? CONFIG.LAUNCH_GAP_MIN_SECONDS),
+  };
+  s.accretion = {
+    feedRate: Math.max(0, Math.min(1, save.accretion?.feedRate ?? 0)),
+    heat: Math.max(0, Math.min(1, save.accretion?.heat ?? 0)),
+  };
+  s.relay = {
+    researchAllocation: Math.max(0, Math.min(1, save.relay?.researchAllocation ?? 0)),
   };
   s.lastSaved = save.lastSaved;
   s.stats = { ...save.stats };
@@ -218,6 +238,9 @@ export function migrate(raw: Record<string, unknown>): Record<string, unknown> {
     // mechanic pressures future growth instead of kneecapping an old run.
     save = { ...save, version: 5, grid: { vLevel: -1, aLevel: 0, rLevel: 0 } };
   }
+  if ((save.version as number) < 6 || !isRecord(save.launchWindow)) {
+    save = { ...save, version: 6, ...defaultTierTwistState() };
+  }
   return save;
 }
 
@@ -238,6 +261,9 @@ export function validateSave(raw: unknown): SaveData {
   if (!isRecord(m.stats)) throw new Error('Save field "stats" is invalid');
   if (!isRecord(m.dispatch)) throw new Error('Save field "dispatch" is invalid');
   if (!isRecord(m.grid)) throw new Error('Save field "grid" is invalid');
+  if (!isRecord(m.launchWindow)) throw new Error('Save field "launchWindow" is invalid');
+  if (!isRecord(m.accretion)) throw new Error('Save field "accretion" is invalid');
+  if (!isRecord(m.relay)) throw new Error('Save field "relay" is invalid');
   if (!isRecord(m.boosts)) throw new Error('Save field "boosts" is invalid');
   if (!isRecord(m.daily)) throw new Error('Save field "daily" is invalid');
   if (!Array.isArray(m.achievements)) throw new Error('Save field "achievements" is invalid');

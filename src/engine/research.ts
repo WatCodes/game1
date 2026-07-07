@@ -1,7 +1,15 @@
 import { CONFIG } from '../content/config';
 import type { GameState, Id, ResearchNode } from './types';
+import { accretionOutputMult, accretionUpkeepMult, relayPowerMult, relayRpMult } from './tierTwists';
 
-/** Aggregated effects of all purchased research — recomputed on read, never stored. */
+/**
+ * Aggregated effects of all purchased research — recomputed on read, never
+ * stored. Also folds in the run-scoped tier twists (accretion feed rate, T6
+ * relay routing): this is the single multiplier bag already threaded through
+ * every consumer (economy, megaproject, offline, loop), so tier twists ride
+ * along for free instead of rippling a new parameter through a dozen call
+ * sites. Each twist is a no-op outside its own tier.
+ */
 export interface ResearchModifiers {
   sourceMult: Record<Id, number>;
   globalMult: number;
@@ -54,6 +62,9 @@ export function researchModifiers(s: GameState): ResearchModifiers {
         break;
     }
   }
+  mods.globalMult *= accretionOutputMult(s) * relayPowerMult(s);
+  mods.upkeepMult *= accretionUpkeepMult(s);
+  mods.rpMult *= relayRpMult(s);
   return mods;
 }
 

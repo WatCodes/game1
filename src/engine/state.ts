@@ -4,8 +4,9 @@ import { buildSources } from '../content/sources';
 import { buildMegaproject } from '../content/megaprojects';
 import { buildResearch } from '../content/research';
 import { newPuzzle } from './puzzle';
+import { defaultTierTwistState } from './tierTwists';
 
-export const SAVE_VERSION = 5;
+export const SAVE_VERSION = 6;
 
 export function createInitialState(now: number = Date.now(), rand: () => number = Math.random): GameState {
   const s: GameState = {
@@ -21,6 +22,7 @@ export function createInitialState(now: number = Date.now(), rand: () => number 
     routePct: 0,
     dispatch: { charge: 0, peakLeft: 0, nextPeakIn: 240 },
     grid: { vLevel: 0, aLevel: 0, rLevel: 0 },
+    ...defaultTierTwistState(),
     credits: 0,
     puzzle: newPuzzle(0, rand),
     solvers: 0,

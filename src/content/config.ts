@@ -47,6 +47,17 @@ export const CONFIG = {
   DAILY_REWARDS: [50, 75, 100, 150, 200, 300, 500],
   DAILY_STREAK_BONUS: 0.1,
   ACHIEVEMENT_BONUS: 0.01, // +1% global output per record earned
+  // Per-tier mechanical twists (GAME_DESIGN §8) — each inert outside its tier
+  LAUNCH_WINDOW_DURATION_SECONDS: 20, // T3: orbital purchases avoid the surcharge
+  LAUNCH_GAP_MIN_SECONDS: 60,
+  LAUNCH_GAP_MAX_SECONDS: 120,
+  LAUNCH_SURCHARGE: 1.4, // ×cost outside the window
+  ACCRETION_OUTPUT_BONUS: 0.6, // T5: +60% output at feed rate 100%
+  ACCRETION_UPKEEP_PENALTY: 1.2, // +120% upkeep at feed rate 100%
+  ACCRETION_HEAT_SECONDS: 60, // time to a flare at feed rate 100% (scales inversely)
+  ACCRETION_FLARE_SECONDS: 30, // flare burst = this many seconds of current output
+  RELAY_POWER_PENALTY: 0.35, // T6: -35% power at 100% research allocation
+  RELAY_RP_BONUS: 1.5, // +150% RP rate at 100% research allocation
   STARTING_POWER: 15, // enough for the first battery within seconds
   ASCEND_SEED_UNITS: 2, // ascending grants 2× the new tier's cheapest source cost
   AUTOSAVE_INTERVAL_MS: 8000,

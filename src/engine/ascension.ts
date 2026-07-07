@@ -4,6 +4,7 @@ import { kpGain, sourceCost } from './formulas';
 import { isMegaprojectComplete } from './megaproject';
 import { reapplyPurchasedEffects } from './research';
 import { newPuzzle } from './puzzle';
+import { defaultTierTwistState } from './tierTwists';
 import { getTier } from '../content/tiers';
 import { buildSources } from '../content/sources';
 import { buildMegaproject } from '../content/megaprojects';
@@ -39,6 +40,7 @@ export function ascend(s: GameState, rand: () => number = Math.random): number {
   s.megaproject = buildMegaproject(s.tier);
   s.puzzle = newPuzzle(s.tier, rand);
   s.grid = { vLevel: 0, aLevel: 0, rLevel: 0 }; // infrastructure is rebuilt each era
+  Object.assign(s, defaultTierTwistState()); // tier twists are era-scoped too
   s.stats.ascensions += 1;
   reapplyPurchasedEffects(s); // restore managers for any automation research
   return gained;

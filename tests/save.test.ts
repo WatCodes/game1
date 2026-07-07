@@ -32,6 +32,9 @@ function playedState() {
   s.daily = { lastClaimDay: '2026-7-5', streak: 3 };
   s.achievements = ['first-spark', 'first-rack'];
   s.grid = { vLevel: 2, aLevel: 1, rLevel: 1 };
+  s.launchWindow = { active: true, timeLeft: 12, nextIn: 0 };
+  s.accretion = { feedRate: 0.6, heat: 0.3 };
+  s.relay = { researchAllocation: 0.25 };
   s.puzzle.tiles[0].rot = (s.puzzle.tiles[0].rot + 1) % 4;
   s.puzzle.moves = 5;
   s.lastSaved = 555_000;
@@ -59,6 +62,9 @@ describe('round trip', () => {
     expect(restored.daily).toEqual({ lastClaimDay: '2026-7-5', streak: 3 });
     expect(restored.achievements).toEqual(['first-spark', 'first-rack']);
     expect(restored.grid).toEqual({ vLevel: 2, aLevel: 1, rLevel: 1 });
+    expect(restored.launchWindow).toEqual({ active: true, timeLeft: 12, nextIn: 0 });
+    expect(restored.accretion).toEqual({ feedRate: 0.6, heat: 0.3 });
+    expect(restored.relay).toEqual({ researchAllocation: 0.25 });
     expect(restored.puzzle.tiles.map((t) => t.rot)).toEqual(s.puzzle.tiles.map((t) => t.rot));
     expect(restored.puzzle.moves).toBe(5);
   });
@@ -160,6 +166,38 @@ describe('migration', () => {
     expect(restored.boosts).toEqual({ surgeLeft: 0, powerLeft: 0, rpLeft: 0 });
     expect(restored.puzzle.tier).toBe(1); // dealt for the saved tier
     expect(restored.sources['solar-farm'].owned).toBe(4);
+  });
+
+  it('upgrades a v5 save: tier twists seeded with defaults', () => {
+    const v5 = {
+      version: 5,
+      tier: 3,
+      power: 100,
+      runPower: 500,
+      rp: 10,
+      kp: 3,
+      owned: {},
+      purchased: [],
+      committed: 0,
+      stagesAuthorized: 1,
+      routePct: 0,
+      dispatch: { charge: 0, peakLeft: 0, nextPeakIn: 100 },
+      grid: { vLevel: 1, aLevel: 0, rLevel: 0 },
+      credits: 50,
+      puzzle: null,
+      solvers: 0,
+      solverProgress: 0,
+      boosts: { surgeLeft: 0, powerLeft: 0, rpLeft: 0 },
+      daily: { lastClaimDay: '', streak: 0 },
+      achievements: [],
+      lastSaved: 42,
+      stats: { lifetimePower: 500, ascensions: 3, startedAt: 42, puzzlesSolved: 0 },
+    };
+    const restored = hydrate(validateSave(v5));
+    expect(restored.launchWindow).toEqual({ active: false, timeLeft: 0, nextIn: expect.any(Number) });
+    expect(restored.accretion).toEqual({ feedRate: 0, heat: 0 });
+    expect(restored.relay).toEqual({ researchAllocation: 0 });
+    expect(restored.grid.vLevel).toBe(1); // untouched by this migration step
   });
 
   it('rejects saves from a newer build', () => {

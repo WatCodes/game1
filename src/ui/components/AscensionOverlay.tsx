@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useGame } from '../../store/gameStore';
 import { formatShort } from '../../engine/format';
 
@@ -6,17 +6,29 @@ import { formatShort } from '../../engine/format';
 export function AscensionOverlay() {
   const cinematic = useGame((s) => s.cinematic);
   const dismissCinematic = useGame((s) => s.actions.dismissCinematic);
+  const closeRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (!cinematic) return;
+    closeRef.current?.focus();
     const t = setTimeout(dismissCinematic, 4500);
-    return () => clearTimeout(t);
+    // Enter/Space already activate the focused button natively; only Escape
+    // needs an explicit handler here.
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') dismissCinematic();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener('keydown', onKey);
+    };
   }, [cinematic, dismissCinematic]);
 
   if (!cinematic) return null;
 
   return (
     <button
+      ref={closeRef}
       className="cine-bg fixed inset-0 z-50 flex w-full flex-col items-center justify-center gap-3 px-6 text-center"
       onClick={dismissCinematic}
       aria-label="Ascension complete, tap to continue"

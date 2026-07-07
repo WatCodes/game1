@@ -52,6 +52,8 @@ describe('ascend', () => {
     s.rp = 777;
     s.credits = 99;
     s.solvers = 2;
+    s.grid = { vLevel: 3, aLevel: 2, rLevel: 1 };
+    s.accretion.feedRate = 0.7;
     buyResearch(s, 'unlock-coal-plant'); // 20 RP at tier 0
     const rpAfterPurchase = s.rp;
 
@@ -67,6 +69,9 @@ describe('ascend', () => {
     // Reset: a fresh circuit dealt for the new tier
     expect(s.puzzle.tier).toBe(1);
     expect(s.puzzle.solved).toBe(false);
+    // Reset: delivery infrastructure and tier twists are era-scoped
+    expect(s.grid).toEqual({ vLevel: 0, aLevel: 0, rLevel: 0 });
+    expect(s.accretion.feedRate).toBe(0);
     // Keep: KP (asserted above), research, RP, credits/solvers, stats
     expect(s.research['unlock-coal-plant'].purchased).toBe(true);
     expect(s.rp).toBe(rpAfterPurchase);

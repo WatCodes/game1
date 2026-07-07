@@ -5,6 +5,7 @@ import { researchModifiers, researchRate } from './research';
 import { runSolvers } from './puzzle';
 import { tickBoosts } from './shop';
 import { checkAchievements } from './achievements';
+import { tickAccretion, tickLaunchWindow } from './tierTwists';
 
 /**
  * Advance the simulation by dt seconds. Pure state mutation — no React, no
@@ -13,7 +14,8 @@ import { checkAchievements } from './achievements';
  */
 export function tick(s: GameState, dt: number, rand: () => number = Math.random): void {
   const mods = researchModifiers(s);
-  const gain = powerPerSec(s, mods) * dt;
+  const pps = powerPerSec(s, mods);
+  const gain = pps * dt;
   const routed = routeIncome(s, gain, mods);
   s.power += gain - routed;
   s.runPower += gain;
@@ -24,4 +26,6 @@ export function tick(s: GameState, dt: number, rand: () => number = Math.random)
   runSolvers(s, dt);
   tickBoosts(s, dt);
   checkAchievements(s);
+  tickLaunchWindow(s, dt, rand);
+  tickAccretion(s, dt, pps);
 }

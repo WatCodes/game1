@@ -27,6 +27,7 @@ import {
   type GridLane,
 } from '../engine/grid';
 import { gridLaneNames } from '../content/grid';
+import { accretionOutputMult, accretionUpkeepMult, launchCostMult, relayPowerMult, relayRpMult, setFeedRate, setRelayAllocation } from '../engine/tierTwists';
 import {
   nextGlobalMilestone,
   globalMilestoneCount,
@@ -192,6 +193,11 @@ export interface DisplaySnapshot {
     binding: 'generation' | 'transmission';
     lanes: { lane: 'v' | 'a' | 'r'; name: string; level: number; cost: Num; affordable: boolean }[];
   };
+  tierTwist:
+    | { kind: 'none' }
+    | { kind: 'launchWindow'; active: boolean; timeLeft: number; nextIn: number; surchargePct: number }
+    | { kind: 'accretion'; feedRate: number; heat: number; outputBonusPct: number; upkeepPenaltyPct: number }
+    | { kind: 'relay'; allocation: number; powerPenaltyPct: number; rpBonusPct: number };
 }
 
 export interface Toast {
@@ -206,6 +212,7 @@ function buildDisplay(s: GameState): DisplaySnapshot {
   const next = getTier(s.tier + 1);
   const done = stagesCompleted(s, mods);
   const authBlock = nextStageResearchBlock(s);
+  const launchMult = launchCostMult(s);
   return {
     power: s.power,
     pps: powerPerSec(s, mods),
@@ -225,10 +232,10 @@ function buildDisplay(s: GameState): DisplaySnapshot {
       name: src.name,
       owned: src.owned,
       unlocked: isSourceUnlocked(s, src, mods),
-      cost1: nextCost(src, 1),
-      cost10: nextCost(src, 10),
-      maxCount: maxAffordable(src, s.power),
-      maxCost: nextCost(src, Math.max(1, maxAffordable(src, s.power))),
+      cost1: nextCost(src, 1, launchMult),
+      cost10: nextCost(src, 10, launchMult),
+      maxCount: maxAffordable(src, s.power, launchMult),
+      maxCost: nextCost(src, Math.max(1, maxAffordable(src, s.power, launchMult)), launchMult),
       output: sourceNet(src, mods),
       upkeep: sourceUpkeep(src, mods),
       nextUnitNet: nextUnitNet(src, mods),
@@ -285,7 +292,38 @@ function buildDisplay(s: GameState): DisplaySnapshot {
     achievementMult: achievementMult(s),
     lifetimePower: s.stats.lifetimePower,
     grid: buildGridView(s, mods),
+    tierTwist: buildTierTwistView(s),
   };
+}
+
+function buildTierTwistView(s: GameState): DisplaySnapshot['tierTwist'] {
+  if (s.tier === 3) {
+    return {
+      kind: 'launchWindow',
+      active: s.launchWindow.active,
+      timeLeft: s.launchWindow.timeLeft,
+      nextIn: s.launchWindow.nextIn,
+      surchargePct: Math.round((CONFIG.LAUNCH_SURCHARGE - 1) * 100),
+    };
+  }
+  if (s.tier === 5) {
+    return {
+      kind: 'accretion',
+      feedRate: s.accretion.feedRate,
+      heat: s.accretion.heat,
+      outputBonusPct: Math.round((accretionOutputMult(s) - 1) * 100),
+      upkeepPenaltyPct: Math.round((accretionUpkeepMult(s) - 1) * 100),
+    };
+  }
+  if (s.tier === 6) {
+    return {
+      kind: 'relay',
+      allocation: s.relay.researchAllocation,
+      powerPenaltyPct: Math.round((1 - relayPowerMult(s)) * 100),
+      rpBonusPct: Math.round((relayRpMult(s) - 1) * 100),
+    };
+  }
+  return { kind: 'none' };
 }
 
 function buildGridView(s: GameState, mods: ReturnType<typeof researchModifiers>): DisplaySnapshot['grid'] {
@@ -355,7 +393,10 @@ export type DevCheat =
   | 'peak'
   | 'solve'
   | 'solver'
-  | 'warp';
+  | 'warp'
+  | 'window'
+  | 'flare'
+  | 'nextTier';
 
 export interface Cinematic {
   era: string;
@@ -376,6 +417,8 @@ interface GameStore {
     commitStoredPower: (fraction: number) => void;
     authorizeNextStage: () => void;
     setRoutePct: (pct: number) => void;
+    setAccretionFeedRate: (rate: number) => void;
+    setRelayAllocation: (pct: number) => void;
     doDispatch: () => void;
     doAscend: () => void;
     rotatePuzzleTile: (idx: number) => void;
@@ -478,6 +521,14 @@ export const useGame = create<GameStore>((set) => {
       },
       setRoutePct: (pct) => {
         game.routePct = Math.max(0, Math.min(1, pct));
+        refresh();
+      },
+      setAccretionFeedRate: (rate) => {
+        setFeedRate(game, rate);
+        refresh();
+      },
+      setRelayAllocation: (pct) => {
+        setRelayAllocation(game, pct);
         refresh();
       },
       doDispatch: () => {
@@ -616,6 +667,21 @@ export const useGame = create<GameStore>((set) => {
             break;
           case 'warp':
             for (let i = 0; i < 3600; i++) tick(game, 1);
+            break;
+          case 'window':
+            game.launchWindow.active = true;
+            game.launchWindow.timeLeft = CONFIG.LAUNCH_WINDOW_DURATION_SECONDS;
+            break;
+          case 'flare':
+            game.accretion.heat = 1;
+            break;
+          case 'nextTier':
+            // Reuses the real ascension code path (same resets everywhere
+            // else get) instead of a bespoke tier-jump — quick way to QA
+            // tier-gated content like the T3/T5/T6 twists.
+            game.megaproject.stagesAuthorized = game.megaproject.stages.length;
+            game.megaproject.committed = game.megaproject.totalCost;
+            ascend(game);
             break;
         }
         pushToast('info', `[dev] ${kind}`);

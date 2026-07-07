@@ -15,6 +15,9 @@ const CHEATS: [DevCheat, string][] = [
   ['solve', 'Solve puzzle'],
   ['solver', '+1 solver'],
   ['warp', 'Warp +1h'],
+  ['window', 'Open launch window (T3)'],
+  ['flare', 'Trigger flare (T5)'],
+  ['nextTier', 'Force-ascend to next tier'],
 ];
 
 export function CheatPanel() {

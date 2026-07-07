@@ -1,16 +1,35 @@
+import { useEffect, useRef } from 'react';
 import { useGame } from '../../store/gameStore';
 import { formatPower, formatTime } from '../../engine/format';
 
 export function OfflineModal() {
   const offline = useGame((s) => s.offline);
   const dismissOffline = useGame((s) => s.actions.dismissOffline);
+  const closeRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!offline) return;
+    closeRef.current?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') dismissOffline();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [offline, dismissOffline]);
 
   if (!offline) return null;
 
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/70 p-6" role="dialog" aria-modal="true">
+    <div
+      className="fixed inset-0 z-40 flex items-center justify-center bg-black/70 p-6"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="offline-modal-title"
+    >
       <div className="glass-deep w-full max-w-sm rounded-xl border border-line p-4">
-        <h2 className="text-sm font-semibold uppercase tracking-widest text-ink-dim">While you were away</h2>
+        <h2 id="offline-modal-title" className="text-sm font-semibold uppercase tracking-widest text-ink-dim">
+          While you were away
+        </h2>
         <p className="mt-2 font-mono text-sm">
           <span className="text-ink-dim">{formatTime(offline.seconds)} elapsed</span>
         </p>
@@ -24,6 +43,7 @@ export function OfflineModal() {
           </p>
         )}
         <button
+          ref={closeRef}
           className="mt-4 w-full rounded border border-current-dim px-3 py-2 text-sm text-current transition-colors hover:bg-raised"
           onClick={dismissOffline}
         >

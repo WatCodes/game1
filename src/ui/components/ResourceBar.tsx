@@ -19,7 +19,7 @@ export function ResourceBar() {
   const credits = useGame((s) => s.display.credits);
 
   return (
-    <div className="flex items-center justify-between gap-1.5 border-b border-line bg-panel/90 px-3 py-1.5 font-mono text-xs">
+    <div className="flex items-center justify-between gap-1.5 border-b border-line/60 bg-transparent px-3 py-1.5 font-mono text-xs">
       <Chip label="RP" value={formatShort(Math.floor(rp))} rate={`+${rpRate.toFixed(2)}/s`} tone="text-current" />
       <Chip label="CR" value={formatShort(Math.floor(credits))} tone="text-volt" />
       <Chip label="KP" value={formatShort(kp)} rate={`×${prestige.toFixed(2)}`} tone="text-ascend" />

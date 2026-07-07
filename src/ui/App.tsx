@@ -25,7 +25,7 @@ function DispatchBar() {
   const pct = Math.floor(dispatch.charge * 100);
 
   return (
-    <div className="border-t border-line bg-panel px-3 py-2">
+    <div className="border-t border-line/60 bg-transparent px-3 py-2">
       <button
         className={`relative w-full overflow-hidden rounded border py-2 font-mono text-xs uppercase tracking-widest transition-colors ${
           dispatch.peakActive
@@ -76,7 +76,7 @@ export default function App() {
 
   return (
     <div className="mx-auto flex h-dvh max-w-md flex-col">
-      <header className="safe-top shrink-0 bg-panel/90">
+      <header className="glass safe-top shrink-0">
         <PowerMeter />
         <ResourceBar />
         <WorldViewport />
@@ -100,7 +100,7 @@ export default function App() {
         )}
       </main>
 
-      <footer className="safe-bottom shrink-0 bg-panel">
+      <footer className="glass safe-bottom shrink-0">
         <DispatchBar />
         <Tabs active={tab} onSelect={setTab} badges={{ ascend: canAscend, shop: dailyReady }} />
       </footer>

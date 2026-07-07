@@ -9,7 +9,7 @@ export function OfflineModal() {
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/70 p-6" role="dialog" aria-modal="true">
-      <div className="w-full max-w-sm rounded border border-line bg-panel p-4">
+      <div className="glass-deep w-full max-w-sm rounded-xl border border-line p-4">
         <h2 className="text-sm font-semibold uppercase tracking-widest text-ink-dim">While you were away</h2>
         <p className="mt-2 font-mono text-sm">
           <span className="text-ink-dim">{formatTime(offline.seconds)} elapsed</span>

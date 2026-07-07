@@ -47,6 +47,25 @@ body {
   background-attachment: fixed;
 }
 
+/* ---------- liquid glass chrome ---------- */
+/* Two grades. `.glass` = translucent + specular edge, NO backdrop-filter —
+   it sits under the live meter, and re-blurring beneath 12 Hz text updates
+   locks up compositors. `.glass-deep` = real frosted blur, reserved for
+   transient overlays (toasts, modals) where nothing updates behind it. */
+.glass {
+  background: rgba(10, 16, 28, 0.72);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+.glass-deep {
+  background: rgba(4, 7, 14, 0.55);
+  -webkit-backdrop-filter: blur(22px) saturate(1.7);
+  backdrop-filter: blur(22px) saturate(1.7);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.09), 0 8px 32px rgba(0, 0, 0, 0.45);
+}
+@supports not (backdrop-filter: blur(1px)) {
+  .glass-deep { background: var(--bg-panel); }
+}
+
 /* ---------- keyframes ---------- */
 
 @keyframes meter-sweep {
@@ -228,6 +247,51 @@ button:not(:disabled):active {
 }
 .turbine-spin {
   animation: turbine-rotate 3.5s linear infinite;
+}
+
+/* Diorama motion: traffic, drifting smoke/clouds, orbits, flowing power */
+@keyframes drive-x {
+  from { transform: translateX(-40px); }
+  to { transform: translateX(400px); }
+}
+.drive {
+  animation: drive-x 9s linear infinite;
+}
+@keyframes drift-up {
+  0% { transform: translateY(0); opacity: 0.7; }
+  100% { transform: translateY(-14px); opacity: 0; }
+}
+.smoke {
+  animation: drift-up 3.2s ease-out infinite;
+}
+@keyframes cloud-x {
+  from { transform: translateX(-60px); }
+  to { transform: translateX(420px); }
+}
+.cloud {
+  animation: cloud-x 26s linear infinite;
+}
+.orbit {
+  transform-box: view-box;
+  animation: turbine-rotate 16s linear infinite;
+}
+.orbit-slow {
+  transform-box: view-box;
+  animation: turbine-rotate 40s linear infinite;
+}
+@keyframes dash-flow {
+  to { stroke-dashoffset: -24; }
+}
+.power-flow {
+  stroke-dasharray: 6 6;
+  animation: dash-flow 1.2s linear infinite;
+}
+@keyframes window-flicker {
+  0%, 92%, 100% { opacity: 1; }
+  95% { opacity: 0.2; }
+}
+.flicker {
+  animation: window-flicker 5s steps(1) infinite;
 }
 
 @keyframes lattice-throb {

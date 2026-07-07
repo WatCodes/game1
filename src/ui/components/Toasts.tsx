@@ -22,7 +22,7 @@ function ToastCard({ toast }: { toast: Toast }) {
 
   return (
     <button
-      className={`toast-enter pointer-events-auto w-full rounded border bg-panel/95 px-3 py-2 text-left text-xs shadow-lg ${KIND_STYLE[toast.kind]}`}
+      className={`toast-enter glass-deep pointer-events-auto w-full rounded-lg border px-3 py-2 text-left text-xs ${KIND_STYLE[toast.kind]}`}
       onClick={() => dismissToast(toast.id)}
     >
       {toast.text}

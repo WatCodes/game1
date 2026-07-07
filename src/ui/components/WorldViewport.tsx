@@ -37,19 +37,37 @@ function CityScene({ owned, surge, live }: Scene) {
   return (
     <>
       <circle cx={318} cy={20} r={8} fill="var(--bg-raised)" stroke="var(--grid-line)" />
+      <ellipse className="cloud" cx={-30} cy={26} rx={22} ry={5} fill="var(--bg-raised)" opacity={0.5} />
       {surge && <rect x={0} y={88} width={360} height={4} fill="var(--cyan)" opacity={0.35} />}
       <line x1={0} y1={95} x2={360} y2={95} stroke="var(--grid-line)" strokeWidth={2} />
       {CITY_BUILDINGS.map(([x, w, h], i) => (
         <rect key={i} x={x} y={95 - h} width={w} height={h} fill="var(--bg-raised)" />
       ))}
       {CITY_WINDOWS.map(([x, y], i) => (
-        <rect key={i} x={x} y={y} width={5} height={7} fill={i < lit ? 'var(--amber)' : 'var(--bg-panel)'} />
+        <rect
+          key={i}
+          x={x}
+          y={y}
+          width={5}
+          height={7}
+          className={i === 3 && i < lit ? 'flicker' : ''}
+          fill={i < lit ? 'var(--amber)' : 'var(--bg-panel)'}
+        />
       ))}
       <rect x={132} y={12} width={7} height={16} fill="var(--bg-raised)" />
       {live && (
         <>
-          <circle cx={136} cy={7} r={4} fill="var(--grid-line)" />
-          <circle cx={142} cy={1} r={3} fill="var(--grid-line)" />
+          <circle className="smoke" cx={136} cy={9} r={4} fill="var(--grid-line)" />
+          <circle className="smoke" cx={141} cy={6} r={3} fill="var(--grid-line)" style={{ animationDelay: '1.4s' }} />
+          {/* night traffic */}
+          <g className="drive">
+            <rect x={-14} y={98} width={12} height={5} rx={1.5} fill="var(--bg-raised)" />
+            <circle cx={-12} cy={100} r={1.4} fill="var(--amber)" />
+          </g>
+          <g className="drive" style={{ animationDelay: '-4.5s', animationDuration: '12s' }}>
+            <rect x={-14} y={104} width={10} height={4} rx={1.5} fill="var(--bg-raised)" />
+            <circle cx={-5} cy={106} r={1.2} fill="var(--danger)" />
+          </g>
         </>
       )}
     </>
@@ -61,6 +79,8 @@ function RenewableScene({ owned, surge, live }: Scene) {
   return (
     <>
       <circle cx={40} cy={26} r={11} fill="var(--amber)" opacity={surge ? 1 : 0.6} />
+      <ellipse className="cloud" cx={-30} cy={20} rx={26} ry={6} fill="var(--bg-raised)" opacity={0.55} />
+      <ellipse className="cloud" cx={-30} cy={38} rx={18} ry={4} fill="var(--bg-raised)" opacity={0.4} style={{ animationDelay: '-12s' }} />
       <ellipse cx={90} cy={125} rx={160} ry={42} fill="var(--bg-raised)" />
       <ellipse cx={300} cy={132} rx={170} ry={48} fill="var(--bg-raised)" />
       {[100, 190, 285].map((x, i) => (
@@ -111,9 +131,13 @@ function PlanetScene({ owned, milestones, surge }: Scene) {
       ))}
       {PLANET_CITIES.slice(0, Math.max(0, lit - 1)).map(([x, y], i) => {
         const [nx, ny] = PLANET_CITIES[i + 1];
-        return <line key={i} x1={x} y1={y} x2={nx} y2={ny} stroke="var(--amber)" strokeWidth={0.8} opacity={0.7} />;
+        return (
+          <line key={i} className="power-flow" x1={x} y1={y} x2={nx} y2={ny} stroke="var(--amber)" strokeWidth={0.8} opacity={0.7} />
+        );
       })}
-      <circle cx={272} cy={34} r={5} fill="var(--bg-raised)" stroke="var(--grid-line)" />
+      <g className="orbit" style={{ transformOrigin: '178px 57px' }}>
+        <circle cx={272} cy={34} r={5} fill="var(--bg-raised)" stroke="var(--grid-line)" />
+      </g>
     </>
   );
 }
@@ -126,7 +150,10 @@ function OrbitalScene({ owned, stagesDone, surge }: Scene) {
         <circle key={i} cx={x} cy={y} r={1.2} fill="var(--text-dim)" />
       ))}
       <circle cx={180} cy={210} r={130} fill="var(--bg-raised)" stroke={surge ? 'var(--cyan)' : 'var(--cyan-dim)'} strokeWidth={1.5} />
-      <ellipse cx={180} cy={96} rx={150} ry={34} fill="none" stroke="var(--grid-line)" strokeWidth={1} strokeDasharray="3 6" />
+      <ellipse
+        className="power-flow"
+        cx={180} cy={96} rx={150} ry={34} fill="none" stroke="var(--grid-line)" strokeWidth={1}
+      />
       {Array.from({ length: 7 }, (_, i) => {
         const a = Math.PI * (0.18 + (i * 0.64) / 6);
         const x = 180 - 150 * Math.cos(a);
@@ -166,6 +193,7 @@ function DysonScene({ stagesDone, stagesAuth, surge, live }: Scene) {
         return (
           <ellipse
             key={i} cx={180} cy={55} rx={rx} ry={rx * 0.32} fill="none"
+            className={done ? 'power-flow' : ''}
             stroke={done ? 'var(--cyan)' : auth ? 'var(--amber-dim)' : 'var(--grid-line)'}
             strokeWidth={done ? 2 : 1.2}
             strokeDasharray={done ? undefined : auth ? '18 8' : '3 8'}
@@ -184,7 +212,9 @@ function ExoticScene({ owned, surge, live }: Scene) {
         <circle key={i} cx={x} cy={y} r={1.2} fill="var(--text-dim)" />
       ))}
       <circle cx={180} cy={55} r={16} fill="var(--bg)" stroke="var(--violet)" strokeWidth={2} />
-      <ellipse cx={180} cy={55} rx={52} ry={13} fill="none" stroke="var(--amber)" strokeWidth={3} opacity={surge ? 1 : 0.75} />
+      <g className="orbit" style={{ transformOrigin: '180px 55px', animationDuration: '7s' }}>
+        <ellipse cx={180} cy={55} rx={52} ry={13} fill="none" stroke="var(--amber)" strokeWidth={3} opacity={surge ? 1 : 0.75} strokeDasharray="60 22" />
+      </g>
       {live && (
         <>
           <line x1={180} y1={30} x2={180} y2={8} stroke="var(--cyan)" strokeWidth={2} />
@@ -222,7 +252,9 @@ function GalaxyScene({ owned, milestones, surge }: Scene) {
       ))}
       {GALAXY_NODES.slice(0, Math.max(0, lit - 1)).map(([x, y], i) => {
         const [nx, ny] = GALAXY_NODES[i + 1];
-        return <line key={i} x1={x} y1={y} x2={nx} y2={ny} stroke="var(--cyan-dim)" strokeWidth={0.9} />;
+        return (
+          <line key={i} className="power-flow" x1={x} y1={y} x2={nx} y2={ny} stroke="var(--cyan-dim)" strokeWidth={0.9} />
+        );
       })}
     </>
   );
@@ -286,7 +318,7 @@ export function WorldViewport() {
   };
 
   return (
-    <div className="relative border-b border-line bg-panel/60">
+    <div className="relative border-b border-line/60 bg-transparent">
       <button
         className="absolute right-2 top-1 z-10 px-1 font-mono text-[10px] text-ink-dim hover:text-ink"
         onClick={toggle}

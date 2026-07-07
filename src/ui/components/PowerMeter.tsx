@@ -23,7 +23,7 @@ export function PowerMeter() {
   const lit = Math.floor(frac * LED_COUNT);
 
   return (
-    <div className="relative overflow-hidden border-b border-line bg-panel/90 px-4 pb-2.5 pt-3">
+    <div className="relative overflow-hidden border-b border-line/60 bg-transparent px-4 pb-2.5 pt-3">
       <div className="flex items-center justify-between">
         <span className="flex items-center gap-2 text-[11px] uppercase tracking-widest text-ink-dim">
           <span className="live-dot" aria-hidden />

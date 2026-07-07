@@ -19,7 +19,7 @@ export function Tabs({
   badges?: Partial<Record<TabId, boolean>>;
 }) {
   return (
-    <nav className="grid grid-cols-6 border-t border-line bg-panel" aria-label="Game sections">
+    <nav className="grid grid-cols-6 border-t border-line/60 bg-transparent" aria-label="Game sections">
       {TABS.map((t) => (
         <button
           key={t.id}

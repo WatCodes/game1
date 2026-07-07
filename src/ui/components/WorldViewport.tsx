@@ -1,7 +1,23 @@
-import { useState } from 'react';
+import { Suspense, lazy, useState } from 'react';
 import { useGame } from '../../store/gameStore';
 import { transmissionFor } from '../../content/transmissions';
 import { audioEnabled, setAudioEnabled } from '../audio';
+import { webglAvailable } from '../three/support';
+import type { SceneData } from '../three/types';
+import { SceneErrorBoundary } from './SceneErrorBoundary';
+
+// Code-split: three.js only downloads when the 3D view actually mounts.
+const Scene3DInner = lazy(() => import('./WorldViewport3D'));
+
+function Scene3D(props: { tier: number; data: SceneData; onFail: () => void }) {
+  return (
+    <SceneErrorBoundary onError={props.onFail}>
+      <Suspense fallback={<div className="h-40 w-full" aria-hidden />}>
+        <Scene3DInner {...props} />
+      </Suspense>
+    </SceneErrorBoundary>
+  );
+}
 
 // The living world: one panel that redraws from game state and levels up with
 // each ascension. Every scene is driven by data the display already carries.
@@ -288,6 +304,12 @@ const SCENES = [CityScene, RenewableScene, PlanetScene, OrbitalScene, DysonScene
 
 export function WorldViewport() {
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('kardashev:ui:viewport') === '0');
+  // Preference is state; capability is checked at render time. Deciding
+  // capability once at mount was a real bug: a page that loads while the
+  // window is hidden probes WebGL as unavailable and would lock into 2D.
+  // Render-time checks self-heal on the next display publish (~12 Hz).
+  const [wants3d, setWants3d] = useState(() => localStorage.getItem('kardashev:ui:3d') !== '0');
+  const use3d = wants3d && webglAvailable();
   const tier = useGame((s) => s.display.tier);
   const sources = useGame((s) => s.display.sources);
   const milestones = useGame((s) => s.display.globalMilestones);
@@ -295,10 +317,16 @@ export function WorldViewport() {
   const boosts = useGame((s) => s.display.boosts);
   const pps = useGame((s) => s.display.pps);
   const lifetimePower = useGame((s) => s.display.lifetimePower);
+  const tierTwist = useGame((s) => s.display.tierTwist);
 
   const toggle = () => {
     localStorage.setItem('kardashev:ui:viewport', collapsed ? '1' : '0');
     setCollapsed(!collapsed);
+  };
+
+  const toggle3d = () => {
+    localStorage.setItem('kardashev:ui:3d', wants3d ? '0' : '1');
+    setWants3d(!wants3d);
   };
 
   const scene: Scene = {
@@ -308,6 +336,11 @@ export function WorldViewport() {
     stagesAuth: mega.stagesAuthorized,
     surge: boosts.surgeLeft > 0 || boosts.powerLeft > 0,
     live: pps > 0,
+  };
+  const sceneData: SceneData = {
+    ...scene,
+    feedRate: tierTwist.kind === 'accretion' ? tierTwist.feedRate : 0,
+    heat: tierTwist.kind === 'accretion' ? tierTwist.heat : 0,
   };
   const Scene = SCENES[Math.min(tier, SCENES.length - 1)];
 
@@ -333,11 +366,25 @@ export function WorldViewport() {
       >
         {sound ? '♪ on' : '♪ off'}
       </button>
+      {webglAvailable() && (
+        <button
+          className={`absolute right-[4.5rem] top-1 z-10 px-1 font-mono text-[10px] ${use3d ? 'text-current' : 'text-ink-dim'} hover:text-ink`}
+          onClick={toggle3d}
+          aria-pressed={use3d}
+          aria-label={use3d ? 'Switch world view to 2D' : 'Switch world view to 3D'}
+        >
+          {use3d ? '◆ 3d' : '◇ 2d'}
+        </button>
+      )}
       {!collapsed && (
         <>
-          <svg viewBox="0 0 360 110" className="block w-full" role="img" aria-label="Your civilization, drawn live from the grid">
-            <Scene {...scene} />
-          </svg>
+          {use3d ? (
+            <Scene3D tier={tier} data={sceneData} onFail={() => setWants3d(false)} />
+          ) : (
+            <svg viewBox="0 0 360 110" className="block w-full" role="img" aria-label="Your civilization, drawn live from the grid">
+              <Scene {...scene} />
+            </svg>
+          )}
           <p className="px-3 pb-1.5 text-center text-[10px] italic text-ink-dim">{transmissionFor(lifetimePower)}</p>
         </>
       )}

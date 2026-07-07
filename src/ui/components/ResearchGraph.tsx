@@ -187,7 +187,11 @@ export function ResearchGraph() {
   }, []);
 
   const onPointerDown = useCallback((e: React.PointerEvent<SVGSVGElement>) => {
-    e.currentTarget.setPointerCapture(e.pointerId);
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      /* stale/synthetic pointerId — capture is an optimization, not a requirement */
+    }
     const target = e.target as Element;
     const nodeEl = target.closest?.('[data-node-id]') as SVGCircleElement | null;
     const nodeId = nodeEl?.getAttribute('data-node-id') ?? undefined;

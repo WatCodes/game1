@@ -1,19 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import {
-  conns,
-  generatePuzzle,
-  isSolved,
-  poweredSet,
-  puzzleReward,
-  puzzleSize,
-  rotateTile,
-  runSolvers,
-  scramblePuzzle,
-  type SolveResult,
-} from '../src/engine/puzzle';
+import { affectedCells, isSolved, newPuzzle, puzzleReward, puzzleSize, runSolvers, tapCell } from '../src/engine/puzzle';
 import { createInitialState } from '../src/engine/state';
 import { CONFIG } from '../src/content/config';
-import type { PuzzleState } from '../src/engine/types';
+import type { GameState } from '../src/engine/types';
 
 /** Deterministic PRNG so generator tests are reproducible. */
 function mulberry32(seed: number): () => number {
@@ -26,47 +15,14 @@ function mulberry32(seed: number): () => number {
   };
 }
 
-function key(dirs: number[]): string {
-  return [...dirs].sort().join('');
-}
-
-/** Rotate every tile until it matches the captured solution orientation. */
-function solve(p: PuzzleState, solution: number[]): void {
-  p.tiles.forEach((t, i) => {
-    const want = key(conns({ ...t, rot: solution[i] }));
-    for (let k = 0; k < 4 && key(conns(t)) !== want; k++) t.rot = (t.rot + 1) % 4;
-  });
-}
-
-describe('generator', () => {
-  it('produces a fully-connected solved circuit with one source', () => {
-    for (let seed = 1; seed <= 5; seed++) {
-      const p = generatePuzzle(0, mulberry32(seed));
-      expect(isSolved(p)).toBe(true);
-      expect(p.tiles.filter((t) => t.role === 'source')).toHaveLength(1);
-      expect(p.tiles.filter((t) => t.role === 'sink').length).toBeGreaterThan(0);
-      // spanning tree: every tile is on the circuit in solved orientation
-      expect(poweredSet(p).size).toBe(p.size * p.size);
-    }
-  });
-
-  it('scrambling always leaves the puzzle unsolved with a positive par', () => {
+describe('newPuzzle (load balancer)', () => {
+  it('deals a solvable but not-yet-balanced board with a positive par', () => {
     for (let seed = 1; seed <= 10; seed++) {
-      const rand = mulberry32(seed);
-      const p = generatePuzzle(0, rand);
-      scramblePuzzle(p, rand);
-      expect(isSolved(p)).toBe(false);
+      const p = newPuzzle(0, mulberry32(seed));
+      expect(p.cells).toHaveLength(p.size * p.size);
+      expect(isSolved(p)).toBe(false); // never hand a pre-balanced board
       expect(p.par).toBeGreaterThan(0);
     }
-  });
-
-  it('scrambled puzzles are solvable by returning to the solution', () => {
-    const rand = mulberry32(42);
-    const p = generatePuzzle(0, rand);
-    const solution = p.tiles.map((t) => t.rot);
-    scramblePuzzle(p, rand);
-    solve(p, solution);
-    expect(isSolved(p)).toBe(true);
   });
 
   it('grids grow with tier and cap at 7', () => {
@@ -77,36 +33,76 @@ describe('generator', () => {
   });
 });
 
-describe('rotateTile', () => {
-  function solvableState() {
-    const rand = mulberry32(7);
-    const s = createInitialState(0, rand);
-    const p = generatePuzzle(0, rand);
-    const solution = p.tiles.map((t) => t.rot);
-    scramblePuzzle(p, rand);
-    s.puzzle = p;
-    return { s, solution };
+describe('affectedCells', () => {
+  it('a corner tap affects 3 cells, an edge 4, an interior 5', () => {
+    const size = 4;
+    expect(affectedCells(0, size).sort((a, b) => a - b)).toEqual([0, 1, 4]); // top-left corner
+    expect(affectedCells(1, size)).toContain(1); // top edge → self + 3 neighbors
+    expect(affectedCells(1, size)).toHaveLength(4);
+    expect(affectedCells(5, size)).toHaveLength(5); // interior → self + 4
+  });
+});
+
+describe('tapCell', () => {
+  /** Deterministic solver: light-chase then handle the board directly. Since
+   *  our boards are small and always solvable, we brute-force via BFS over the
+   *  toggle group would be overkill — instead we replay a known solution by
+   *  tapping every cell whose tap is in the minimal set. We derive that set by
+   *  solving the board here with Gaussian elimination over GF(2). */
+  function solveBoard(s: GameState): number {
+    const p = s.puzzle;
+    const n = p.cells.length;
+    const size = p.size;
+    // Build the toggle matrix A (n×n) and target b (current lit state).
+    const rows: number[][] = [];
+    for (let i = 0; i < n; i++) {
+      const row = new Array(n + 1).fill(0);
+      for (const c of affectedCells(i, size)) row[c] = 1;
+      row[n] = p.cells[i] ? 1 : 0;
+      rows.push(row);
+    }
+    // Gaussian elimination mod 2.
+    let r = 0;
+    const where = new Array(n).fill(-1);
+    for (let col = 0; col < n && r < n; col++) {
+      let sel = -1;
+      for (let i = r; i < n; i++) if (rows[i][col]) { sel = i; break; }
+      if (sel === -1) continue;
+      [rows[r], rows[sel]] = [rows[sel], rows[r]];
+      for (let i = 0; i < n; i++) {
+        if (i !== r && rows[i][col]) for (let j = col; j <= n; j++) rows[i][j] ^= rows[r][j];
+      }
+      where[col] = r;
+      r++;
+    }
+    const x = new Array(n).fill(0);
+    for (let col = 0; col < n; col++) if (where[col] !== -1) x[col] = rows[where[col]][n];
+    let taps = 0;
+    for (let i = 0; i < n; i++) if (x[i]) { tapCell(s, i); taps++; }
+    return taps;
   }
 
-  it('pays credits and lights the surge on solve, then latches', () => {
-    const { s, solution } = solvableState();
-    // rotate every tile to solution via the engine action
-    let result: SolveResult | null = null;
-    s.puzzle.tiles.forEach((t, i) => {
-      const want = key(conns({ ...t, rot: solution[i] }));
-      for (let k = 0; k < 4 && key(conns(t)) !== want; k++) {
-        result = rotateTile(s, i) ?? result;
-      }
-    });
-    expect(result).not.toBeNull();
+  it('balancing the grid pays credits, lights the surge, and latches', () => {
+    const s = createInitialState(0, mulberry32(7));
+    s.puzzle = newPuzzle(0, mulberry32(7));
+    solveBoard(s);
     expect(s.puzzle.solved).toBe(true);
+    expect(isSolved(s.puzzle)).toBe(true);
     expect(s.credits).toBeGreaterThan(0);
     expect(s.boosts.surgeLeft).toBe(CONFIG.SURGE_MANUAL_SECONDS);
     expect(s.stats.puzzlesSolved).toBe(1);
-    // latched: further rotations are ignored
-    const before = s.puzzle.tiles[0].rot;
-    expect(rotateTile(s, 0)).toBeNull();
-    expect(s.puzzle.tiles[0].rot).toBe(before);
+    // latched: further taps are ignored
+    const before = [...s.puzzle.cells];
+    expect(tapCell(s, 0)).toBeNull();
+    expect(s.puzzle.cells).toEqual(before);
+  });
+
+  it('a tap flips the district and its orthogonal neighbors', () => {
+    const s = createInitialState(0);
+    s.puzzle = { tier: 0, size: 4, cells: new Array(16).fill(false), moves: 0, par: 1, solved: false };
+    tapCell(s, 5); // interior
+    for (const c of affectedCells(5, 4)) expect(s.puzzle.cells[c]).toBe(true);
+    expect(s.puzzle.cells[0]).toBe(false); // untouched
   });
 });
 
@@ -124,7 +120,7 @@ describe('auto-solvers', () => {
   it('grind solves for reduced credits and short surges', () => {
     const s = createInitialState(0, mulberry32(1));
     s.solvers = 2;
-    runSolvers(s, CONFIG.SOLVER_SECONDS); // 2 solves banked
+    runSolvers(s, CONFIG.SOLVER_SECONDS);
     const per = Math.round(CONFIG.PUZZLE_BASE_REWARD * CONFIG.SOLVER_REWARD_FACTOR);
     expect(s.credits).toBe(2 * per);
     expect(s.boosts.surgeLeft).toBe(2 * CONFIG.SURGE_AUTO_SECONDS);

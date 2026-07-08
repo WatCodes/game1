@@ -56,7 +56,7 @@ import {
 } from '../engine/megaproject';
 import { ascend, canAscend, projectedKp } from '../engine/ascension';
 import { creditOffline, type OfflineSummary } from '../engine/offline';
-import { newPuzzle, poweredSet, puzzleReward, rotateTile } from '../engine/puzzle';
+import { newPuzzle, puzzleReward, tapCell } from '../engine/puzzle';
 import { tick } from '../engine/loop';
 import {
   buyDispatchRecharge,
@@ -174,7 +174,7 @@ export interface DisplaySnapshot {
     name: string;
     flavor: string;
     size: number;
-    tiles: { kind: string; rot: number; role: string; powered: boolean }[];
+    cells: boolean[]; // true = over-loaded district
     moves: number;
     par: number;
     solved: boolean;
@@ -386,12 +386,11 @@ function buildShopView(s: GameState): DisplaySnapshot['shop'] {
 
 function buildPuzzleView(s: GameState): DisplaySnapshot['puzzle'] {
   const skin = puzzleSkin(s.tier);
-  const powered = poweredSet(s.puzzle);
   return {
     name: skin.name,
     flavor: skin.flavor,
     size: s.puzzle.size,
-    tiles: s.puzzle.tiles.map((t, i) => ({ kind: t.kind, rot: t.rot, role: t.role, powered: powered.has(i) })),
+    cells: [...s.puzzle.cells],
     moves: s.puzzle.moves,
     par: s.puzzle.par,
     solved: s.puzzle.solved,
@@ -444,7 +443,7 @@ interface GameStore {
     setRelayAllocation: (pct: number) => void;
     doDispatch: () => void;
     doAscend: () => void;
-    rotatePuzzleTile: (idx: number) => void;
+    tapPuzzleCell: (idx: number) => void;
     dealNewPuzzle: () => void;
     claimDailyReward: () => void;
     buyShopSolver: () => void;
@@ -581,11 +580,11 @@ export const useGame = create<GameStore>((set) => {
           refresh();
         }
       },
-      rotatePuzzleTile: (idx) => {
-        const result = rotateTile(game, idx);
+      tapPuzzleCell: (idx) => {
+        const result = tapCell(game, idx);
         if (result) {
           const bonus = result.bonus ? ' (efficiency bonus!)' : '';
-          pushToast('milestone', `⚡ Circuit energized — +${result.reward} CR${bonus} · surge extended`);
+          pushToast('milestone', `⚡ Grid balanced — +${result.reward} CR${bonus} · surge extended`);
           saveToStorage(game);
         }
         refresh();

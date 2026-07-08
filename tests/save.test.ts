@@ -36,7 +36,7 @@ function playedState() {
   s.launchWindow = { active: true, timeLeft: 12, nextIn: 0 };
   s.accretion = { feedRate: 0.6, heat: 0.3 };
   s.relay = { researchAllocation: 0.25 };
-  s.puzzle.tiles[0].rot = (s.puzzle.tiles[0].rot + 1) % 4;
+  s.puzzle.cells[0] = !s.puzzle.cells[0];
   s.puzzle.moves = 5;
   s.lastSaved = 555_000;
   return s;
@@ -67,7 +67,7 @@ describe('round trip', () => {
     expect(restored.launchWindow).toEqual({ active: true, timeLeft: 12, nextIn: 0 });
     expect(restored.accretion).toEqual({ feedRate: 0.6, heat: 0.3 });
     expect(restored.relay).toEqual({ researchAllocation: 0.25 });
-    expect(restored.puzzle.tiles.map((t) => t.rot)).toEqual(s.puzzle.tiles.map((t) => t.rot));
+    expect(restored.puzzle.cells).toEqual(s.puzzle.cells);
     expect(restored.puzzle.moves).toBe(5);
   });
 
@@ -138,9 +138,9 @@ describe('migration', () => {
     // 210k / 350k = 60% → stages 1–3 worth of progress stays reachable
     expect(restored.megaproject.stagesAuthorized).toBe(4);
     expect(restored.megaproject.committed).toBe(210_000);
-    // v3 additions get sane defaults, including a freshly dealt circuit
+    // v3 additions get sane defaults, including a freshly dealt board
     expect(restored.credits).toBe(0);
-    expect(restored.puzzle.tiles.length).toBe(restored.puzzle.size ** 2);
+    expect(restored.puzzle.cells.length).toBe(restored.puzzle.size ** 2);
   });
 
   it('upgrades a v2 save: puzzle/shop economy seeded with defaults', () => {

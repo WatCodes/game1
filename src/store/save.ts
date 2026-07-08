@@ -65,7 +65,7 @@ export function serialize(s: GameState): SaveData {
     accretion: { ...s.accretion },
     relay: { ...s.relay },
     credits: s.credits,
-    puzzle: { ...s.puzzle, tiles: s.puzzle.tiles.map((t) => ({ ...t })) },
+    puzzle: { ...s.puzzle, cells: [...s.puzzle.cells] },
     solvers: s.solvers,
     solverProgress: s.solverProgress,
     boosts: { ...s.boosts },
@@ -76,16 +76,11 @@ export function serialize(s: GameState): SaveData {
   };
 }
 
-const TILE_KINDS = new Set(['stub', 'straight', 'corner', 'tee', 'cross']);
-const TILE_ROLES = new Set(['source', 'sink', 'wire']);
-
-/** A saved puzzle must be structurally sound or we deal a fresh one. */
+/** A saved board must be structurally sound or we deal a fresh one. */
 function isValidPuzzle(p: PuzzleState | null | undefined, tier: number): p is PuzzleState {
-  if (!p || typeof p.size !== 'number' || !Array.isArray(p.tiles)) return false;
-  if (p.size !== puzzleSize(tier) || p.tiles.length !== p.size * p.size) return false;
-  return p.tiles.every(
-    (t) => t && TILE_KINDS.has(t.kind) && TILE_ROLES.has(t.role) && typeof t.rot === 'number',
-  );
+  if (!p || typeof p.size !== 'number' || !Array.isArray(p.cells)) return false;
+  if (p.size !== puzzleSize(tier) || p.cells.length !== p.size * p.size) return false;
+  return p.cells.every((c) => typeof c === 'boolean');
 }
 
 /** Rebuild a full GameState from content + a validated save's runtime values. */
@@ -160,14 +155,15 @@ export function hydrate(save: SaveData): GameState {
     s.puzzle = {
       tier: save.tier,
       size: save.puzzle.size,
-      tiles: save.puzzle.tiles.map((t) => ({ kind: t.kind, rot: ((t.rot % 4) + 4) % 4, role: t.role })),
+      cells: save.puzzle.cells.map((c) => !!c),
       moves: Math.max(0, Math.floor(save.puzzle.moves ?? 0)),
-      par: Math.max(0, Math.floor(save.puzzle.par ?? 0)),
+      par: Math.max(1, Math.floor(save.puzzle.par ?? 1)),
       solved: !!save.puzzle.solved,
     };
     // never trust the latch blindly — recompute so a stale flag can't farm
     s.puzzle.solved = s.puzzle.solved && isSolved(s.puzzle);
   } else {
+    // Includes old circuit-puzzle saves (tiles, no cells) — deal a fresh board.
     s.puzzle = newPuzzle(save.tier);
   }
   reapplyPurchasedEffects(s); // restore automation managers

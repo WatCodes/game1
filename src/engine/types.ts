@@ -54,21 +54,13 @@ export interface Megaproject {
   stagesAuthorized: number; // stages cleared to receive power (starts at 1)
 }
 
-export type TileKind = 'stub' | 'straight' | 'corner' | 'tee' | 'cross';
-
-export interface PuzzleTile {
-  kind: TileKind;
-  rot: number; // quarter-turns, 0..3
-  role: 'source' | 'sink' | 'wire';
-}
-
 export interface PuzzleState {
   tier: number;
   size: number;
-  tiles: PuzzleTile[]; // size×size, row-major
+  cells: boolean[]; // size×size, row-major; true = over-loaded district
   moves: number;
-  par: number; // minimal turns from the scrambled deal
-  solved: boolean; // latched until a new circuit is dealt
+  par: number; // minimal taps from the dealt board
+  solved: boolean; // latched until a new board is dealt
 }
 
 export interface KardashevTier {

@@ -85,6 +85,27 @@ export function nextCost(src: PowerSource, count = 1, costMult = 1): Num {
   return sourceCost(src.baseCost * costMult, src.costGrowth, src.owned, count);
 }
 
+/**
+ * Delivered W/s the grid would gain from buying `count` more of a source —
+ * the honest headline delta (includes milestone ×2 crossings, all global
+ * multipliers, and the transmission cap/losses). Temporarily bumps owned and
+ * restores it; safe because buildDisplay is synchronous.
+ */
+export function deliveredGain(
+  s: GameState,
+  src: PowerSource,
+  count: number,
+  mods: ResearchModifiers = researchModifiers(s),
+): Num {
+  if (count <= 0) return 0;
+  const before = powerPerSec(s, mods);
+  const saved = src.owned;
+  src.owned += count;
+  const after = powerPerSec(s, mods);
+  src.owned = saved;
+  return Math.max(0, after - before);
+}
+
 export function maxAffordable(src: PowerSource, budget: Num, costMult = 1): number {
   return buyMaxCount(src.baseCost * costMult, src.costGrowth, src.owned, budget);
 }

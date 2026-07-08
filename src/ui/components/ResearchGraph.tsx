@@ -414,7 +414,7 @@ export function ResearchGraph() {
                 fill = 'var(--bg-raised)';
                 stroke = 'var(--cyan-dim)';
               }
-              const radius = r.purchased ? 6 : r.available ? 6 : 4.5;
+              const radius = r.purchased ? 9 : r.available ? 9 : 6.5;
               return (
                 <g
                   key={r.id}
@@ -423,28 +423,29 @@ export function ResearchGraph() {
                     else nodeGroupRefs.current.delete(r.id);
                   }}
                 >
-                  {isSelected && (
-                    <circle
-                      cx={0}
-                      cy={0}
-                      r={radius + 5}
-                      fill="none"
-                      stroke="var(--cyan)"
-                      strokeOpacity={0.5}
-                      strokeWidth={1.5}
-                      style={{ pointerEvents: 'none' }}
-                    />
-                  )}
+                  {/* Oversized transparent hit target — the visible dot is small
+                      after the viewBox down-scale, so tapping it exactly is hard.
+                      pointerEvents:all makes the whole disc tappable. */}
                   <circle
                     data-node-id={r.id}
+                    cx={0}
+                    cy={0}
+                    r={20}
+                    fill="transparent"
+                    style={{ pointerEvents: 'all', cursor: 'pointer', touchAction: 'none' }}
+                  />
+                  {isSelected && (
+                    <circle cx={0} cy={0} r={radius + 6} fill="none" stroke="var(--cyan)" strokeOpacity={0.5} strokeWidth={2} style={{ pointerEvents: 'none' }} />
+                  )}
+                  <circle
                     cx={0}
                     cy={0}
                     r={radius}
                     fill={fill}
                     stroke={stroke}
-                    strokeWidth={1.5}
+                    strokeWidth={2}
                     opacity={dim ? 0.25 : 1}
-                    style={{ cursor: 'pointer', touchAction: 'none' }}
+                    style={{ pointerEvents: 'none' }}
                   />
                 </g>
               );

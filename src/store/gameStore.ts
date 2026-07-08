@@ -5,6 +5,7 @@ import { getTier } from '../content/tiers';
 import { createInitialState } from '../engine/state';
 import {
   buy,
+  deliveredGain,
   fireDispatch,
   generationPerSec,
   isSourceUnlocked,
@@ -98,8 +99,15 @@ export interface SourceView {
   unlocked: boolean;
   cost1: Num;
   cost10: Num;
+  nextCount: number; // units to reach the next ×2 count milestone
+  nextCost: Num;
   maxCount: number;
   maxCost: Num;
+  // Delivered W/s the grid gains from each buy option (post-cap, post-loss).
+  gain1: Num;
+  gain10: Num;
+  gainNext: Num;
+  gainMax: Num;
   output: Num; // net W/s of this line before global mults
   upkeep: Num; // W/s lost to fuel/maintenance
   nextUnitNet: Num; // net gain of buying one more; ≤0 = curtails
@@ -229,24 +237,34 @@ function buildDisplay(s: GameState): DisplaySnapshot {
     runPower: s.runPower,
     globalMilestones: globalMilestoneCount(s.runPower),
     nextGlobalAt: nextGlobalMilestone(s.runPower),
-    sources: Object.values(s.sources).map((src) => ({
-      id: src.id,
-      name: src.name,
-      owned: src.owned,
-      unlocked: isSourceUnlocked(s, src, mods),
-      cost1: nextCost(src, 1, launchMult),
-      cost10: nextCost(src, 10, launchMult),
-      maxCount: maxAffordable(src, s.power, launchMult),
-      maxCost: nextCost(src, Math.max(1, maxAffordable(src, s.power, launchMult)), launchMult),
-      output: sourceNet(src, mods),
-      upkeep: sourceUpkeep(src, mods),
-      nextUnitNet: nextUnitNet(src, mods),
-      milestoneMult: sourceMilestoneMult(src.owned),
-      toNextMilestone: nextSourceMilestone(src.owned) - src.owned,
-      nextMilestoneAt: nextSourceMilestone(src.owned),
-      automated: !!src.automated,
-      autoPaused: !!src.autoPaused,
-    })),
+    sources: Object.values(s.sources).map((src) => {
+      const toNext = nextSourceMilestone(src.owned) - src.owned;
+      const maxN = maxAffordable(src, s.power, launchMult);
+      return {
+        id: src.id,
+        name: src.name,
+        owned: src.owned,
+        unlocked: isSourceUnlocked(s, src, mods),
+        cost1: nextCost(src, 1, launchMult),
+        cost10: nextCost(src, 10, launchMult),
+        nextCount: toNext,
+        nextCost: nextCost(src, toNext, launchMult),
+        maxCount: maxN,
+        maxCost: nextCost(src, Math.max(1, maxN), launchMult),
+        gain1: deliveredGain(s, src, 1, mods),
+        gain10: deliveredGain(s, src, 10, mods),
+        gainNext: deliveredGain(s, src, toNext, mods),
+        gainMax: deliveredGain(s, src, Math.max(1, maxN), mods),
+        output: sourceNet(src, mods),
+        upkeep: sourceUpkeep(src, mods),
+        nextUnitNet: nextUnitNet(src, mods),
+        milestoneMult: sourceMilestoneMult(src.owned),
+        toNextMilestone: toNext,
+        nextMilestoneAt: nextSourceMilestone(src.owned),
+        automated: !!src.automated,
+        autoPaused: !!src.autoPaused,
+      };
+    }),
     research: Object.values(s.research)
       .filter((n) => n.tier <= s.tier)
       .map((n) => ({

@@ -33,8 +33,11 @@ function ToastCard({ toast }: { toast: Toast }) {
 export function Toasts() {
   const toasts = useGame((s) => s.toasts);
   return (
+    // Anchored above the footer (dispatch + tabs) + iOS safe area, so toasts
+    // never cover the power meter or the interactive bottom bar.
     <div
-      className="pointer-events-none fixed inset-x-0 top-2 z-50 mx-auto flex w-full max-w-sm flex-col gap-1.5 px-3"
+      className="pointer-events-none fixed inset-x-0 z-30 mx-auto flex w-full max-w-sm flex-col gap-1.5 px-3"
+      style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 6.75rem)' }}
       role="status"
       aria-live="polite"
     >

@@ -14,10 +14,6 @@ export const SourceRow = memo(function SourceRow({ src, power }: { src: SourceVi
     );
   }
 
-  const btn =
-    'rounded border px-2 py-1 font-mono text-[11px] leading-tight transition-all disabled:opacity-40 disabled:cursor-not-allowed';
-  const canBuy1 = power >= src.cost1;
-  const canBuy10 = power >= src.cost10;
   const producing = src.output > 0;
   const warn = src.nextUnitNet <= 0 && src.owned > 0;
   const milestoneFrac = Math.min(1, src.owned / src.nextMilestoneAt);
@@ -65,32 +61,60 @@ export const SourceRow = memo(function SourceRow({ src, power }: { src: SourceVi
           ⚠ next unit curtails — push to the ×2 milestone or research efficiency
         </p>
       )}
-      <div className="mt-1.5 grid grid-cols-3 gap-1.5">
-        <button
-          className={`${btn} ${canBuy1 ? 'border-current-dim text-current hover:bg-raised' : 'border-line text-ink-dim'}`}
-          disabled={!canBuy1}
-          onClick={() => buySource(src.id, 1)}
-        >
-          Buy 1<br />
-          <span className="text-ink-dim">{formatPower(src.cost1)}</span>
-        </button>
-        <button
-          className={`${btn} ${canBuy10 ? 'border-current-dim text-current hover:bg-raised' : 'border-line text-ink-dim'}`}
-          disabled={!canBuy10}
-          onClick={() => buySource(src.id, 10)}
-        >
-          Buy 10<br />
-          <span className="text-ink-dim">{formatPower(src.cost10)}</span>
-        </button>
-        <button
-          className={`${btn} ${src.maxCount > 0 ? 'border-volt-dim text-volt hover:bg-raised' : 'border-line text-ink-dim'}`}
-          disabled={src.maxCount < 1}
+      <div className="mt-1.5 grid grid-cols-2 gap-1.5">
+        <BuyButton label="Buy 1" cost={src.cost1} gain={src.gain1} affordable={power >= src.cost1} onClick={() => buySource(src.id, 1)} />
+        <BuyButton label="Buy 10" cost={src.cost10} gain={src.gain10} affordable={power >= src.cost10} onClick={() => buySource(src.id, 10)} />
+        <BuyButton
+          label={`Next ×2 (${src.nextCount})`}
+          cost={src.nextCost}
+          gain={src.gainNext}
+          affordable={power >= src.nextCost}
+          onClick={() => buySource(src.id, src.nextCount)}
+        />
+        <BuyButton
+          label={`Max (${src.maxCount})`}
+          cost={src.maxCount > 0 ? src.maxCost : undefined}
+          gain={src.gainMax}
+          affordable={src.maxCount > 0}
+          accent
           onClick={() => buySource(src.id, 'max')}
-        >
-          Max ({src.maxCount})<br />
-          <span className="text-ink-dim">{src.maxCount > 0 ? formatPower(src.maxCost) : '—'}</span>
-        </button>
+        />
       </div>
     </div>
   );
 });
+
+function BuyButton({
+  label,
+  cost,
+  gain,
+  affordable,
+  accent,
+  onClick,
+}: {
+  label: string;
+  cost: number | undefined;
+  gain: number;
+  affordable: boolean;
+  accent?: boolean;
+  onClick: () => void;
+}) {
+  const tone = affordable
+    ? accent
+      ? 'border-volt-dim text-volt hover:bg-raised'
+      : 'border-current-dim text-current hover:bg-raised'
+    : 'border-line text-ink-dim';
+  return (
+    <button
+      className={`rounded border px-2 py-1 text-left font-mono text-[11px] leading-tight transition-all disabled:opacity-40 disabled:cursor-not-allowed ${tone}`}
+      disabled={!affordable}
+      onClick={onClick}
+    >
+      <div className="flex items-baseline justify-between">
+        <span>{label}</span>
+        <span className="text-volt">{gain > 0 ? `+${formatPower(gain)}/s` : ''}</span>
+      </div>
+      <span className="text-[10px] text-ink-dim">{cost !== undefined ? formatPower(cost) : '—'}</span>
+    </button>
+  );
+}

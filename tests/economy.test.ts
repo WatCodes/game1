@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createInitialState } from '../src/engine/state';
 import {
   buy,
+  deliveredGain,
   fireDispatch,
   generationPerSec,
   isSourceUnlocked,
@@ -115,6 +116,33 @@ describe('fuel & upkeep', () => {
     s.rp = 1e9;
     buyResearch(s, 'eff-t0');
     expect(sourceUpkeep(src, researchModifiers(s))).toBeCloseTo(before / 2);
+  });
+});
+
+describe('deliveredGain', () => {
+  it('equals the delivered pps delta and restores owned', () => {
+    const s = state();
+    s.sources['battery-bank'].owned = 5;
+    const before = powerPerSec(s);
+    const g = deliveredGain(s, s.sources['battery-bank'], 10);
+    expect(s.sources['battery-bank'].owned).toBe(5); // restored
+    s.sources['battery-bank'].owned = 15;
+    const after = powerPerSec(s);
+    expect(g).toBeCloseTo(after - before);
+  });
+
+  it('a milestone-crossing buy gains more than a plain one', () => {
+    const s = state();
+    s.sources['battery-bank'].owned = 20;
+    // Buying 5 reaches the 25 milestone (×2); buying 4 doesn't.
+    const toMilestone = deliveredGain(s, s.sources['battery-bank'], 5);
+    const shortOf = deliveredGain(s, s.sources['battery-bank'], 4);
+    expect(toMilestone).toBeGreaterThan(shortOf);
+  });
+
+  it('is zero for a non-positive count', () => {
+    const s = state();
+    expect(deliveredGain(s, s.sources['battery-bank'], 0)).toBe(0);
   });
 });
 

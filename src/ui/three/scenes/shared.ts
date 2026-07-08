@@ -16,6 +16,17 @@ export const C = {
   danger: 0xf87171,
 } as const;
 
+// Vaporwave neon palette — bright, saturated signs that pop against the dark
+// buildings without needing a bloom pass (too costly on the mobile budget).
+export const NEON = {
+  pink: 0xff2d95,
+  hotCyan: 0x00e5ff,
+  magenta: 0xd946ef,
+  amber: 0xffb300,
+  lime: 0x39ff88,
+  blue: 0x3b6bff,
+} as const;
+
 /** Sub-linear ramp so early buys visibly change the world (mirrors 2D). */
 export function litCount(owned: number, max: number, k = 1.6): number {
   return Math.min(max, Math.ceil(Math.sqrt(Math.max(0, owned)) * k));
@@ -32,12 +43,57 @@ export function glow(color: number, intensity = 1): THREE.MeshBasicMaterial {
   return new THREE.MeshBasicMaterial({ color: c });
 }
 
-/** Standard two-light rig shared by every scene. */
+/**
+ * Three-light rig shared by every scene. The violet rim light is the key to
+ * "pop" — it edge-lights silhouettes so objects separate from the near-black
+ * app background instead of blending into it.
+ */
 export function addLights(group: THREE.Group): void {
-  const ambient = new THREE.AmbientLight(0x8899bb, 0.55);
-  const key = new THREE.DirectionalLight(0xbfd8ff, 1.1);
-  key.position.set(3, 5, 2);
-  group.add(ambient, key);
+  const hemi = new THREE.HemisphereLight(0x9bb0ff, 0x140a2e, 0.75);
+  const key = new THREE.DirectionalLight(0xe2ecff, 1.25);
+  key.position.set(4, 6, 3);
+  const rim = new THREE.DirectionalLight(0xc084fc, 0.7);
+  rim.position.set(-5, 2, -5);
+  group.add(hemi, key, rim);
+}
+
+/**
+ * Gradient sky dome (+ optional ground disk) so scenes read against a lit
+ * backdrop rather than the flat page color. BackSide sphere, vertex-colored
+ * top→horizon, fog-immune and depth-write-off so it always sits behind.
+ */
+export function addBackdrop(
+  group: THREE.Group,
+  topHex: number,
+  horizonHex: number,
+  groundHex?: number,
+): void {
+  const R = 42;
+  const geo = new THREE.SphereGeometry(R, 24, 16);
+  const top = new THREE.Color(topHex);
+  const hor = new THREE.Color(horizonHex);
+  const colors: number[] = [];
+  const pos = geo.attributes.position;
+  for (let i = 0; i < pos.count; i++) {
+    const y = pos.getY(i) / R; // −1 (bottom) .. 1 (top)
+    const tt = Math.pow(Math.max(0, Math.min(1, (y + 0.15) / 1.15)), 0.85);
+    const c = hor.clone().lerp(top, tt);
+    colors.push(c.r, c.g, c.b);
+  }
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+  const dome = new THREE.Mesh(
+    geo,
+    new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide, fog: false, depthWrite: false }),
+  );
+  dome.renderOrder = -1;
+  group.add(dome);
+
+  if (groundHex !== undefined) {
+    const ground = new THREE.Mesh(new THREE.CircleGeometry(32, 48), new THREE.MeshBasicMaterial({ color: groundHex }));
+    ground.rotation.x = -Math.PI / 2;
+    ground.position.y = -0.05;
+    group.add(ground);
+  }
 }
 
 /** Recursively free geometries and materials — WebGL memory is manual. */

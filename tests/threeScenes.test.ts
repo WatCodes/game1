@@ -44,17 +44,38 @@ describe('every tier scene', () => {
 });
 
 describe('fossil scene data bindings', () => {
-  it('traffic and smoke only run while the grid is live', () => {
-    const scene = fossilScene();
-    scene.update({ ...IDLE, live: false }, 2);
-    const visible: boolean[] = [];
+  function hiddenCount(scene: ReturnType<typeof fossilScene>): number {
+    let n = 0;
     scene.group.traverse((obj) => {
-      const mesh = obj as THREE.Mesh;
-      const mat = mesh.material as THREE.MeshBasicMaterial | undefined;
-      // cars are the two small emissive boxes; capture visibility flags
-      if (mat && mesh.geometry?.type === 'BoxGeometry' && !mesh.visible) visible.push(mesh.visible);
+      if ((obj as THREE.Mesh).isMesh && !obj.visible) n++;
     });
-    expect(visible.length).toBeGreaterThanOrEqual(2); // both cars hidden
+    return n;
+  }
+
+  it('traffic, blimp and searchlights hide when the grid is not live', () => {
+    const scene = fossilScene();
+    scene.update({ ...IDLE, live: true }, 2);
+    const liveHidden = hiddenCount(scene);
+    scene.update({ ...IDLE, live: false }, 2);
+    const idleHidden = hiddenCount(scene);
+    // Motion elements (2 traffic streams + blimp + 2 searchlights) go dark.
+    expect(idleHidden).toBeGreaterThan(liveHidden);
+    expect(idleHidden - liveHidden).toBeGreaterThanOrEqual(4);
+    scene.dispose();
+  });
+
+  it('windows light up as sources are owned', () => {
+    const scene = fossilScene();
+    const windows = () =>
+      scene.group.children.find((c) => (c as THREE.InstancedMesh).isInstancedMesh) as THREE.InstancedMesh | undefined;
+    scene.update({ ...IDLE, owned: 0 }, 1);
+    const dark = new THREE.Color();
+    windows()!.getColorAt(0, dark);
+    scene.update({ ...IDLE, owned: 4000 }, 1);
+    const bright = new THREE.Color();
+    windows()!.getColorAt(0, bright);
+    // instance 0 goes from near-black to lit amber
+    expect(bright.r + bright.g + bright.b).toBeGreaterThan(dark.r + dark.g + dark.b);
     scene.dispose();
   });
 });

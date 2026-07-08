@@ -50,10 +50,13 @@ export class ViewportManager {
     this.renderer = new THREE.WebGLRenderer({
       canvas,
       alpha: true, // app background shows through — glass chrome stays coherent
-      antialias: false,
+      antialias: true, // MSAA on the canvas — the single biggest "not-Roblox" win
       powerPreference: 'low-power',
     });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    // Filmic tone mapping: soft highlight rolloff instead of flat clipped color.
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    this.renderer.toneMappingExposure = 1.2;
     this.camera = new THREE.PerspectiveCamera(46, 2, 0.1, 100);
     // Deep-indigo fog, pushed back so it separates the scene from the near-black
     // page without swallowing it.
@@ -145,6 +148,10 @@ export class ViewportManager {
     this.targetY = targetY;
   }
 
+  private render(): void {
+    this.renderer.render(this.root, this.camera);
+  }
+
   resize(): void {
     const { clientWidth, clientHeight } = this.canvas;
     if (clientWidth === 0 || clientHeight === 0) return;
@@ -179,7 +186,7 @@ export class ViewportManager {
         this.theta += this.autoSpeed * dt;
       }
       this.placeCamera();
-      this.renderer.render(this.root, this.camera);
+      this.render();
     };
     this.raf = requestAnimationFrame(frame);
   }
@@ -194,7 +201,7 @@ export class ViewportManager {
     if (!this.scene) return;
     this.scene.update(this.getData(), 0);
     this.placeCamera();
-    this.renderer.render(this.root, this.camera);
+    this.render();
   }
 
   dispose(): void {

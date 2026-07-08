@@ -32,15 +32,33 @@ export function litCount(owned: number, max: number, k = 1.6): number {
   return Math.min(max, Math.ceil(Math.sqrt(Math.max(0, owned)) * k));
 }
 
-/** Matte surface that still reads in our dark, low-light scenes. */
-export function matte(color: number): THREE.MeshLambertMaterial {
-  return new THREE.MeshLambertMaterial({ color });
+/**
+ * PBR matte surface. MeshStandard (not Lambert) gives soft specular falloff
+ * and reads far less "flat plastic" once anti-aliasing + tone mapping are on.
+ */
+export function matte(color: number, roughness = 0.82): THREE.MeshStandardMaterial {
+  return new THREE.MeshStandardMaterial({ color, roughness, metalness: 0.12 });
 }
 
-/** Self-lit material — the workhorse for windows, stars, power lines. */
-export function glow(color: number, intensity = 1): THREE.MeshBasicMaterial {
+/** Brushed-metal surface for structures that should catch a highlight. */
+export function metal(color: number, roughness = 0.35): THREE.MeshStandardMaterial {
+  return new THREE.MeshStandardMaterial({ color, roughness, metalness: 0.85 });
+}
+
+/**
+ * Self-lit material for windows, stars, power lines. Values are pushed past
+ * 1.0 so the bloom pass catches them and they actually glow rather than just
+ * being bright pixels.
+ */
+export function glow(color: number, intensity = 1.4): THREE.MeshBasicMaterial {
   const c = new THREE.Color(color).multiplyScalar(intensity);
   return new THREE.MeshBasicMaterial({ color: c });
+}
+
+/** Extra-bright emissive for neon signage — bloom's main customer. */
+export function neon(color: number, intensity = 2.4): THREE.MeshBasicMaterial {
+  const c = new THREE.Color(color).multiplyScalar(intensity);
+  return new THREE.MeshBasicMaterial({ color: c, fog: false });
 }
 
 /**
@@ -94,6 +112,47 @@ export function addBackdrop(
     ground.position.y = -0.05;
     group.add(ground);
   }
+}
+
+// Soft radial glow sprite — a bloom substitute that's cheap and robust where
+// a full post-processing pass is fragile on mobile GPUs. Cached texture;
+// falls back to a blank texture under headless tests (no 2D canvas).
+let haloTex: THREE.Texture | null = null;
+function haloTexture(): THREE.Texture {
+  if (haloTex) return haloTex;
+  try {
+    const s = 64;
+    const cv = document.createElement('canvas');
+    cv.width = cv.height = s;
+    const ctx = cv.getContext('2d');
+    if (!ctx) throw new Error('no 2d');
+    const g = ctx.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
+    g.addColorStop(0, 'rgba(255,255,255,1)');
+    g.addColorStop(0.28, 'rgba(255,255,255,0.55)');
+    g.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, s, s);
+    haloTex = new THREE.CanvasTexture(cv);
+  } catch {
+    haloTex = new THREE.Texture();
+  }
+  return haloTex;
+}
+
+/** Additive glow billboard — put behind neon/lights so they bloom. */
+export function makeHalo(color: number, size = 1, opacity = 0.6): THREE.Sprite {
+  const mat = new THREE.SpriteMaterial({
+    map: haloTexture(),
+    color,
+    transparent: true,
+    opacity,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    fog: false,
+  });
+  const sprite = new THREE.Sprite(mat);
+  sprite.scale.set(size, size, 1);
+  return sprite;
 }
 
 /** Recursively free geometries and materials — WebGL memory is manual. */

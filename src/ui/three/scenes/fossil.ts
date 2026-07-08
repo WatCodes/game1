@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import type { SceneData, TierScene } from '../types';
-import { C, NEON, addBackdrop, addLights, disposeGroup, glow, litCount, makeInstanced, matte } from './shared';
+import { C, NEON, addBackdrop, addLights, disposeGroup, glow, litCount, makeHalo, makeInstanced, matte, neon } from './shared';
 
 // T0 — a Roku-City-style nightscape: a dense neon skyline in a vaporwave
 // palette, with traffic light-streams, sweeping searchlights, a drifting
@@ -83,11 +83,17 @@ export function fossilScene(): TierScene {
       // Neon sign on some mid-rise faces.
       if (h > 2 && rand() < 0.5) {
         const color = neonList[Math.floor(rand() * neonList.length)];
-        const mat = new THREE.MeshBasicMaterial({ color, fog: false });
-        const sign = new THREE.Mesh(new THREE.PlaneGeometry(w * 0.7, 0.5 + rand() * 0.7), mat);
-        sign.position.set(x, 1 + rand() * (h - 1.5), z + d / 2 + 0.03);
+        const mat = neon(color);
+        const sh = 0.5 + rand() * 0.7;
+        const sign = new THREE.Mesh(new THREE.PlaneGeometry(w * 0.7, sh), mat);
+        const sy = 1 + rand() * (h - 1.5);
+        sign.position.set(x, sy, z + d / 2 + 0.03);
         group.add(sign);
         signMats.push(mat);
+        // Glow halo behind the sign so it reads as lit neon, not a flat decal.
+        const halo = makeHalo(color, Math.max(w, sh) * 2.4, 0.75);
+        halo.position.set(x, sy, z + d / 2 + 0.05);
+        group.add(halo);
       }
     }
   }
@@ -128,9 +134,11 @@ export function fossilScene(): TierScene {
   blimp.position.set(0, 6.5, 0);
   group.add(blimp);
 
-  const moon = new THREE.Mesh(new THREE.SphereGeometry(0.9, 16, 16), glow(0xdcd6ff, 0.85));
+  const moon = new THREE.Mesh(new THREE.SphereGeometry(0.9, 32, 32), glow(0xdcd6ff, 0.85));
   moon.position.set(-7, 8, -8);
-  group.add(moon);
+  const moonGlow = makeHalo(0xcfd0ff, 4.2, 0.5);
+  moonGlow.position.copy(moon.position);
+  group.add(moon, moonGlow);
 
   // Smoke puffs from the tallest stack.
   const stack = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.16, 1, 8), matte(C.raised));

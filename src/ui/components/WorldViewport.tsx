@@ -350,6 +350,15 @@ export function WorldViewport() {
     setSound(!sound);
   };
 
+  // One-time "drag to rotate" nudge — the 3D camera is swipeable but there's
+  // nothing to signal it. Show once, then remember it's been seen.
+  const [showHint, setShowHint] = useState(() => localStorage.getItem('kardashev:ui:3dhint') !== '0');
+  const dismissHint = () => {
+    if (!showHint) return;
+    localStorage.setItem('kardashev:ui:3dhint', '0');
+    setShowHint(false);
+  };
+
   return (
     <div className="relative border-b border-line/60 bg-transparent">
       <button
@@ -379,7 +388,14 @@ export function WorldViewport() {
       {!collapsed && (
         <>
           {use3d ? (
-            <Scene3D tier={tier} data={sceneData} onFail={() => setWants3d(false)} />
+            <div className="relative" onPointerDown={dismissHint}>
+              <Scene3D tier={tier} data={sceneData} onFail={() => setWants3d(false)} />
+              {showHint && (
+                <div className="pointer-events-none absolute bottom-1.5 left-1/2 -translate-x-1/2 rounded-full border border-line/60 bg-panel/70 px-2.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-ink-dim">
+                  drag to rotate
+                </div>
+              )}
+            </div>
           ) : (
             <svg viewBox="0 0 360 110" className="block w-full" role="img" aria-label="Your civilization, drawn live from the grid">
               <Scene {...scene} />

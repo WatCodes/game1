@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useGame } from '../../store/gameStore';
-import { formatPower, formatUnit } from '../../engine/format';
+import { formatPower, formatShort, formatUnit } from '../../engine/format';
 
 // Plain-language effect per lane — shown on the button (no hover on mobile).
 const LANE_EFFECT: Record<string, string> = {
@@ -88,7 +88,7 @@ export function GridPanel() {
             <span className="text-[9px] text-ink-dim">{LANE_EFFECT[l.lane]}</span>
             <br />
             <span className="text-ink-dim">
-              {LANE_UNIT[l.lane]}↑ {formatPower(l.cost)}
+              {LANE_UNIT[l.lane]}↑ {formatShort(l.cost)} CR
             </span>
           </button>
         ))}

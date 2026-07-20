@@ -5,8 +5,8 @@ const LED_COUNT = 24;
 
 /** The signature element: a live meter that ticks like a real instrument. */
 export function PowerMeter() {
-  const power = useGame((s) => s.display.power);
   const pps = useGame((s) => s.display.pps);
+  const board = useGame((s) => s.display.board);
   const era = useGame((s) => s.display.era);
   const scaleCopy = useGame((s) => s.display.scaleCopy);
   const kardashevLabel = useGame((s) => s.display.kardashevLabel);
@@ -37,14 +37,19 @@ export function PowerMeter() {
       </div>
 
       <div className="readout mt-1 text-4xl font-semibold" aria-live="off">
-        {formatPower(power)}
+        {formatPower(pps)}
+        <span className="ml-1 text-xl text-ink-dim">/s</span>
       </div>
 
       <div className="sweep-track mt-2" aria-hidden />
 
       <div className="mt-1.5 flex items-baseline justify-between font-mono text-xs text-ink-dim">
         <span>
-          <span className="text-volt">+{formatPower(pps)}</span>/s
+          {board.browned ? (
+            <span className="text-danger">⚠ BROWNOUT −{board.brownoutPct}%</span>
+          ) : (
+            <span className="text-current">generating</span>
+          )}
           {surgeLeft > 0 && <span className="ml-1.5 text-volt">SURGE ×1.5</span>}
           {powerBoostLeft > 0 && <span className="ml-1.5 text-ok">×2</span>}
         </span>

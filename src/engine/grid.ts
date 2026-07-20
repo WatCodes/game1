@@ -44,8 +44,8 @@ export function gridUpgradeCost(s: GameState, lane: GridLane): Num {
 
 export function buyGridUpgrade(s: GameState, lane: GridLane): boolean {
   const cost = gridUpgradeCost(s, lane);
-  if (s.power < cost) return false;
-  s.power -= cost;
+  if (s.credits < cost) return false;
+  s.credits -= cost;
   if (lane === 'v') s.grid.vLevel += 1;
   else if (lane === 'a') s.grid.aLevel += 1;
   else s.grid.rLevel += 1;

@@ -2,7 +2,7 @@ import { memo } from 'react';
 import { useGame, type SourceView } from '../../store/gameStore';
 import { formatPower, formatShort } from '../../engine/format';
 
-export const SourceRow = memo(function SourceRow({ src, power }: { src: SourceView; power: number }) {
+export const SourceRow = memo(function SourceRow({ src, credits }: { src: SourceView; credits: number }) {
   const buySource = useGame((s) => s.actions.buySource);
   const toggleAutomation = useGame((s) => s.actions.toggleAutomation);
 
@@ -62,13 +62,13 @@ export const SourceRow = memo(function SourceRow({ src, power }: { src: SourceVi
         </p>
       )}
       <div className="mt-1.5 grid grid-cols-2 gap-1.5">
-        <BuyButton label="Buy 1" cost={src.cost1} gain={src.gain1} affordable={power >= src.cost1} onClick={() => buySource(src.id, 1)} />
-        <BuyButton label="Buy 10" cost={src.cost10} gain={src.gain10} affordable={power >= src.cost10} onClick={() => buySource(src.id, 10)} />
+        <BuyButton label="Buy 1" cost={src.cost1} gain={src.gain1} affordable={credits >= src.cost1} onClick={() => buySource(src.id, 1)} />
+        <BuyButton label="Buy 10" cost={src.cost10} gain={src.gain10} affordable={credits >= src.cost10} onClick={() => buySource(src.id, 10)} />
         <BuyButton
           label={`Next ×2 (${src.nextCount})`}
           cost={src.nextCost}
           gain={src.gainNext}
-          affordable={power >= src.nextCost}
+          affordable={credits >= src.nextCost}
           onClick={() => buySource(src.id, src.nextCount)}
         />
         <BuyButton
@@ -114,7 +114,7 @@ function BuyButton({
         <span>{label}</span>
         <span className="text-volt">{gain > 0 ? `+${formatPower(gain)}/s` : ''}</span>
       </div>
-      <span className="text-[10px] text-ink-dim">{cost !== undefined ? formatPower(cost) : '—'}</span>
+      <span className="text-[10px] text-ink-dim">{cost !== undefined ? `${formatShort(cost)} CR` : '—'}</span>
     </button>
   );
 }

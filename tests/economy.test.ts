@@ -3,6 +3,7 @@ import { createInitialState } from '../src/engine/state';
 import {
   buy,
   deliveredGain,
+  dispatchGeneration,
   fireDispatch,
   generationPerSec,
   isSourceUnlocked,
@@ -143,6 +144,48 @@ describe('deliveredGain', () => {
   it('is zero for a non-positive count', () => {
     const s = state();
     expect(deliveredGain(s, s.sources['battery-bank'], 0)).toBe(0);
+  });
+});
+
+describe('dispatchGeneration (three rails)', () => {
+  it('sells the Sell-rail share for CR and routes the Project share', () => {
+    const s = state();
+    s.sellPct = 0.5;
+    s.routePct = 0.2;
+    s.market.saturation = 0; // price = BASE_PRICE
+    const before = s.credits;
+    const { routed, sold, sellCredits } = dispatchGeneration(s, 1000);
+    expect(routed).toBeCloseTo(200); // 20% → project (below the boundary)
+    expect(sold).toBeCloseTo(500); // 50% sold
+    expect(sellCredits).toBeCloseTo(500 * CONFIG.BASE_PRICE);
+    expect(s.credits - before).toBeCloseTo(sellCredits);
+    expect(s.megaproject.committed).toBeCloseTo(200);
+  });
+
+  it('spills un-committable project overflow into the Sell rail', () => {
+    const s = state();
+    s.sellPct = 0.1;
+    s.routePct = 0.9;
+    s.megaproject.committed = s.megaproject.totalCost; // project can accept no more
+    const before = s.credits;
+    const { routed, sold } = dispatchGeneration(s, 1000);
+    expect(routed).toBe(0);
+    // Sell share (100) + spilled project overflow (900) all sell
+    expect(sold).toBeCloseTo(1000);
+    expect(s.credits - before).toBeCloseTo(1000 * CONFIG.BASE_PRICE);
+  });
+});
+
+describe('brownout throttles generation', () => {
+  it('a starved grid rail bottoms output at 1−severity', () => {
+    const s = state();
+    s.sources['battery-bank'].owned = 10;
+    s.routePct = 0;
+    s.sellPct = 1 - CONFIG.DEMAND_FRACTION; // grid share exactly meets demand
+    const full = generationPerSec(s);
+    s.sellPct = 1; // starve the grid rail
+    const starved = generationPerSec(s);
+    expect(starved).toBeCloseTo(full * (1 - CONFIG.BROWNOUT_SEVERITY));
   });
 });
 

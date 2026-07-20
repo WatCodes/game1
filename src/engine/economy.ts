@@ -10,7 +10,7 @@ import {
   upkeepFor,
 } from './formulas';
 import { researchModifiers, type ResearchModifiers } from './research';
-import { authorizedBoundary, megaprojectMult } from './megaproject';
+import { authorizedBoundary, megaprojectMult, routeIncome } from './megaproject';
 import { boostPowerMult } from './shop';
 import { achievementMult } from './achievements';
 import { deliverPower } from './grid';
@@ -112,6 +112,34 @@ export function deliveredGain(
 
 export function maxAffordable(src: PowerSource, budget: Num, costMult = 1): number {
   return buyMaxCount(src.baseCost * costMult, src.costGrowth, src.owned, budget);
+}
+
+export interface DispatchSplit {
+  routed: Num; // W routed into the megaproject
+  sold: Num; // W sold to the market (Sell rail + any project overflow)
+  sellCredits: Num; // CR minted from the sale
+}
+
+/**
+ * Split a slab of fresh generation across the three Dispatch Board rails and
+ * apply the effects: Sell → CR (plus any project overflow that couldn't be
+ * committed), Project → committed, Grid → demand (already priced into brownout
+ * upstream, so the grid share simply isn't monetized). The single source of
+ * truth for both the live loop and offline crediting.
+ */
+export function dispatchGeneration(
+  s: GameState,
+  gain: Num,
+  mods: ResearchModifiers = researchModifiers(s),
+): DispatchSplit {
+  const sellPct = Math.max(0, Math.min(1, s.sellPct));
+  const intendedProject = gain * Math.max(0, Math.min(1, s.routePct));
+  const routed = routeIncome(s, gain, mods); // clamps to routePct AND the authorized boundary
+  const overflow = Math.max(0, intendedProject - routed);
+  const sold = gain * sellPct + overflow;
+  const sellCredits = sold * gridPrice(s);
+  s.credits += sellCredits;
+  return { routed, sold, sellCredits };
 }
 
 /** Buy `count` units ('max' solves the geometric sum). Costs are paid in CR

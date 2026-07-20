@@ -480,6 +480,7 @@ interface GameStore {
     buyShopSolver: () => void;
     buyShopBoost: (kind: 'power' | 'rp' | 'dispatch') => void;
     dismissOffline: () => void;
+    claimOfflineDouble: () => void;
     dismissCinematic: () => void;
     dismissToast: (id: number) => void;
     exportSaveString: () => string;
@@ -654,6 +655,18 @@ export const useGame = create<GameStore>((set) => {
         }
       },
       dismissOffline: () => set({ offline: null }),
+      // The "watch an ad for ×2" reward: grant the away CR a second time. The
+      // ad gate itself arrives with the native (Capacitor) build; for now the
+      // bonus is simply claimable.
+      claimOfflineDouble: () => {
+        const summary = useGame.getState().offline;
+        if (summary && summary.creditsGained > 0) {
+          game.credits += summary.creditsGained;
+          saveToStorage(game);
+          refresh();
+        }
+        set({ offline: null });
+      },
       dismissCinematic: () => set({ cinematic: null }),
       dismissToast: (id) => set((st) => ({ toasts: st.toasts.filter((t) => t.id !== id) })),
       exportSaveString: () => exportSave(game),

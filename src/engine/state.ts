@@ -6,7 +6,7 @@ import { buildResearch } from '../content/research';
 import { newPuzzle } from './puzzle';
 import { defaultTierTwistState } from './tierTwists';
 
-export const SAVE_VERSION = 6;
+export const SAVE_VERSION = 7;
 
 export function createInitialState(now: number = Date.now(), rand: () => number = Math.random): GameState {
   const s: GameState = {

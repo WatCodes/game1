@@ -82,7 +82,13 @@ export interface GameState {
   sources: Record<Id, PowerSource>; // current tier's sources only
   research: Record<Id, ResearchNode>; // all tiers — purchases are permanent
   megaproject: Megaproject; // current tier's project
-  routePct: number; // % of income diverted to megaproject (0..1)
+  // Dispatch Board: generation is split across three rails (must sum to ≤1).
+  // routePct = Project rail; sellPct = Sell-to-market rail; the remainder
+  // (1 − sellPct − routePct) is the Grid rail, which must cover the demand
+  // floor or the run takes a brownout penalty.
+  routePct: number; // % of generation routed to the megaproject (0..1)
+  sellPct: number; // % of generation sold to the grid for CR (0..1)
+  market: { saturation: number }; // ≥0; rises as you sell, decays back; depresses price
   dispatch: {
     charge: number; // 0..1, builds over time; firing spends it
     peakLeft: number; // seconds remaining of an active peak-demand window

@@ -1,0 +1,101 @@
+import { describe, expect, it } from 'vitest';
+import {
+  brownoutMult,
+  brownoutShortfall,
+  creditsPerSec,
+  demandFloor,
+  gridFraction,
+  gridPrice,
+  isBrownedOut,
+  tickMarket,
+} from '../src/engine/market';
+import { createInitialState } from '../src/engine/state';
+import { CONFIG } from '../src/content/config';
+
+describe('gridPrice', () => {
+  it('is BASE_PRICE at an unsaturated market and falls as it saturates', () => {
+    const s = createInitialState(0);
+    s.market.saturation = 0;
+    expect(gridPrice(s)).toBe(CONFIG.BASE_PRICE);
+    s.market.saturation = 1.5;
+    expect(gridPrice(s)).toBeCloseTo(CONFIG.BASE_PRICE / 2.5);
+    // more saturation → strictly cheaper
+    s.market.saturation = 4;
+    expect(gridPrice(s)).toBeLessThan(CONFIG.BASE_PRICE / 2.5);
+  });
+});
+
+describe('tickMarket', () => {
+  it('relaxes toward GAIN×sellPct while selling, and back to 0 when idle', () => {
+    const s = createInitialState(0);
+    s.sellPct = 1;
+    // A long step jumps essentially to equilibrium.
+    tickMarket(s, CONFIG.MARKET_TAU_SECONDS * 20);
+    expect(s.market.saturation).toBeCloseTo(CONFIG.MARKET_SATURATION_GAIN, 3);
+    // Stop selling → drains back toward zero.
+    s.sellPct = 0;
+    tickMarket(s, CONFIG.MARKET_TAU_SECONDS * 20);
+    expect(s.market.saturation).toBe(0);
+  });
+
+  it('a small step moves only partway (memory / inertia)', () => {
+    const s = createInitialState(0);
+    s.sellPct = 1;
+    tickMarket(s, CONFIG.MARKET_TAU_SECONDS / 4);
+    expect(s.market.saturation).toBeGreaterThan(0);
+    expect(s.market.saturation).toBeLessThan(CONFIG.MARKET_SATURATION_GAIN);
+  });
+});
+
+describe('grid rail / brownout', () => {
+  it('gridFraction is the remainder after sell + project', () => {
+    const s = createInitialState(0);
+    s.sellPct = 0.6;
+    s.routePct = 0.1;
+    expect(gridFraction(s)).toBeCloseTo(0.3);
+    // over-allocated rails clamp the grid share at 0
+    s.sellPct = 0.8;
+    s.routePct = 0.5;
+    expect(gridFraction(s)).toBe(0);
+  });
+
+  it('no brownout while the grid share meets demand', () => {
+    const s = createInitialState(0);
+    s.sellPct = 1 - CONFIG.DEMAND_FRACTION; // grid share == demand exactly
+    s.routePct = 0;
+    expect(brownoutShortfall(s)).toBeCloseTo(0);
+    expect(brownoutMult(s)).toBeCloseTo(1);
+    expect(isBrownedOut(s)).toBe(false);
+  });
+
+  it('a starved grid bottoms output at 1−severity', () => {
+    const s = createInitialState(0);
+    s.sellPct = 1; // grid share 0 → fully starved
+    s.routePct = 0;
+    expect(brownoutShortfall(s)).toBe(1);
+    expect(brownoutMult(s)).toBeCloseTo(1 - CONFIG.BROWNOUT_SEVERITY);
+    expect(isBrownedOut(s)).toBe(true);
+  });
+
+  it('partial shortfall scales linearly', () => {
+    const s = createInitialState(0);
+    // grid share = half the demand floor → shortfall 0.5
+    s.sellPct = 1 - CONFIG.DEMAND_FRACTION / 2;
+    s.routePct = 0;
+    expect(brownoutShortfall(s)).toBeCloseTo(0.5);
+    expect(brownoutMult(s)).toBeCloseTo(1 - 0.5 * CONFIG.BROWNOUT_SEVERITY);
+  });
+});
+
+describe('display helpers', () => {
+  it('demandFloor is a share of brownout-free generation', () => {
+    expect(demandFloor(1000)).toBeCloseTo(CONFIG.DEMAND_FRACTION * 1000);
+  });
+
+  it('creditsPerSec = soldW × price', () => {
+    const s = createInitialState(0);
+    s.sellPct = 0.5;
+    s.market.saturation = 0;
+    expect(creditsPerSec(s, 1000)).toBeCloseTo(1000 * 0.5 * CONFIG.BASE_PRICE);
+  });
+});

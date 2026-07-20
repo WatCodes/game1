@@ -20,6 +20,8 @@ export function createInitialState(now: number = Date.now(), rand: () => number 
     research: {},
     megaproject: buildMegaproject(0),
     routePct: 0,
+    sellPct: 0.6, // default: sell most, reserve 40% for the grid, none to project yet
+    market: { saturation: 0 },
     dispatch: { charge: 0, peakLeft: 0, nextPeakIn: 240 },
     grid: { vLevel: 0, aLevel: 0, rLevel: 0 },
     ...defaultTierTwistState(),

@@ -9,7 +9,10 @@ interface Viewport {
   scale: number;
 }
 
-const DEFAULT_VIEWPORT: Viewport = { tx: 0, ty: 0, scale: 1 };
+// Default a touch zoomed-in: at scale 1 the whole 800-unit viewBox shrinks to
+// ~380px on a phone, leaving node dots ~8px across. 1.3 renders them big enough
+// to aim a thumb at; pinch/wheel/center still reach the full tree.
+const DEFAULT_VIEWPORT: Viewport = { tx: 0, ty: 0, scale: 1.3 };
 const MIN_SCALE = 0.4;
 const MAX_SCALE = 2.2;
 const DRAG_THRESHOLD = 6; // pixels of pointer movement before we treat as pan/drag
@@ -414,7 +417,7 @@ export function ResearchGraph() {
                 fill = 'var(--bg-raised)';
                 stroke = 'var(--cyan-dim)';
               }
-              const radius = r.purchased ? 9 : r.available ? 9 : 6.5;
+              const radius = r.purchased ? 12 : r.available ? 12 : 8;
               return (
                 <g
                   key={r.id}
@@ -430,7 +433,7 @@ export function ResearchGraph() {
                     data-node-id={r.id}
                     cx={0}
                     cy={0}
-                    r={20}
+                    r={30}
                     fill="transparent"
                     style={{ pointerEvents: 'all', cursor: 'pointer', touchAction: 'none' }}
                   />

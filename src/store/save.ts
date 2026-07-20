@@ -4,6 +4,7 @@ import { SAVE_VERSION, createInitialState } from '../engine/state';
 import { reapplyPurchasedEffects } from '../engine/research';
 import { isSolved, newPuzzle, puzzleSize } from '../engine/puzzle';
 import { generationPerSec } from '../engine/economy';
+import { stagesCompleted } from '../engine/megaproject';
 import { transmissionCap } from '../engine/grid';
 import { defaultTierTwistState } from '../engine/tierTwists';
 import { buildSources } from '../content/sources';
@@ -26,6 +27,7 @@ export interface SaveData {
   purchased: Id[];
   committed: Num;
   stagesAuthorized: number;
+  decommissionedStages?: number; // absent on pre-v7 saves → grandfathered on load
   routePct: number; // Project rail share (0..1)
   sellPct: number; // Sell rail share (0..1); sellPct + routePct ≤ 1
   market: { saturation: number };
@@ -60,6 +62,7 @@ export function serialize(s: GameState): SaveData {
     purchased: Object.values(s.research).filter((n) => n.purchased).map((n) => n.id),
     committed: s.megaproject.committed,
     stagesAuthorized: s.megaproject.stagesAuthorized,
+    decommissionedStages: s.megaproject.decommissionedStages,
     routePct: s.routePct,
     sellPct: s.sellPct,
     market: { ...s.market },
@@ -140,6 +143,12 @@ export function hydrate(save: SaveData): GameState {
       ? Math.max(1, Math.min(n, Math.floor(save.stagesAuthorized)))
       : Math.max(1, Math.min(n, Math.floor((save.committed / s.megaproject.totalCost) * n) + 1));
   s.megaproject.committed = Math.max(0, Math.min(save.committed, s.megaproject.totalCost));
+  // Grandfather old saves: assume already-completed stages were paid, so loading
+  // never retroactively dismantles an existing fleet.
+  s.megaproject.decommissionedStages =
+    typeof save.decommissionedStages === 'number'
+      ? Math.max(0, Math.min(s.megaproject.stages.length, Math.floor(save.decommissionedStages)))
+      : stagesCompleted(s);
   s.routePct = Math.max(0, Math.min(1, save.routePct));
   s.sellPct = Math.max(0, Math.min(1, save.sellPct ?? 0.6));
   // Enforce the rail invariant: Sell + Project can't exceed 100% of generation.

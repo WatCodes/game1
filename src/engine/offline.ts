@@ -2,6 +2,7 @@ import { CONFIG } from '../content/config';
 import type { GameState, Num } from './types';
 import { offlineSeconds } from './formulas';
 import { dispatchGeneration, powerPerSec } from './economy';
+import { applyStageDecommission } from './megaproject';
 import { tickMarket } from './market';
 import { researchModifiers } from './research';
 import { runSolvers } from './puzzle';
@@ -40,6 +41,7 @@ export function creditOffline(s: GameState, nowMs: number): OfflineSummary | nul
   // Same three-rail split as the live loop; the Sell rail sells the whole
   // window at the price on return, then the market settles to the new share.
   const { routed } = dispatchGeneration(s, gain, mods);
+  applyStageDecommission(s, mods); // stages an away window completes still cost sources
   s.runPower += gain;
   s.stats.lifetimePower += gain;
   tickMarket(s, elapsed);

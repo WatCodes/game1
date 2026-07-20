@@ -68,6 +68,11 @@ export const CONFIG = {
   // Grid rail: keep at least DEMAND_FRACTION of output on the grid or brown out.
   DEMAND_FRACTION: 0.25, // grid demand as a share of your own generation
   BROWNOUT_SEVERITY: 0.5, // output multiplier bottoms at 1−this when the grid is starved
+  // Megaproject source cost: completing a stage dismantles this fraction of your
+  // total owned units, drawn lowest-output-source first. Escalates per stage, so
+  // the final stages cut into your best plants — building the wonder cannibalizes
+  // the grid (GAME_DESIGN §3.14). Applied on stage completion, once each.
+  STAGE_DECOMMISSION: [0.08, 0.12, 0.18, 0.28, 0.45],
   ASCEND_SEED_UNITS: 2, // ascending grants 2× the new tier's cheapest source cost
   AUTOSAVE_INTERVAL_MS: 8000,
 } as const;

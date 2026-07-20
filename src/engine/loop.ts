@@ -1,5 +1,6 @@
 import type { GameState } from './types';
 import { dispatchGeneration, powerPerSec, runAutomation, tickDispatch } from './economy';
+import { applyStageDecommission } from './megaproject';
 import { tickMarket } from './market';
 import { researchModifiers, researchRate } from './research';
 import { runSolvers } from './puzzle';
@@ -20,6 +21,7 @@ export function tick(s: GameState, dt: number, rand: () => number = Math.random)
   // instead of banking as Watts. runPower/lifetimePower still count the full
   // generation (Kardashev progress is about total power produced).
   dispatchGeneration(s, gain, mods);
+  applyStageDecommission(s, mods); // completing a stage dismantles some sources
   s.runPower += gain;
   s.stats.lifetimePower += gain;
   tickMarket(s, dt);

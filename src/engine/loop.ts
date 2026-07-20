@@ -1,6 +1,7 @@
 import type { GameState } from './types';
-import { powerPerSec, runAutomation, tickDispatch } from './economy';
-import { routeIncome } from './megaproject';
+import { dispatchGeneration, powerPerSec, runAutomation, tickDispatch } from './economy';
+import { applyStageDecommission } from './megaproject';
+import { tickMarket } from './market';
 import { researchModifiers, researchRate } from './research';
 import { runSolvers } from './puzzle';
 import { tickBoosts } from './shop';
@@ -16,10 +17,14 @@ export function tick(s: GameState, dt: number, rand: () => number = Math.random)
   const mods = researchModifiers(s);
   const pps = powerPerSec(s, mods);
   const gain = pps * dt;
-  const routed = routeIncome(s, gain, mods);
-  s.power += gain - routed;
+  // Dispatch Board: generation flows across the Sell / Project / Grid rails
+  // instead of banking as Watts. runPower/lifetimePower still count the full
+  // generation (Kardashev progress is about total power produced).
+  dispatchGeneration(s, gain, mods);
+  applyStageDecommission(s, mods); // completing a stage dismantles some sources
   s.runPower += gain;
   s.stats.lifetimePower += gain;
+  tickMarket(s, dt);
   s.rp += researchRate(s) * dt;
   runAutomation(s, mods);
   tickDispatch(s, dt, rand);

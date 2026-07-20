@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createInitialState } from '../src/engine/state';
 import {
+  applyStageDecommission,
   authorizeStage,
   authorizedBoundary,
   canAuthorizeStage,
@@ -9,9 +10,11 @@ import {
   nextStageResearchBlock,
   routeIncome,
   stageRpCost,
+  stagesCompleted,
 } from '../src/engine/megaproject';
 import { cheapestNextCost, maxSafeCommit } from '../src/engine/economy';
 import { buyResearch, researchModifiers } from '../src/engine/research';
+import { CONFIG } from '../src/content/config';
 
 function state() {
   return createInitialState(0);
@@ -85,6 +88,38 @@ describe('stage authorization', () => {
     commitPower(s, 1e12);
     // mega-t0 reduces cost 15%, so completion compares against effective cost
     expect(isMegaprojectComplete(s)).toBe(true);
+  });
+});
+
+describe('stage decommission', () => {
+  it('completing a stage dismantles a fraction of the fleet, once, idempotently', () => {
+    const s = state();
+    s.sources['battery-bank'].owned = 100;
+    const mods = researchModifiers(s);
+    // fill exactly one stage (1/5 of the effective cost)
+    s.megaproject.committed = s.megaproject.totalCost / s.megaproject.stages.length;
+    expect(stagesCompleted(s, mods)).toBe(1);
+    const removed = applyStageDecommission(s, mods);
+    const expected = Math.floor(100 * CONFIG.STAGE_DECOMMISSION[0]);
+    expect(removed).toBe(expected);
+    expect(s.sources['battery-bank'].owned).toBe(100 - expected);
+    expect(s.megaproject.decommissionedStages).toBe(1);
+    // running again with no new stage completed removes nothing
+    expect(applyStageDecommission(s, mods)).toBe(0);
+  });
+
+  it('drains the lowest-output source before touching a higher one', () => {
+    const s = state();
+    s.sources['battery-bank'].owned = 10; // lowest baseOutput
+    s.sources['coal-plant'].owned = 100; // higher baseOutput
+    const mods = researchModifiers(s);
+    // jump straight to the final stage's (largest) cut
+    s.megaproject.decommissionedStages = 4;
+    s.megaproject.committed = s.megaproject.totalCost; // all stages complete
+    applyStageDecommission(s, mods); // fires stage index 4 only
+    const cut = Math.floor(110 * CONFIG.STAGE_DECOMMISSION[4]); // > the 10 battery units
+    expect(s.sources['battery-bank'].owned).toBe(0); // drained first
+    expect(s.sources['coal-plant'].owned).toBe(100 - (cut - 10)); // remainder from coal
   });
 });
 

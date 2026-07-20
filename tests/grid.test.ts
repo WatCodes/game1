@@ -75,13 +75,13 @@ describe('delivery', () => {
 });
 
 describe('upgrades', () => {
-  it('costs grow per level and purchases deduct power', () => {
+  it('costs grow per level and purchases deduct CR', () => {
     const s = state();
     expect(gridUpgradeCost(s, 'v')).toBeCloseTo(gridCostBase(0, 'v'));
-    s.power = gridUpgradeCost(s, 'v');
+    s.credits = gridUpgradeCost(s, 'v');
     expect(buyGridUpgrade(s, 'v')).toBe(true);
     expect(s.grid.vLevel).toBe(1);
-    expect(s.power).toBeCloseTo(0, 6);
+    expect(s.credits).toBeCloseTo(0, 6);
     expect(gridUpgradeCost(s, 'v')).toBeCloseTo(gridCostBase(0, 'v') * GRID.V_COST_GROWTH);
     expect(buyGridUpgrade(s, 'v')).toBe(false); // broke
   });

@@ -1,4 +1,5 @@
 import type { GameState, Id, Num } from './types';
+import { CONFIG } from '../content/config';
 import { researchModifiers, type ResearchModifiers } from './research';
 
 /** Total power cost after research reductions. */
@@ -90,4 +91,45 @@ export function routeIncome(s: GameState, gain: Num, mods: ResearchModifiers): N
   const routed = Math.min(gain * s.routePct, remaining);
   s.megaproject.committed += routed;
   return routed;
+}
+
+/** Fraction of the fleet dismantled when stage `idx` (0-based) completes. */
+export function decommissionFraction(idx: number): number {
+  const table = CONFIG.STAGE_DECOMMISSION;
+  return table[idx] ?? table[table.length - 1] ?? 0;
+}
+
+/** Dismantle `frac` of total owned units, lowest-baseOutput source first.
+ *  Returns the number of units actually removed. */
+function decommissionStage(s: GameState, idx: number): number {
+  const frac = decommissionFraction(idx);
+  if (frac <= 0) return 0;
+  const total = Object.values(s.sources).reduce((n, src) => n + src.owned, 0);
+  let toRemove = Math.floor(total * frac);
+  const target = toRemove;
+  if (toRemove <= 0) return 0;
+  const order = Object.values(s.sources).sort((a, b) => a.baseOutput - b.baseOutput);
+  for (const src of order) {
+    if (toRemove <= 0) break;
+    const take = Math.min(src.owned, toRemove);
+    src.owned -= take;
+    toRemove -= take;
+  }
+  return target - toRemove;
+}
+
+/**
+ * Fire the source-dismantle cost for any stages completed since last check.
+ * Idempotent via megaproject.decommissionedStages, so a reload can't re-charge
+ * a stage. Call after committed progress advances (loop + offline). Returns the
+ * total units removed this call.
+ */
+export function applyStageDecommission(s: GameState, mods?: ResearchModifiers): number {
+  const done = stagesCompleted(s, mods);
+  let removed = 0;
+  while (s.megaproject.decommissionedStages < done) {
+    removed += decommissionStage(s, s.megaproject.decommissionedStages);
+    s.megaproject.decommissionedStages += 1;
+  }
+  return removed;
 }

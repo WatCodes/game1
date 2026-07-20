@@ -57,5 +57,6 @@ export function buildMegaproject(tier: number): Megaproject {
     completionReward: COMPLETION_REWARD,
     committed: 0,
     stagesAuthorized: 1,
+    decommissionedStages: 0,
   };
 }

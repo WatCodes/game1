@@ -64,10 +64,10 @@ describe('T3 launch windows', () => {
     s.tier = 3; // note: sources aren't rebuilt here; buy() only needs launchCostMult + a real source
     s.sources['battery-bank'].automated = false;
     s.launchWindow.active = false;
-    s.power = 1000;
+    s.credits = 1000;
     const normalCost = 10; // battery-bank baseCost
     expect(buy(s, 'battery-bank', 1)).toBe(1);
-    expect(s.power).toBeCloseTo(1000 - normalCost * CONFIG.LAUNCH_SURCHARGE);
+    expect(s.credits).toBeCloseTo(1000 - normalCost * CONFIG.LAUNCH_SURCHARGE);
   });
 });
 
@@ -108,7 +108,9 @@ describe('T5 accretion disk', () => {
     expect(flare).not.toBeNull();
     expect(flare!.gained).toBeCloseTo(1000 * CONFIG.ACCRETION_FLARE_SECONDS);
     expect(s.accretion.heat).toBe(0);
-    expect(s.power).toBeCloseTo(CONFIG.STARTING_POWER + 1000 * CONFIG.ACCRETION_FLARE_SECONDS);
+    // the burst now sells for CR at the current grid price instead of banking Watts
+    expect(flare!.creditsGained).toBeCloseTo(1000 * CONFIG.ACCRETION_FLARE_SECONDS * CONFIG.BASE_PRICE);
+    expect(s.credits).toBeCloseTo(1000 * CONFIG.ACCRETION_FLARE_SECONDS * CONFIG.BASE_PRICE);
   });
 });
 

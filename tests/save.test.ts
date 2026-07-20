@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { SAVE_VERSION, createInitialState } from '../src/engine/state';
+import { CONFIG } from '../src/content/config';
 import { buyResearch } from '../src/engine/research';
 import {
   backupInfo,
@@ -26,6 +27,8 @@ function playedState() {
   s.sources['battery-bank'].autoPaused = true;
   s.megaproject.committed = 12345;
   s.routePct = 0.35;
+  s.sellPct = 0.5; // 0.5 + 0.35 = 0.85 ≤ 1
+  s.market.saturation = 1.2;
   s.credits = 321;
   s.solvers = 2;
   s.solverProgress = 0.4;
@@ -56,6 +59,8 @@ describe('round trip', () => {
     expect(restored.research['unlock-coal-plant'].purchased).toBe(true);
     expect(restored.megaproject.committed).toBe(12345);
     expect(restored.routePct).toBe(0.35);
+    expect(restored.sellPct).toBe(0.5);
+    expect(restored.market.saturation).toBeCloseTo(1.2);
     expect(restored.lastSaved).toBe(555_000);
     expect(restored.credits).toBe(321);
     expect(restored.solvers).toBe(2);
@@ -111,7 +116,10 @@ describe('migration', () => {
     expect(migrated.stats.ascensions).toBe(0);
     expect(migrated.stats.puzzlesSolved).toBe(0);
     expect(migrated.dispatch).toEqual({ charge: 0, peakLeft: 0, nextPeakIn: 240 });
-    expect(migrated.credits).toBe(0);
+    // v7: the old 100 W bank converts to CR and the Watt bank retires to 0
+    expect(migrated.credits).toBe(100 * CONFIG.BASE_PRICE);
+    expect(migrated.power).toBe(0);
+    expect(migrated.sellPct).toBeCloseTo(0.6);
     expect(migrated.puzzle).toBeNull();
   });
 
@@ -139,7 +147,7 @@ describe('migration', () => {
     expect(restored.megaproject.stagesAuthorized).toBe(4);
     expect(restored.megaproject.committed).toBe(210_000);
     // v3 additions get sane defaults, including a freshly dealt board
-    expect(restored.credits).toBe(0);
+    expect(restored.credits).toBe(100 * CONFIG.BASE_PRICE); // v7 power→CR
     expect(restored.puzzle.cells.length).toBe(restored.puzzle.size ** 2);
   });
 
@@ -162,7 +170,7 @@ describe('migration', () => {
     };
     const restored = hydrate(validateSave(v2));
     expect(restored.grid.vLevel).toBeGreaterThanOrEqual(0); // sentinel resolved
-    expect(restored.credits).toBe(0);
+    expect(restored.credits).toBe(100 * CONFIG.BASE_PRICE); // v7 power→CR
     expect(restored.solvers).toBe(0);
     expect(restored.daily).toEqual({ lastClaimDay: '', streak: 0 });
     expect(restored.boosts).toEqual({ surgeLeft: 0, powerLeft: 0, rpLeft: 0 });
@@ -200,6 +208,23 @@ describe('migration', () => {
     expect(restored.accretion).toEqual({ feedRate: 0, heat: 0 });
     expect(restored.relay).toEqual({ researchAllocation: 0 });
     expect(restored.grid.vLevel).toBe(1); // untouched by this migration step
+  });
+
+  it('upgrades a v6 save: the Watt bank converts to CR and the sell rail seeds', () => {
+    const s = playedState();
+    s.power = 500;
+    s.credits = 100;
+    s.routePct = 0.7; // leaves ≤0.3 for the sell rail
+    const save = serialize(s) as unknown as Record<string, unknown>;
+    save.version = 6;
+    delete save.sellPct;
+    delete save.market;
+    const restored = hydrate(validateSave(save));
+    // banked Watts (500) fold into CR at BASE_PRICE, on top of existing 100 CR
+    expect(restored.credits).toBeCloseTo(100 + 500 * CONFIG.BASE_PRICE);
+    expect(restored.power).toBe(0); // Watt bank retired
+    expect(restored.sellPct).toBeCloseTo(0.3); // default 0.6 clamped by route 0.7
+    expect(restored.market.saturation).toBe(0);
   });
 
   it('rejects saves from a newer build', () => {

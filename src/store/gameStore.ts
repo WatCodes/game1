@@ -10,13 +10,20 @@ import {
   generationPerSec,
   isSourceUnlocked,
   maxAffordable,
-  maxSafeCommit,
   nextCost,
   nextUnitNet,
   powerPerSec,
   sourceNet,
   sourceUpkeep,
 } from '../engine/economy';
+import {
+  brownoutMult,
+  brownoutShortfall,
+  creditsPerSec,
+  demandFloor,
+  gridFraction,
+  gridPrice,
+} from '../engine/market';
 import {
   bindingConstraint,
   buyGridUpgrade,
@@ -46,7 +53,7 @@ import {
   authorizeStage,
   authorizedBoundary,
   canAuthorizeStage,
-  commitPower,
+  decommissionFraction,
   effectiveCost,
   isMegaprojectComplete,
   megaprojectProgress,
@@ -80,7 +87,7 @@ import {
   loadFromStorage,
   saveToStorage,
 } from './save';
-import { formatPower } from '../engine/format';
+import { formatPower, formatShort } from '../engine/format';
 
 // ---------------------------------------------------------------------------
 // Authoritative state: a module-level mutable object the loop ticks at 20 Hz.
@@ -164,7 +171,19 @@ export interface DisplaySnapshot {
     authBlockedBy: string | null; // research name blocking the next stage
     complete: boolean;
     routePct: number;
-    maxCommit: Num; // safe lump-sum limit (anti-softlock)
+    decommissionPct: number; // fraction of the fleet the NEXT stage will dismantle
+  };
+  // The Dispatch Board: how live generation is split, and the market it sells into.
+  board: {
+    sellPct: number; // Sell rail (0..1)
+    projPct: number; // Project rail (= routePct)
+    gridPct: number; // Grid rail (remainder)
+    price: number; // CR per Watt right now
+    creditsPerSec: number; // CR/s the Sell rail is minting
+    demand: Num; // W/s the grid rail must cover
+    gridSupply: Num; // W/s currently on the grid rail
+    browned: boolean; // grid rail below demand → brownout
+    brownoutPct: number; // % output lost to brownout
   };
   ascend: { can: boolean; projected: number; nextEra: string; nextScale: string };
   dispatch: { charge: number; canFire: boolean; peakActive: boolean; peakLeft: number };
@@ -223,9 +242,10 @@ function buildDisplay(s: GameState): DisplaySnapshot {
   const done = stagesCompleted(s, mods);
   const authBlock = nextStageResearchBlock(s);
   const launchMult = launchCostMult(s);
+  const pps = powerPerSec(s, mods);
   return {
     power: s.power,
-    pps: powerPerSec(s, mods),
+    pps,
     rp: s.rp,
     rpRate: researchRate(s),
     kp: s.kp,
@@ -239,7 +259,7 @@ function buildDisplay(s: GameState): DisplaySnapshot {
     nextGlobalAt: nextGlobalMilestone(s.runPower),
     sources: Object.values(s.sources).map((src) => {
       const toNext = nextSourceMilestone(src.owned) - src.owned;
-      const maxN = maxAffordable(src, s.power, launchMult);
+      const maxN = maxAffordable(src, s.credits, launchMult);
       return {
         id: src.id,
         name: src.name,
@@ -292,7 +312,18 @@ function buildDisplay(s: GameState): DisplaySnapshot {
       authBlockedBy: authBlock ? (s.research[authBlock]?.name ?? authBlock) : null,
       complete: isMegaprojectComplete(s, mods),
       routePct: s.routePct,
-      maxCommit: maxSafeCommit(s, mods),
+      decommissionPct: done < s.megaproject.stages.length ? decommissionFraction(done) : 0,
+    },
+    board: {
+      sellPct: s.sellPct,
+      projPct: s.routePct,
+      gridPct: gridFraction(s),
+      price: gridPrice(s),
+      creditsPerSec: creditsPerSec(s, pps),
+      demand: demandFloor(pps),
+      gridSupply: gridFraction(s) * pps,
+      browned: brownoutShortfall(s) > 0,
+      brownoutPct: Math.round((1 - brownoutMult(s)) * 100),
     },
     ascend: {
       can: canAscend(s),
@@ -361,7 +392,7 @@ function buildGridView(s: GameState, mods: ReturnType<typeof researchModifiers>)
     binding: bindingConstraint(s, generation),
     lanes: (['v', 'a', 'r'] as const).map((lane, i) => {
       const cost = gridUpgradeCost(s, lane);
-      return { lane, name: names[i], level: levels[i], cost, affordable: s.power >= cost };
+      return { lane, name: names[i], level: levels[i], cost, affordable: s.credits >= cost };
     }),
   };
 }
@@ -436,9 +467,9 @@ interface GameStore {
     toggleAutomation: (id: Id) => void;
     buyGridLane: (lane: GridLane) => void;
     buyResearchNode: (id: Id) => void;
-    commitStoredPower: (fraction: number) => void;
     authorizeNextStage: () => void;
     setRoutePct: (pct: number) => void;
+    setSellPct: (pct: number) => void;
     setAccretionFeedRate: (rate: number) => void;
     setRelayAllocation: (pct: number) => void;
     doDispatch: () => void;
@@ -449,6 +480,7 @@ interface GameStore {
     buyShopSolver: () => void;
     buyShopBoost: (kind: 'power' | 'rp' | 'dispatch') => void;
     dismissOffline: () => void;
+    claimOfflineDouble: () => void;
     dismissCinematic: () => void;
     dismissToast: (id: number) => void;
     exportSaveString: () => string;
@@ -534,12 +566,6 @@ export const useGame = create<GameStore>((set) => {
           refresh();
         }
       },
-      commitStoredPower: (fraction) => {
-        const wanted = game.power * Math.max(0, Math.min(1, fraction));
-        // Clamp to the safe limit: never leave a dead grid with no buyable source
-        const amount = Math.min(wanted, maxSafeCommit(game));
-        if (commitPower(game, amount) > 0) refresh();
-      },
       authorizeNextStage: () => {
         const stage = game.megaproject.stages[game.megaproject.stagesAuthorized];
         if (authorizeStage(game)) {
@@ -548,8 +574,17 @@ export const useGame = create<GameStore>((set) => {
           refresh();
         }
       },
+      // The two Dispatch Board sliders share a budget: sell + project ≤ 1, and
+      // the grid takes whatever's left. Raising one first eats into the grid
+      // remainder, then trades against the other rail once the grid hits zero.
       setRoutePct: (pct) => {
         game.routePct = Math.max(0, Math.min(1, pct));
+        if (game.sellPct + game.routePct > 1) game.sellPct = 1 - game.routePct;
+        refresh();
+      },
+      setSellPct: (pct) => {
+        game.sellPct = Math.max(0, Math.min(1, pct));
+        if (game.sellPct + game.routePct > 1) game.routePct = 1 - game.sellPct;
         refresh();
       },
       setAccretionFeedRate: (rate) => {
@@ -564,7 +599,7 @@ export const useGame = create<GameStore>((set) => {
         const result = fireDispatch(game);
         if (result) {
           const label = result.peak ? `PEAK ×${CONFIG.PEAK_MULT}! ` : '';
-          pushToast('info', `${label}Dispatch: +${formatPower(result.gained)}`);
+          pushToast('info', `${label}Dispatch: ${formatPower(result.gained)} sold → +${formatShort(Math.round(result.creditsGained))} CR`);
           refresh();
         }
       },
@@ -620,6 +655,18 @@ export const useGame = create<GameStore>((set) => {
         }
       },
       dismissOffline: () => set({ offline: null }),
+      // The "watch an ad for ×2" reward: grant the away CR a second time. The
+      // ad gate itself arrives with the native (Capacitor) build; for now the
+      // bonus is simply claimable.
+      claimOfflineDouble: () => {
+        const summary = useGame.getState().offline;
+        if (summary && summary.creditsGained > 0) {
+          game.credits += summary.creditsGained;
+          saveToStorage(game);
+          refresh();
+        }
+        set({ offline: null });
+      },
       dismissCinematic: () => set({ cinematic: null }),
       dismissToast: (id) => set((st) => ({ toasts: st.toasts.filter((t) => t.id !== id) })),
       exportSaveString: () => exportSave(game),
@@ -658,8 +705,9 @@ export const useGame = create<GameStore>((set) => {
       devCheat: (kind) => {
         switch (kind) {
           case 'power': {
+            // Grants an hour of income as spendable CR (power is no longer banked).
             const gain = Math.max(1e4, powerPerSec(game) * 3600);
-            game.power += gain;
+            game.credits += gain * gridPrice(game);
             game.runPower += gain;
             game.stats.lifetimePower += gain;
             break;

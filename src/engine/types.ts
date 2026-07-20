@@ -52,6 +52,7 @@ export interface Megaproject {
   completionReward: number; // global mult while complete (this run)
   committed: Num; // runtime progress
   stagesAuthorized: number; // stages cleared to receive power (starts at 1)
+  decommissionedStages: number; // stages whose source-dismantle cost already fired
 }
 
 export interface PuzzleState {

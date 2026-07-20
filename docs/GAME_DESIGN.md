@@ -199,7 +199,7 @@ power = `min(generation, V×A cap) × (1 − loss)`:
   losses AND raise the cap (V↑ ⇒ I↓ ⇒ I²R↓↓ — real physics, double value); the
   superconductor lane is pure efficiency.
 
-Three upgrade lanes per tier, priced in Power, reset on ascension (infrastructure is
+Three upgrade lanes per tier, priced in Credits (§3.15), reset on ascension (infrastructure is
 rebuilt each era; per-tier flavor names in `content/grid.ts`). The cap base scales with
 prestige so KP never strands a run — only **within-run** growth (count milestones,
 global milestones) outpaces it, which is the intended pressure. The Transmission panel
@@ -235,6 +235,34 @@ A rolling backup (`kardashev:backup`) is written on autosave with a **monotonic
 lifetime-power guard** — a lower-progress state can never overwrite it — and is
 restorable from the Ascend tab. (Lesson learned the hard way + CIFI's serialization
 complaints.)
+
+### 3.15 The Dispatch Board — power vs. money, a live grid economy (`engine/market.ts`)
+
+Separates *what you produce* (power) from *what you spend* (**Credits/CR**, now the one
+currency all buys, grid upgrades, and the shop share). Generation is no longer banked as
+Watts — each tick it's a live flow split across **three rails that sum to ≤ 1** (two
+sliders on the Dispatch Board; the grid takes the remainder):
+
+- **Sell** (`sellPct`) → CR at a **floating price**: `price = BASE_PRICE / (1 + saturation)`,
+  where `saturation` relaxes toward `MARKET_SATURATION_GAIN × sellPct` over `MARKET_TAU`
+  seconds. Dumping a bigger share sags the price; easing off lets it recover — the "live
+  economy." Driven by the *fraction* sold, so it's tier-invariant and never imports the
+  economy layer (no cycle with generation).
+- **Project** (`routePct`, the old route slider) → megaproject `committed`, clamped to the
+  authorized boundary; un-committable overflow spills back to the Sell rail.
+- **Grid** (remainder) must cover a demand floor `DEMAND_FRACTION × generation`. Under-serve
+  and output is throttled by `brownoutMult = 1 − shortfall × BROWNOUT_SEVERITY`, applied
+  last in `generationPerSec` — self-limiting, since lower output lowers demand.
+
+**Megaproject source cost:** completing a stage dismantles `STAGE_DECOMMISSION[stage]` of the
+fleet, lowest-`baseOutput` source first (escalating fractions, so late stages reach your best
+plants) — building the wonder cannibalizes the grid. Fires once per stage via a persisted
+`decommissionedStages` counter; old saves are grandfathered so a load never retro-charges.
+
+**Offline** runs the same split (Sell → CR, Project → committed) and the welcome-back modal
+leads with CR earned plus a **×2 claim** (the rewarded-ad hook; the ad gate itself lands with
+the native/Capacitor build). Save schema v7 retires the Watt bank, converting any banked power
+to CR at `BASE_PRICE`. Key pacing knob for the M7 balance pass: `BASE_PRICE`.
 
 ---
 

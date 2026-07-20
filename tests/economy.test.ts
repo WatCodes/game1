@@ -3,6 +3,7 @@ import { createInitialState } from '../src/engine/state';
 import {
   buy,
   deliveredGain,
+  dispatchGeneration,
   fireDispatch,
   generationPerSec,
   isSourceUnlocked,
@@ -25,29 +26,29 @@ function state() {
 describe('buy', () => {
   it('deducts the exact cost and adds units', () => {
     const s = state();
-    s.power = 1000;
+    s.credits = 1000;
     expect(buy(s, 'battery-bank', 1)).toBe(1);
     expect(s.sources['battery-bank'].owned).toBe(1);
-    expect(s.power).toBeCloseTo(990);
+    expect(s.credits).toBeCloseTo(990);
   });
 
   it('refuses unaffordable purchases', () => {
     const s = state();
-    s.power = 5;
+    s.credits = 5;
     expect(buy(s, 'battery-bank', 1)).toBe(0);
-    expect(s.power).toBe(5);
+    expect(s.credits).toBe(5);
   });
 
   it('buy max solves the geometric sum exactly', () => {
     const s = state();
-    s.power = sourceCost(10, CONFIG.COST_GROWTH, 0, 5);
+    s.credits = sourceCost(10, CONFIG.COST_GROWTH, 0, 5);
     expect(buy(s, 'battery-bank', 'max')).toBe(5);
-    expect(s.power).toBeCloseTo(0, 6);
+    expect(s.credits).toBeCloseTo(0, 6);
   });
 
   it('refuses locked sources', () => {
     const s = state();
-    s.power = 1e12;
+    s.credits = 1e12;
     expect(isSourceUnlocked(s, s.sources['coal-plant'])).toBe(false);
     expect(buy(s, 'coal-plant', 1)).toBe(0);
   });
@@ -146,6 +147,48 @@ describe('deliveredGain', () => {
   });
 });
 
+describe('dispatchGeneration (three rails)', () => {
+  it('sells the Sell-rail share for CR and routes the Project share', () => {
+    const s = state();
+    s.sellPct = 0.5;
+    s.routePct = 0.2;
+    s.market.saturation = 0; // price = BASE_PRICE
+    const before = s.credits;
+    const { routed, sold, sellCredits } = dispatchGeneration(s, 1000);
+    expect(routed).toBeCloseTo(200); // 20% → project (below the boundary)
+    expect(sold).toBeCloseTo(500); // 50% sold
+    expect(sellCredits).toBeCloseTo(500 * CONFIG.BASE_PRICE);
+    expect(s.credits - before).toBeCloseTo(sellCredits);
+    expect(s.megaproject.committed).toBeCloseTo(200);
+  });
+
+  it('spills un-committable project overflow into the Sell rail', () => {
+    const s = state();
+    s.sellPct = 0.1;
+    s.routePct = 0.9;
+    s.megaproject.committed = s.megaproject.totalCost; // project can accept no more
+    const before = s.credits;
+    const { routed, sold } = dispatchGeneration(s, 1000);
+    expect(routed).toBe(0);
+    // Sell share (100) + spilled project overflow (900) all sell
+    expect(sold).toBeCloseTo(1000);
+    expect(s.credits - before).toBeCloseTo(1000 * CONFIG.BASE_PRICE);
+  });
+});
+
+describe('brownout throttles generation', () => {
+  it('a starved grid rail bottoms output at 1−severity', () => {
+    const s = state();
+    s.sources['battery-bank'].owned = 10;
+    s.routePct = 0;
+    s.sellPct = 1 - CONFIG.DEMAND_FRACTION; // grid share exactly meets demand
+    const full = generationPerSec(s);
+    s.sellPct = 1; // starve the grid rail
+    const starved = generationPerSec(s);
+    expect(starved).toBeCloseTo(full * (1 - CONFIG.BROWNOUT_SEVERITY));
+  });
+});
+
 describe('generation multiplier order', () => {
   it('composes source → global milestone → era → prestige → research global', () => {
     const s = state();
@@ -166,7 +209,7 @@ describe('automation', () => {
     s.rp = 1e9;
     buyResearch(s, 'auto-battery-bank');
     expect(s.sources['battery-bank'].automated).toBe(true);
-    s.power = 25;
+    s.credits = 25;
     runAutomation(s); // buys one at 10
     expect(s.sources['battery-bank'].owned).toBe(1);
     runAutomation(s); // second costs 11.3
@@ -179,11 +222,11 @@ describe('automation', () => {
     const s = state();
     s.rp = 1e9;
     buyResearch(s, 'auto-battery-bank');
-    s.power = 1000;
+    s.credits = 1000;
     s.sources['battery-bank'].autoPaused = true;
     runAutomation(s);
     expect(s.sources['battery-bank'].owned).toBe(0);
-    expect(s.power).toBe(1000);
+    expect(s.credits).toBe(1000);
     s.sources['battery-bank'].autoPaused = false;
     runAutomation(s);
     expect(s.sources['battery-bank'].owned).toBe(1);

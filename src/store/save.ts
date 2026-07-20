@@ -4,6 +4,7 @@ import { SAVE_VERSION, createInitialState } from '../engine/state';
 import { reapplyPurchasedEffects } from '../engine/research';
 import { isSolved, newPuzzle, puzzleSize } from '../engine/puzzle';
 import { generationPerSec } from '../engine/economy';
+import { stagesCompleted } from '../engine/megaproject';
 import { transmissionCap } from '../engine/grid';
 import { defaultTierTwistState } from '../engine/tierTwists';
 import { buildSources } from '../content/sources';
@@ -26,7 +27,10 @@ export interface SaveData {
   purchased: Id[];
   committed: Num;
   stagesAuthorized: number;
-  routePct: number;
+  decommissionedStages?: number; // absent on pre-v7 saves → grandfathered on load
+  routePct: number; // Project rail share (0..1)
+  sellPct: number; // Sell rail share (0..1); sellPct + routePct ≤ 1
+  market: { saturation: number };
   dispatch: { charge: number; peakLeft: number; nextPeakIn: number };
   grid: { vLevel: number; aLevel: number; rLevel: number };
   launchWindow: { active: boolean; timeLeft: number; nextIn: number };
@@ -58,7 +62,10 @@ export function serialize(s: GameState): SaveData {
     purchased: Object.values(s.research).filter((n) => n.purchased).map((n) => n.id),
     committed: s.megaproject.committed,
     stagesAuthorized: s.megaproject.stagesAuthorized,
+    decommissionedStages: s.megaproject.decommissionedStages,
     routePct: s.routePct,
+    sellPct: s.sellPct,
+    market: { ...s.market },
     dispatch: { ...s.dispatch },
     grid: { ...s.grid },
     launchWindow: { ...s.launchWindow },
@@ -136,7 +143,17 @@ export function hydrate(save: SaveData): GameState {
       ? Math.max(1, Math.min(n, Math.floor(save.stagesAuthorized)))
       : Math.max(1, Math.min(n, Math.floor((save.committed / s.megaproject.totalCost) * n) + 1));
   s.megaproject.committed = Math.max(0, Math.min(save.committed, s.megaproject.totalCost));
+  // Grandfather old saves: assume already-completed stages were paid, so loading
+  // never retroactively dismantles an existing fleet.
+  s.megaproject.decommissionedStages =
+    typeof save.decommissionedStages === 'number'
+      ? Math.max(0, Math.min(s.megaproject.stages.length, Math.floor(save.decommissionedStages)))
+      : stagesCompleted(s);
   s.routePct = Math.max(0, Math.min(1, save.routePct));
+  s.sellPct = Math.max(0, Math.min(1, save.sellPct ?? 0.6));
+  // Enforce the rail invariant: Sell + Project can't exceed 100% of generation.
+  if (s.sellPct + s.routePct > 1) s.sellPct = Math.max(0, 1 - s.routePct);
+  s.market = { saturation: Math.max(0, save.market?.saturation ?? 0) };
   s.credits = Math.max(0, save.credits);
   s.solvers = Math.max(0, Math.floor(save.solvers));
   s.solverProgress = Math.max(0, save.solverProgress);
@@ -245,6 +262,23 @@ export function migrate(raw: Record<string, unknown>): Record<string, unknown> {
   if ((save.version as number) < 6 || !isRecord(save.launchWindow)) {
     save = { ...save, version: 6, ...defaultTierTwistState() };
   }
+  // v7 — Dispatch Board. Power stops being the spend currency; CR is. The old
+  // banked Watts convert to CR at BASE_PRICE so no value is lost, and the Watt
+  // bank is retired to 0. Seed the Sell rail (default 0.6, clamped so it never
+  // pushes Sell + Project over 100%); a fresh market starts unsaturated.
+  if ((save.version as number) < 7 || typeof save.sellPct !== 'number' || !isRecord(save.market)) {
+    const oldPower = typeof save.power === 'number' ? Math.max(0, save.power) : 0;
+    const oldCredits = typeof save.credits === 'number' ? Math.max(0, save.credits) : 0;
+    const routePct = typeof save.routePct === 'number' ? Math.max(0, Math.min(1, save.routePct)) : 0;
+    save = {
+      ...save,
+      version: 7,
+      power: 0,
+      credits: oldCredits + oldPower * CONFIG.BASE_PRICE,
+      sellPct: Math.max(0, Math.min(1 - routePct, 0.6)),
+      market: { saturation: 0 },
+    };
+  }
   return save;
 }
 
@@ -254,7 +288,7 @@ export function validateSave(raw: unknown): SaveData {
   const m = migrate(raw);
   const numFields = [
     'tier', 'power', 'runPower', 'rp', 'kp', 'committed', 'stagesAuthorized',
-    'routePct', 'lastSaved', 'credits', 'solvers', 'solverProgress',
+    'routePct', 'sellPct', 'lastSaved', 'credits', 'solvers', 'solverProgress',
   ] as const;
   for (const f of numFields) {
     if (typeof m[f] !== 'number' || !isFinite(m[f] as number)) throw new Error(`Save field "${f}" is invalid`);
@@ -264,6 +298,7 @@ export function validateSave(raw: unknown): SaveData {
   if (!Array.isArray(m.purchased)) throw new Error('Save field "purchased" is invalid');
   if (!isRecord(m.stats)) throw new Error('Save field "stats" is invalid');
   if (!isRecord(m.dispatch)) throw new Error('Save field "dispatch" is invalid');
+  if (!isRecord(m.market)) throw new Error('Save field "market" is invalid');
   if (!isRecord(m.grid)) throw new Error('Save field "grid" is invalid');
   if (!isRecord(m.launchWindow)) throw new Error('Save field "launchWindow" is invalid');
   if (!isRecord(m.accretion)) throw new Error('Save field "accretion" is invalid');

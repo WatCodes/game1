@@ -1,5 +1,6 @@
 import { CONFIG } from '../content/config';
 import type { GameState, Num } from './types';
+import { gridPrice } from './market';
 
 /** Fresh per-run twist state — used on init and on every ascension. */
 export function defaultTierTwistState(): Pick<GameState, 'launchWindow' | 'accretion' | 'relay'> {
@@ -62,10 +63,11 @@ export function accretionUpkeepMult(s: GameState): number {
 }
 
 export interface FlareResult {
-  gained: Num;
+  gained: Num; // power released by the flare (W)
+  creditsGained: Num; // CR from selling that burst at the current grid price
 }
 
-/** Advance heat by feed rate; fires a flare (burst of stored power) at 100%. */
+/** Advance heat by feed rate; fires a flare (burst of power sold for CR) at 100%. */
 export function tickAccretion(s: GameState, dt: number, pps: Num): FlareResult | null {
   if (s.tier !== 5 || s.accretion.feedRate <= 0) return null;
   s.accretion.heat = Math.min(1, s.accretion.heat + (s.accretion.feedRate * dt) / CONFIG.ACCRETION_HEAT_SECONDS);
@@ -73,10 +75,11 @@ export function tickAccretion(s: GameState, dt: number, pps: Num): FlareResult |
   s.accretion.heat = 0;
   const gained = pps * CONFIG.ACCRETION_FLARE_SECONDS;
   if (gained <= 0) return null;
-  s.power += gained;
+  const creditsGained = gained * gridPrice(s);
+  s.credits += creditsGained;
   s.runPower += gained;
   s.stats.lifetimePower += gained;
-  return { gained };
+  return { gained, creditsGained };
 }
 
 // ---------------------------------------------------------------------------

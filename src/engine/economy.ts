@@ -15,6 +15,7 @@ import { boostPowerMult } from './shop';
 import { achievementMult } from './achievements';
 import { deliverPower } from './grid';
 import { launchCostMult } from './tierTwists';
+import { brownoutMult, gridPrice } from './market';
 
 export function isSourceUnlocked(s: GameState, src: PowerSource, mods?: ResearchModifiers): boolean {
   const gate = src.unlockedBy;
@@ -55,7 +56,9 @@ export function nextUnitNet(src: PowerSource, mods: ResearchModifiers): Num {
 /**
  * Gross generation. Multiplier order is fixed (ARCHITECTURE §7): per-source
  * (milestones × research − upkeep) → global milestone → era → prestige →
- * research global → megaproject → surge/shop boosts → records.
+ * research global → megaproject → surge/shop boosts → records → brownout.
+ * The brownout factor (last) throttles output when the Grid rail is starved
+ * below the demand floor — it self-limits, since lower output lowers demand.
  */
 export function generationPerSec(s: GameState, mods: ResearchModifiers = researchModifiers(s)): Num {
   let sum = 0;
@@ -68,7 +71,8 @@ export function generationPerSec(s: GameState, mods: ResearchModifiers = researc
     mods.globalMult *
     megaprojectMult(s, mods) *
     boostPowerMult(s) *
-    achievementMult(s)
+    achievementMult(s) *
+    brownoutMult(s)
   );
 }
 
@@ -110,16 +114,17 @@ export function maxAffordable(src: PowerSource, budget: Num, costMult = 1): numb
   return buyMaxCount(src.baseCost * costMult, src.costGrowth, src.owned, budget);
 }
 
-/** Buy `count` units ('max' solves the geometric sum). Returns units bought. */
+/** Buy `count` units ('max' solves the geometric sum). Costs are paid in CR
+ *  (the Dispatch Board sells power for CR; CR is what you spend). */
 export function buy(s: GameState, sourceId: Id, count: number | 'max'): number {
   const src = s.sources[sourceId];
   if (!src || !isSourceUnlocked(s, src)) return 0;
   const mult = launchCostMult(s);
-  const n = count === 'max' ? maxAffordable(src, s.power, mult) : count;
+  const n = count === 'max' ? maxAffordable(src, s.credits, mult) : count;
   if (n <= 0) return 0;
   const cost = nextCost(src, n, mult);
-  if (cost > s.power) return 0;
-  s.power -= cost;
+  if (cost > s.credits) return 0;
+  s.credits -= cost;
   src.owned += n;
   return n;
 }
@@ -136,8 +141,8 @@ export function runAutomation(s: GameState, mods: ResearchModifiers = researchMo
     if (!src.automated || src.autoPaused) continue;
     if (nextUnitNet(src, mods) <= 0) continue;
     const cost = nextCost(src, 1, mult);
-    if (cost <= s.power) {
-      s.power -= cost;
+    if (cost <= s.credits) {
+      s.credits -= cost;
       src.owned += 1;
     }
   }
@@ -168,14 +173,17 @@ export function maxSafeCommit(s: GameState, mods: ResearchModifiers = researchMo
 }
 
 export interface DispatchResult {
-  gained: Num;
+  gained: Num; // power burst dispatched (W)
+  creditsGained: Num; // CR earned selling that burst at the current grid price
   demand: number;
   peak: boolean;
 }
 
 /**
- * Fire the dispatch surge. Charge builds in tick; firing early is weak, full
- * charge is strong, and inside a peak-demand window it's ×PEAK_MULT.
+ * Fire the dispatch surge: a burst of power sold straight to the grid for CR.
+ * Charge builds in tick; firing early is weak, full charge is strong, and
+ * inside a peak-demand window it's ×PEAK_MULT. The burst still counts toward
+ * lifetime/run power (it was generated), but pays out as cash, not a Watt bank.
  */
 export function fireDispatch(s: GameState, rand: () => number = Math.random): DispatchResult | null {
   if (s.dispatch.charge < CONFIG.DISPATCH_MIN_CHARGE) return null;
@@ -184,11 +192,12 @@ export function fireDispatch(s: GameState, rand: () => number = Math.random): Di
   const gained =
     powerPerSec(s) * CONFIG.DISPATCH_SECONDS * s.dispatch.charge * demand * (peak ? CONFIG.PEAK_MULT : 1);
   if (gained <= 0) return null;
-  s.power += gained;
+  const creditsGained = gained * gridPrice(s);
+  s.credits += creditsGained;
   s.runPower += gained;
   s.stats.lifetimePower += gained;
   s.dispatch.charge = 0;
-  return { gained, demand, peak };
+  return { gained, creditsGained, demand, peak };
 }
 
 /** Advance dispatch charge and the peak-demand window clock by dt seconds. */

@@ -137,6 +137,7 @@ export interface ResearchView {
   available: boolean;
   affordable: boolean;
   missingPrereqs: string[];
+  projectCritical: boolean; // a megaproject stage is gated behind this node
 }
 
 export interface StageView extends MegaprojectStage {
@@ -246,6 +247,9 @@ function buildDisplay(s: GameState): DisplaySnapshot {
   const authBlock = nextStageResearchBlock(s);
   const launchMult = launchCostMult(s);
   const pps = powerPerSec(s, mods);
+  // Research the current megaproject's stages are gated behind — highlighted in
+  // the Lab so "what unblocks my build?" is answerable at a glance.
+  const projectNeeds = new Set(s.megaproject.stageResearch.filter((id): id is Id => !!id));
   return {
     power: s.power,
     pps,
@@ -301,6 +305,7 @@ function buildDisplay(s: GameState): DisplaySnapshot {
         available: isResearchAvailable(s, n),
         affordable: s.rp >= n.cost,
         missingPrereqs: n.prereqs.filter((p) => !s.research[p]?.purchased).map((p) => s.research[p]?.name ?? p),
+        projectCritical: projectNeeds.has(n.id) && !n.purchased,
       })),
     mega: {
       name: s.megaproject.name,
@@ -315,7 +320,7 @@ function buildDisplay(s: GameState): DisplaySnapshot {
       authBlockedBy: authBlock ? (s.research[authBlock]?.name ?? authBlock) : null,
       complete: isMegaprojectComplete(s, mods),
       routePct: s.routePct,
-      decommissionPct: done < s.megaproject.stages.length ? decommissionFraction(done) : 0,
+      decommissionPct: done < s.megaproject.stages.length ? decommissionFraction(done, mods.decommissionMult) : 0,
     },
     unlocks: {
       board: isUnlocked(s, 'board'),
@@ -327,11 +332,11 @@ function buildDisplay(s: GameState): DisplaySnapshot {
       projPct: effectiveRoutePct(s),
       gridPct: gridFraction(s),
       price: gridPrice(s),
-      creditsPerSec: creditsPerSec(s, pps),
-      demand: demandFloor(pps),
+      creditsPerSec: creditsPerSec(s, pps, mods.creditMult),
+      demand: demandFloor(pps, mods.demandMult),
       gridSupply: gridFraction(s) * pps,
-      browned: brownoutShortfall(s) > 0,
-      brownoutPct: Math.round((1 - brownoutMult(s)) * 100),
+      browned: brownoutShortfall(s, mods.demandMult) > 0,
+      brownoutPct: Math.round((1 - brownoutMult(s, mods.demandMult)) * 100),
     },
     ascend: {
       can: canAscend(s),

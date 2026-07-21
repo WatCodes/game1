@@ -38,32 +38,38 @@ export function gridFraction(s: GameState): number {
   return clamp01(1 - effectiveSellPct(s) - effectiveRoutePct(s));
 }
 
+/**
+ * Research modifiers arrive as plain numbers rather than a ResearchModifiers
+ * import: research → tierTwists → market already, so importing research here
+ * would close a cycle. Callers all hold `mods` anyway.
+ */
+
 /** 0 = grid demand fully met, 1 = grid rail completely starved.
  *  Always 0 until the grid-demand system unlocks. */
-export function brownoutShortfall(s: GameState): number {
+export function brownoutShortfall(s: GameState, demandMult = 1): number {
   if (!isUnlocked(s, 'gridDemand')) return 0;
-  const d = CONFIG.DEMAND_FRACTION;
+  const d = CONFIG.DEMAND_FRACTION * Math.max(0, demandMult);
   if (d <= 0) return 0;
   return clamp01((d - gridFraction(s)) / d);
 }
 
 /** Output multiplier from the grid rail: 1 when demand is met, down to
  *  1−BROWNOUT_SEVERITY when the grid is fully starved. */
-export function brownoutMult(s: GameState): number {
-  return 1 - brownoutShortfall(s) * CONFIG.BROWNOUT_SEVERITY;
+export function brownoutMult(s: GameState, demandMult = 1): number {
+  return 1 - brownoutShortfall(s, demandMult) * CONFIG.BROWNOUT_SEVERITY;
 }
 
 /** True once the grid rail dips under the demand floor (drives the UI badge). */
-export function isBrownedOut(s: GameState): boolean {
-  return brownoutShortfall(s) > 0;
+export function isBrownedOut(s: GameState, demandMult = 1): boolean {
+  return brownoutShortfall(s, demandMult) > 0;
 }
 
 /** Absolute grid demand in W/s, for display. `genBase` is brownout-free generation. */
-export function demandFloor(genBase: Num): Num {
-  return CONFIG.DEMAND_FRACTION * genBase;
+export function demandFloor(genBase: Num, demandMult = 1): Num {
+  return CONFIG.DEMAND_FRACTION * Math.max(0, demandMult) * genBase;
 }
 
 /** CR/s the Sell rail is currently minting. `pps` is delivered generation. */
-export function creditsPerSec(s: GameState, pps: Num): Num {
-  return Math.max(0, pps) * effectiveSellPct(s) * gridPrice(s);
+export function creditsPerSec(s: GameState, pps: Num, creditMult = 1): Num {
+  return Math.max(0, pps) * effectiveSellPct(s) * gridPrice(s) * creditMult;
 }

@@ -86,6 +86,16 @@ describe('grid rail / brownout', () => {
     expect(isBrownedOut(s)).toBe(true);
   });
 
+  it('demand research lightens the floor, so the same split browns out less', () => {
+    const s = state();
+    s.sellPct = 1 - CONFIG.DEMAND_FRACTION / 2; // grid at half the demand floor
+    s.routePct = 0;
+    const plain = brownoutShortfall(s);
+    expect(plain).toBeCloseTo(0.5);
+    expect(brownoutShortfall(s, 0.8)).toBeLessThan(plain); // −20% demand
+    expect(brownoutMult(s, 0.8)).toBeGreaterThan(brownoutMult(s));
+  });
+
   it('partial shortfall scales linearly', () => {
     const s = state();
     // grid share = half the demand floor → shortfall 0.5

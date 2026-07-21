@@ -110,6 +110,17 @@ describe('stage decommission', () => {
     expect(applyStageDecommission(s, mods)).toBe(0);
   });
 
+  it('salvage research dismantles proportionally fewer plants', () => {
+    const s = state();
+    s.sources['battery-bank'].owned = 100;
+    const mods = researchModifiers(s);
+    mods.decommissionMult = 0.7; // as if salvage research were purchased
+    s.megaproject.committed = s.megaproject.totalCost / s.megaproject.stages.length;
+    applyStageDecommission(s, mods);
+    // 30% fewer than the plain 8% cut
+    expect(s.sources['battery-bank'].owned).toBe(100 - Math.floor(100 * CONFIG.STAGE_DECOMMISSION[0] * 0.7));
+  });
+
   it('drains the lowest-output source before touching a higher one', () => {
     const s = state();
     s.sources['battery-bank'].owned = 10; // lowest baseOutput

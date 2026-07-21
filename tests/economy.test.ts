@@ -178,6 +178,32 @@ describe('dispatchGeneration (three rails)', () => {
   });
 });
 
+describe('dispatch-rail research', () => {
+  it('folds all three rail levers into the modifier bag', () => {
+    const s = state();
+    s.rp = 1e9;
+    s.tier = 2; // salvage nodes start at tier 2
+    buyResearch(s, 'credits-t0');
+    buyResearch(s, 'demand-t0');
+    buyResearch(s, 'salvage-t2');
+    const m = researchModifiers(s);
+    expect(m.creditMult).toBeCloseTo(1.25);
+    expect(m.demandMult).toBeCloseTo(0.8);
+    expect(m.decommissionMult).toBeCloseTo(0.7);
+  });
+
+  it('credits research pays more CR for the same power sold', () => {
+    const s = state();
+    s.sellPct = 1;
+    s.routePct = 0;
+    const before = dispatchGeneration(s, 1000).sellCredits;
+    s.rp = 1e9;
+    buyResearch(s, 'credits-t0');
+    const after = dispatchGeneration(s, 1000).sellCredits;
+    expect(after).toBeCloseTo(before * 1.25);
+  });
+});
+
 describe('brownout throttles generation', () => {
   it('a starved grid rail bottoms output at 1−severity', () => {
     const s = state();

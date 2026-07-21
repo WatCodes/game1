@@ -259,6 +259,15 @@ fleet, lowest-`baseOutput` source first (escalating fractions, so late stages re
 plants) — building the wonder cannibalizes the grid. Fires once per stage via a persisted
 `decommissionedStages` counter; old saves are grandfathered so a load never retro-charges.
 
+**Lab levers (one per rail).** Research now has real purchase on the economy, not just raw
+output: `multCredits` (+25% CR/W sold), `reduceDemand` (−20% grid demand floor), and
+`reduceDecommission` (−30% of the stage dismantle). They compound, so they are deliberately
+*not* on every tier — credits ×8, demand ×4, salvage ×3 — enough to feel like mastery without
+erasing the brownout tension. They ride the existing `ResearchModifiers` bag; `market.ts`
+takes them as plain number params rather than importing research, which would close a
+`research → tierTwists → market` cycle. The Lab also rings **project-critical** nodes in
+violet (a megaproject stage is gated behind them) with a "N blocks the build" counter.
+
 **Offline** runs the same split (Sell → CR, Project → committed) and the welcome-back modal
 leads with CR earned plus a **×2 claim** (the rewarded-ad hook; the ad gate itself lands with
 the native/Capacitor build). Save schema v7 retires the Watt bank, converting any banked power

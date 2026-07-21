@@ -95,16 +95,18 @@ export function routeIncome(s: GameState, gain: Num, mods: ResearchModifiers): N
   return routed;
 }
 
-/** Fraction of the fleet dismantled when stage `idx` (0-based) completes. */
-export function decommissionFraction(idx: number): number {
+/** Fraction of the fleet dismantled when stage `idx` (0-based) completes.
+ *  `decommissionMult` is the research reduction (1 = no research). */
+export function decommissionFraction(idx: number, decommissionMult = 1): number {
   const table = CONFIG.STAGE_DECOMMISSION;
-  return table[idx] ?? table[table.length - 1] ?? 0;
+  const base = table[idx] ?? table[table.length - 1] ?? 0;
+  return base * Math.max(0, decommissionMult);
 }
 
 /** Dismantle `frac` of total owned units, lowest-baseOutput source first.
  *  Returns the number of units actually removed. */
-function decommissionStage(s: GameState, idx: number): number {
-  const frac = decommissionFraction(idx);
+function decommissionStage(s: GameState, idx: number, decommissionMult: number): number {
+  const frac = decommissionFraction(idx, decommissionMult);
   if (frac <= 0) return 0;
   const total = Object.values(s.sources).reduce((n, src) => n + src.owned, 0);
   let toRemove = Math.floor(total * frac);
@@ -126,11 +128,11 @@ function decommissionStage(s: GameState, idx: number): number {
  * a stage. Call after committed progress advances (loop + offline). Returns the
  * total units removed this call.
  */
-export function applyStageDecommission(s: GameState, mods?: ResearchModifiers): number {
+export function applyStageDecommission(s: GameState, mods: ResearchModifiers = researchModifiers(s)): number {
   const done = stagesCompleted(s, mods);
   let removed = 0;
   while (s.megaproject.decommissionedStages < done) {
-    removed += decommissionStage(s, s.megaproject.decommissionedStages);
+    removed += decommissionStage(s, s.megaproject.decommissionedStages, mods.decommissionMult);
     s.megaproject.decommissionedStages += 1;
   }
   return removed;

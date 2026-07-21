@@ -73,7 +73,7 @@ export function generationPerSec(s: GameState, mods: ResearchModifiers = researc
     megaprojectMult(s, mods) *
     boostPowerMult(s) *
     achievementMult(s) *
-    brownoutMult(s)
+    brownoutMult(s, mods.demandMult)
   );
 }
 
@@ -138,7 +138,7 @@ export function dispatchGeneration(
   const routed = routeIncome(s, gain, mods); // clamps to routePct AND the authorized boundary
   const overflow = Math.max(0, intendedProject - routed);
   const sold = gain * sellPct + overflow;
-  const sellCredits = sold * gridPrice(s);
+  const sellCredits = sold * gridPrice(s) * mods.creditMult;
   s.credits += sellCredits;
   return { routed, sold, sellCredits };
 }

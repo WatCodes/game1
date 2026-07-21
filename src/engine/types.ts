@@ -23,7 +23,12 @@ export type ResearchEffect =
   | { kind: 'reduceMegaprojectCost'; x: number } // 0..1, fraction removed
   | { kind: 'reduceUpkeep'; x: number } // 0..1, fraction removed from all upkeep
   | { kind: 'increaseOfflineCap'; seconds: number }
-  | { kind: 'unlockAutomation'; sourceId: Id };
+  | { kind: 'unlockAutomation'; sourceId: Id }
+  // One per Dispatch Board rail (GAME_DESIGN §3.15), so the Lab has real
+  // leverage over the live economy rather than only over raw output.
+  | { kind: 'multCredits'; x: number } // Sell rail: more CR per Watt sold
+  | { kind: 'reduceDemand'; x: number } // Grid rail: 0..1 off the demand floor
+  | { kind: 'reduceDecommission'; x: number }; // Project rail: 0..1 off the stage dismantle
 
 export interface ResearchNode {
   id: Id;

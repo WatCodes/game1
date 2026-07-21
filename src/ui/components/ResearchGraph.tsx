@@ -321,6 +321,7 @@ export function ResearchGraph() {
 
   // ---- controls -------------------------------------------------------------
   const affordableCount = research.filter((r) => r.available && r.affordable).length;
+  const projectCriticalCount = research.filter((r) => r.projectCritical).length;
 
   const resetView = () => {
     viewportRef.current = { ...DEFAULT_VIEWPORT };
@@ -339,6 +340,12 @@ export function ResearchGraph() {
         <span className="font-mono text-ink-dim">
           {research.filter((r) => r.purchased).length}/{research.length} researched
         </span>
+        {projectCriticalCount > 0 && (
+          <>
+            <span className="text-ink-dim">·</span>
+            <span className="font-mono text-ascend">{projectCriticalCount} blocks the build</span>
+          </>
+        )}
         <span className="flex-1" />
         <button
           className={`rounded border px-2 py-0.5 font-mono uppercase tracking-wider transition-colors ${
@@ -417,6 +424,9 @@ export function ResearchGraph() {
                 fill = 'var(--bg-raised)';
                 stroke = 'var(--cyan-dim)';
               }
+              // A megaproject stage is gated behind this node — violet outranks
+              // the affordability colours, since it answers "what unblocks my build?"
+              if (r.projectCritical) stroke = 'var(--violet)';
               const radius = r.purchased ? 12 : r.available ? 12 : 8;
               return (
                 <g
@@ -437,6 +447,19 @@ export function ResearchGraph() {
                     fill="transparent"
                     style={{ pointerEvents: 'all', cursor: 'pointer', touchAction: 'none' }}
                   />
+                  {r.projectCritical && (
+                    <circle
+                      cx={0}
+                      cy={0}
+                      r={radius + 4}
+                      fill="none"
+                      stroke="var(--violet)"
+                      strokeOpacity={0.75}
+                      strokeWidth={1.5}
+                      strokeDasharray="3 2"
+                      style={{ pointerEvents: 'none' }}
+                    />
+                  )}
                   {isSelected && (
                     <circle cx={0} cy={0} r={radius + 6} fill="none" stroke="var(--cyan)" strokeOpacity={0.5} strokeWidth={2} style={{ pointerEvents: 'none' }} />
                   )}
@@ -468,6 +491,9 @@ export function ResearchGraph() {
                 <span className="font-mono text-[11px] text-ink-dim">T{selected.tier}</span>
               </div>
               <p className="mt-1 text-xs text-ink-dim">{selected.desc}</p>
+              {selected.projectCritical && (
+                <p className="mt-1 text-[11px] text-ascend">⚡ A megaproject stage is locked behind this.</p>
+              )}
               {selected.purchased ? (
                 <p className="mt-1.5 text-[11px] text-ok">Complete.</p>
               ) : selected.missingPrereqs.length > 0 ? (

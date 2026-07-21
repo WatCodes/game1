@@ -17,6 +17,9 @@ export interface ResearchModifiers {
   megaCostMult: number; // 0..1, applied to megaproject totalCost
   upkeepMult: number; // 0..1, applied to all source upkeep
   offlineBonusSeconds: number;
+  creditMult: number; // ×CR earned on the Sell rail
+  demandMult: number; // 0..1, applied to the grid demand floor
+  decommissionMult: number; // 0..1, applied to the per-stage source dismantle
   unlockedSources: Set<Id>;
   automatedSources: Set<Id>;
 }
@@ -29,6 +32,9 @@ export function researchModifiers(s: GameState): ResearchModifiers {
     megaCostMult: 1,
     upkeepMult: 1,
     offlineBonusSeconds: 0,
+    creditMult: 1,
+    demandMult: 1,
+    decommissionMult: 1,
     unlockedSources: new Set(),
     automatedSources: new Set(),
   };
@@ -59,6 +65,15 @@ export function researchModifiers(s: GameState): ResearchModifiers {
         break;
       case 'unlockAutomation':
         mods.automatedSources.add(e.sourceId);
+        break;
+      case 'multCredits':
+        mods.creditMult *= e.x;
+        break;
+      case 'reduceDemand':
+        mods.demandMult *= 1 - e.x;
+        break;
+      case 'reduceDecommission':
+        mods.decommissionMult *= 1 - e.x;
         break;
     }
   }

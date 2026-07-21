@@ -75,16 +75,32 @@ describe('ascend', () => {
     // Keep: KP (asserted above), research, RP, credits/solvers, stats
     expect(s.research['unlock-coal-plant'].purchased).toBe(true);
     expect(s.rp).toBe(rpAfterPurchase);
-    expect(s.credits).toBe(99);
+    // credits are kept, plus the new tier's CR seed grant
+    const seed = sourceCost(unitCost(1), CONFIG.COST_GROWTH, 0, CONFIG.ASCEND_SEED_UNITS);
+    expect(s.credits).toBeCloseTo(99 + seed);
     expect(s.solvers).toBe(2);
     expect(s.stats.ascensions).toBe(1);
   });
 
-  it('grants seed power so the new tier is startable', () => {
+  it('grants a CR seed so the new tier is startable', () => {
     const s = readyState();
+    s.credits = 0;
     ascend(s);
     const expectedSeed = sourceCost(unitCost(1), CONFIG.COST_GROWTH, 0, CONFIG.ASCEND_SEED_UNITS);
-    expect(s.power).toBeCloseTo(expectedSeed);
+    expect(s.credits).toBeCloseTo(expectedSeed);
+    expect(s.power).toBe(0); // the Watt bank is retired
+  });
+
+  it('scales the new project with prestige, so it stays a real gate', () => {
+    const poor = readyState();
+    ascend(poor);
+    const rich = readyState();
+    rich.runPower = 5e5;
+    rich.kp = 1_000_000; // a deeply prestiged run
+    ascend(rich);
+    // Generation scales with prestige, so the build must too — otherwise it
+    // fills in seconds (measured: 1.3s at 17M KP before this fix).
+    expect(rich.megaproject.totalCost).toBeGreaterThan(poor.megaproject.totalCost * 1000);
   });
 
   it('reapplies automation research to the new tier', () => {

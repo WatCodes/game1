@@ -40,7 +40,13 @@ const PROJECTS: [string, string, string[]][] = [
     ['Kernel seed', 'Casimir cage', 'Zero-point bloom', 'Reality anchor', 'The ninth life begins']],
 ];
 
-export function buildMegaproject(tier: number): Megaproject {
+/**
+ * `prestigeCostMult` scales the build with the run's permanent power multiplier
+ * (GAME_DESIGN §3.17). Generation scales with prestige without bound, so a flat
+ * cost stops gating anything: at 17M KP the whole project filled in 1.3s.
+ * Scaling it makes fill-time depend on how well you've built *this* run instead.
+ */
+export function buildMegaproject(tier: number, prestigeCostMult = 1): Megaproject {
   const authored = PROJECTS[tier];
   const [id, name, labels] = authored ?? [
     `exotic-lattice-${tier}`,
@@ -51,7 +57,7 @@ export function buildMegaproject(tier: number): Megaproject {
     id,
     name,
     tier,
-    totalCost: megaCost(tier),
+    totalCost: megaCost(tier) * Math.max(1, prestigeCostMult),
     rpCost: megaRpCost(tier),
     stages: labels.map((label) => ({ label, reward: STAGE_REWARD })),
     stageResearch: stageResearchFor(tier, authored !== undefined),

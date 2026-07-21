@@ -27,6 +27,10 @@ export interface SaveData {
   purchased: Id[];
   committed: Num;
   stagesAuthorized: number;
+  // The project's cost is stored, not recomputed, so a rebalance (or the
+  // prestige scaling added in §3.17) never re-prices a build already underway.
+  // Absent on older saves → they keep the un-scaled cost they started with.
+  megaTotalCost?: Num;
   decommissionedStages?: number; // absent on pre-v7 saves → grandfathered on load
   routePct: number; // Project rail share (0..1)
   sellPct: number; // Sell rail share (0..1); sellPct + routePct ≤ 1
@@ -62,6 +66,7 @@ export function serialize(s: GameState): SaveData {
     purchased: Object.values(s.research).filter((n) => n.purchased).map((n) => n.id),
     committed: s.megaproject.committed,
     stagesAuthorized: s.megaproject.stagesAuthorized,
+    megaTotalCost: s.megaproject.totalCost,
     decommissionedStages: s.megaproject.decommissionedStages,
     routePct: s.routePct,
     sellPct: s.sellPct,
@@ -134,6 +139,12 @@ export function hydrate(save: SaveData): GameState {
   for (const id of save.purchased) {
     const node = s.research[id];
     if (node) node.purchased = true;
+  }
+  // Restore the stored cost first — the stage/committed clamps below read it.
+  // Missing (older save) = keep the freshly built base cost, i.e. grandfathered
+  // at the price the run started at.
+  if (typeof save.megaTotalCost === 'number' && isFinite(save.megaTotalCost) && save.megaTotalCost > 0) {
+    s.megaproject.totalCost = save.megaTotalCost;
   }
   const n = s.megaproject.stages.length;
   // stagesAuthorized < 0 = "derive from progress" sentinel set by the v1→v2

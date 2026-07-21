@@ -298,6 +298,32 @@ verb — to y=863, *below the fold*. Two fixes:
    per-tap one, so it defaults closed and the buy buttons stay above the fold (measured:
    first Buy 863 → 633px with every system unlocked).
 
+### 3.17 Megaprojects must scale with prestige (`content/megaprojects.ts`)
+
+**Measured bug, 2026-07-21.** Generation scales with `prestigeMult` (KP) without bound, but
+`megaCost` only scaled with *tier*. With a deliberately tiny 20-unit buildout:
+
+| KP | generation | project cost | time to fill the whole project |
+|---|---|---|---|
+| 0 | 5.25 W/s | 3.5e5 | ~5 days |
+| 1e3 | 110 W/s | 3.5e5 | ~6 hours |
+| 1e6 | 105 kW/s | 3.5e5 | 22 seconds |
+| 1.7e7 | 1.79 MW/s | 3.5e5 | **1.3 seconds** |
+
+The tier gate had silently stopped existing. The fix: `buildMegaproject(tier, prestigeCostMult)`,
+called from `ascend` with `prestigeMult(s.kp)`. Fill-time then depends only on how well you
+built *this* run — prestige-invariant, which is what a gate should measure.
+
+**Corollary — costs must move with whatever scales output.** Raising CR income would have made
+this *worse* (more CR → more sources → more generation → faster fill). A sweep confirmed CR is
+not the binding constraint: with a rational buyer that refuses curtailing units, generation
+hard-stops (quadratic upkeep) and 566k banked CR cannot move it — only research can.
+
+**In-flight builds are grandfathered.** `SaveData.megaTotalCost` stores the project's price, so
+a rebalance never re-prices a build already underway; a save without it keeps the base cost.
+`ascend` also seeds **CR**, not Watts — the Watt bank has been retired since §3.15, and seeding
+it would strand a player with no money at a new tier.
+
 ---
 
 ## 4. The Kardashev ladder (content: `content/tiers.ts` + `content/sources.ts`)

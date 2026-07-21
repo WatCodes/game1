@@ -227,6 +227,24 @@ describe('migration', () => {
     expect(restored.market.saturation).toBe(0);
   });
 
+  it('grandfathers an in-flight project: a save without a stored cost keeps the base price', () => {
+    const s = playedState();
+    s.kp = 1_000_000; // enough prestige that re-pricing would explode the build
+    const save = serialize(s) as unknown as Record<string, unknown>;
+    const basePrice = save.megaTotalCost as number;
+    delete save.megaTotalCost; // as an older save would be
+    const restored = hydrate(validateSave(save));
+    expect(restored.megaproject.totalCost).toBeCloseTo(basePrice);
+    expect(restored.megaproject.committed).toBe(12345); // progress intact
+  });
+
+  it('a stored project cost survives the round trip', () => {
+    const s = playedState();
+    s.megaproject.totalCost = 987_654_321;
+    const restored = hydrate(validateSave(JSON.parse(JSON.stringify(serialize(s)))));
+    expect(restored.megaproject.totalCost).toBe(987_654_321);
+  });
+
   it('rejects saves from a newer build', () => {
     expect(() => migrate({ version: 99 })).toThrow(/newer/);
   });

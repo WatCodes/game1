@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { sceneForTier } from '../src/ui/three/scenes';
-import { fossilScene } from '../src/ui/three/scenes/fossil';
+import { athensScene } from '../src/ui/three/scenes/athens';
 import { stellarScene } from '../src/ui/three/scenes/stellar';
 import { exoticScene } from '../src/ui/three/scenes/exotic';
 import { litCount, makeInstanced } from '../src/ui/three/scenes/shared';
@@ -43,8 +43,8 @@ describe('every tier scene', () => {
   });
 });
 
-describe('fossil scene data bindings', () => {
-  function hiddenCount(scene: ReturnType<typeof fossilScene>): number {
+describe('athens scene data bindings', () => {
+  function hiddenCount(scene: ReturnType<typeof athensScene>): number {
     let n = 0;
     scene.group.traverse((obj) => {
       if ((obj as THREE.Mesh).isMesh && !obj.visible) n++;
@@ -52,29 +52,29 @@ describe('fossil scene data bindings', () => {
     return n;
   }
 
-  it('traffic, blimp and searchlights hide when the grid is not live', () => {
-    const scene = fossilScene();
+  it('cats and Zeus’s lightning go dark when the grid is not live', () => {
+    const scene = athensScene();
     scene.update({ ...IDLE, live: true }, 2);
     const liveHidden = hiddenCount(scene);
     scene.update({ ...IDLE, live: false }, 2);
     const idleHidden = hiddenCount(scene);
-    // Motion elements (2 traffic streams + blimp + 2 searchlights) go dark.
+    // Motion elements (2 cat streams + 2 lightning bolts) go dark.
     expect(idleHidden).toBeGreaterThan(liveHidden);
     expect(idleHidden - liveHidden).toBeGreaterThanOrEqual(4);
     scene.dispose();
   });
 
-  it('windows light up as sources are owned', () => {
-    const scene = fossilScene();
-    const windows = () =>
+  it('braziers light up as generators are put to work', () => {
+    const scene = athensScene();
+    const braziers = () =>
       scene.group.children.find((c) => (c as THREE.InstancedMesh).isInstancedMesh) as THREE.InstancedMesh | undefined;
     scene.update({ ...IDLE, owned: 0 }, 1);
     const dark = new THREE.Color();
-    windows()!.getColorAt(0, dark);
+    braziers()!.getColorAt(0, dark);
     scene.update({ ...IDLE, owned: 4000 }, 1);
     const bright = new THREE.Color();
-    windows()!.getColorAt(0, bright);
-    // instance 0 goes from near-black to lit amber
+    braziers()!.getColorAt(0, bright);
+    // instance 0 goes from near-black to lit flame
     expect(bright.r + bright.g + bright.b).toBeGreaterThan(dark.r + dark.g + dark.b);
     scene.dispose();
   });

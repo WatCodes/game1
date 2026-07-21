@@ -36,53 +36,82 @@ function litCount(owned: number, max: number, k = 1.6): number {
   return Math.min(max, Math.ceil(Math.sqrt(owned) * k));
 }
 
-const CITY_BUILDINGS: [number, number, number][] = [
-  [20, 26, 45], [54, 32, 62], [94, 22, 38], [124, 36, 72], [168, 26, 52],
-  [202, 30, 66], [240, 22, 40], [270, 34, 58], [312, 24, 46],
+// Ruined Athens: low broken houses either side of the Temple of Zeus, whose
+// precinct (x ≈ 138–222) is kept clear.
+const RUINS: [number, number, number][] = [
+  [16, 26, 22], [48, 30, 15], [86, 22, 28], [114, 20, 12],
+  [228, 24, 26], [258, 30, 14], [294, 22, 24], [324, 20, 11],
 ];
-const CITY_WINDOWS: [number, number][] = CITY_BUILDINGS.flatMap(([x, w, h]) => {
-  const slots: [number, number][] = [];
-  for (let r = 0; r < Math.floor(h / 18); r++) {
-    slots.push([x + 5, 90 - h + 8 + r * 16], [x + w - 10, 90 - h + 8 + r * 16]);
-  }
-  return slots;
-});
+const BRAZIERS: [number, number][] = [
+  [12, 91], [40, 91], [74, 91], [104, 91], [130, 91],
+  [232, 91], [262, 91], [292, 91], [320, 91], [346, 91],
+  [150, 74], [212, 74],
+];
+const COLUMNS = [146, 158, 170, 182, 194, 206];
 
-function CityScene({ owned, surge, live }: Scene) {
-  const lit = litCount(owned, CITY_WINDOWS.length, 2);
+function AthensScene({ owned, surge, live }: Scene) {
+  const lit = litCount(owned, BRAZIERS.length, 2);
   return (
     <>
+      {/* moon */}
       <circle cx={318} cy={20} r={8} fill="var(--bg-raised)" stroke="var(--grid-line)" />
       <ellipse className="cloud" cx={-30} cy={26} rx={22} ry={5} fill="var(--bg-raised)" opacity={0.5} />
       {surge && <rect x={0} y={88} width={360} height={4} fill="var(--cyan)" opacity={0.35} />}
       <line x1={0} y1={95} x2={360} y2={95} stroke="var(--grid-line)" strokeWidth={2} />
-      {CITY_BUILDINGS.map(([x, w, h], i) => (
-        <rect key={i} x={x} y={95 - h} width={w} height={h} fill="var(--bg-raised)" />
+
+      {/* ruined houses, some with a toppled column beside them */}
+      {RUINS.map(([x, w, h], i) => (
+        <g key={i}>
+          <rect x={x} y={95 - h} width={w} height={h} fill="var(--bg-raised)" />
+          {i % 2 === 0 && <rect x={x - 10} y={92} width={9} height={3} rx={1.5} fill="var(--bg-raised)" />}
+        </g>
       ))}
-      {CITY_WINDOWS.map(([x, y], i) => (
-        <rect
+
+      {/* Temple of Zeus */}
+      <rect x={136} y={80} width={88} height={4} fill="var(--bg-raised)" />
+      <rect x={140} y={74} width={80} height={6} fill="var(--bg-raised)" />
+      {COLUMNS.map((x, i) => (
+        <rect key={i} x={x} y={i === 4 ? 58 : 50} width={5} height={i === 4 ? 16 : 24} fill="var(--bg-raised)" />
+      ))}
+      <rect x={140} y={44} width={80} height={6} fill="var(--bg-raised)" />
+      <polygon points="140,44 180,28 220,44" fill="var(--bg-raised)" />
+
+      {/* the stolen spark, crackling between the columns */}
+      {live && (
+        <polyline
+          className="flicker"
+          points="164,52 172,60 166,64 176,72"
+          fill="none"
+          stroke="var(--cyan)"
+          strokeWidth={1.6}
+          opacity={surge ? 1 : 0.8}
+        />
+      )}
+
+      {/* braziers light as generators come online */}
+      {BRAZIERS.map(([x, y], i) => (
+        <circle
           key={i}
-          x={x}
-          y={y}
-          width={5}
-          height={7}
+          cx={x}
+          cy={y}
+          r={2.6}
           className={i === 3 && i < lit ? 'flicker' : ''}
           fill={i < lit ? 'var(--amber)' : 'var(--bg-panel)'}
         />
       ))}
-      <rect x={132} y={12} width={7} height={16} fill="var(--bg-raised)" />
+
       {live && (
         <>
-          <circle className="smoke" cx={136} cy={9} r={4} fill="var(--grid-line)" />
-          <circle className="smoke" cx={141} cy={6} r={3} fill="var(--grid-line)" style={{ animationDelay: '1.4s' }} />
-          {/* night traffic */}
+          <circle className="smoke" cx={150} cy={70} r={4} fill="var(--grid-line)" />
+          <circle className="smoke" cx={212} cy={68} r={3} fill="var(--grid-line)" style={{ animationDelay: '1.4s' }} />
+          {/* cats padding along the avenue — eyes catching the firelight */}
           <g className="drive">
-            <rect x={-14} y={98} width={12} height={5} rx={1.5} fill="var(--bg-raised)" />
-            <circle cx={-12} cy={100} r={1.4} fill="var(--amber)" />
+            <ellipse cx={-10} cy={101} rx={6} ry={2.4} fill="var(--bg-raised)" />
+            <circle cx={-5} cy={100} r={1.3} fill="var(--amber)" />
           </g>
           <g className="drive" style={{ animationDelay: '-4.5s', animationDuration: '12s' }}>
-            <rect x={-14} y={104} width={10} height={4} rx={1.5} fill="var(--bg-raised)" />
-            <circle cx={-5} cy={106} r={1.2} fill="var(--danger)" />
+            <ellipse cx={-10} cy={106} rx={5} ry={2} fill="var(--bg-raised)" />
+            <circle cx={-6} cy={105} r={1.1} fill="var(--ok)" />
           </g>
         </>
       )}
@@ -300,7 +329,7 @@ function LatticeScene({ owned, surge }: Scene) {
   );
 }
 
-const SCENES = [CityScene, RenewableScene, PlanetScene, OrbitalScene, DysonScene, ExoticScene, GalaxyScene, LatticeScene];
+const SCENES = [AthensScene, RenewableScene, PlanetScene, OrbitalScene, DysonScene, ExoticScene, GalaxyScene, LatticeScene];
 
 export function WorldViewport() {
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('kardashev:ui:viewport') === '0');

@@ -1,5 +1,5 @@
 import type { SceneFactory } from '../types';
-import { fossilScene } from './fossil';
+import { athensScene } from './athens';
 import { renewableScene } from './renewable';
 import { atomicScene } from './atomic';
 import { orbitalScene } from './orbital';
@@ -9,7 +9,7 @@ import { galacticScene } from './galactic';
 import { latticeScene } from './lattice';
 
 const SCENES: SceneFactory[] = [
-  fossilScene,
+  athensScene,
   renewableScene,
   atomicScene,
   orbitalScene,

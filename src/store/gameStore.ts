@@ -147,7 +147,8 @@ export interface StageView extends MegaprojectStage {
 }
 
 export interface DisplaySnapshot {
-  power: Num;
+  // No `power`: the Watt bank is retired (§3.15). Generation is a rate (`pps`)
+  // and money is `credits`.
   pps: Num;
   rp: Num;
   rpRate: number;
@@ -254,7 +255,6 @@ function buildDisplay(s: GameState): DisplaySnapshot {
   // the Lab so "what unblocks my build?" is answerable at a glance.
   const projectNeeds = new Set(s.megaproject.stageResearch.filter((id): id is Id => !!id));
   return {
-    power: s.power,
     pps,
     rp: s.rp,
     rpRate: researchRate(s),

@@ -74,15 +74,8 @@ export function authorizeStage(s: GameState): boolean {
   return true;
 }
 
-/** Lump-sum deposit from stored power. Returns the amount actually committed. */
-export function commitPower(s: GameState, amount: Num, mods?: ResearchModifiers): Num {
-  const remaining = authorizedBoundary(s, mods) - s.megaproject.committed;
-  const commit = Math.max(0, Math.min(amount, s.power, remaining));
-  if (commit <= 0) return 0;
-  s.power -= commit;
-  s.megaproject.committed += commit;
-  return commit;
-}
+// `commitPower` (a lump-sum deposit from the Watt bank) is gone with the bank
+// itself — construction is fed only by the Project rail below.
 
 /** Route a share of fresh income into construction (called from tick). */
 export function routeIncome(s: GameState, gain: Num, mods: ResearchModifiers): Num {

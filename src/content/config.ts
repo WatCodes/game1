@@ -58,8 +58,7 @@ export const CONFIG = {
   ACCRETION_FLARE_SECONDS: 30, // flare burst = this many seconds of current output
   RELAY_POWER_PENALTY: 0.35, // T6: -35% power at 100% research allocation
   RELAY_RP_BONUS: 1.5, // +150% RP rate at 100% research allocation
-  STARTING_POWER: 15, // legacy: pre-Dispatch-Board Watt bank seed (retired, kept for migration)
-  STARTING_CREDITS: 15, // CR on hand at a fresh start — enough for the first battery
+  STARTING_CREDITS: 15, // CR on hand at a fresh start — MUST cover the first generator
   // Dispatch Board — the live grid economy (GAME_DESIGN §3.14).
   // Sell rail: CR earned = soldW × price, price = BASE_PRICE / (1 + saturation).
   BASE_PRICE: 1, // CR per Watt at an unsaturated market (the key M7 pacing knob)

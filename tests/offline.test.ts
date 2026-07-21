@@ -11,6 +11,7 @@ function producing(lastSaved: number) {
   const s = createInitialState(lastSaved);
   s.sources['battery-bank'].owned = 1; // 0.5 W/s
   s.stats.lifetimePower = 1e9; // past every progressive-unlock gate
+  s.credits = 0; // zero the ledger so CR assertions measure earnings only
   return s;
 }
 

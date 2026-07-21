@@ -100,6 +100,7 @@ describe('T5 accretion disk', () => {
 
   it('heat builds proportionally and a flare pays a burst then resets', () => {
     const s = atTier(5);
+    s.credits = 0; // zero the ledger: this asserts what the flare PAYS
     setFeedRate(s, 1);
     const half = tickAccretion(s, CONFIG.ACCRETION_HEAT_SECONDS / 2, 1000);
     expect(half).toBeNull();

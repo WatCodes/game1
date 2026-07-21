@@ -12,7 +12,7 @@ export function createInitialState(now: number = Date.now(), rand: () => number 
   const s: GameState = {
     version: SAVE_VERSION,
     tier: 0,
-    power: CONFIG.STARTING_POWER,
+    power: 0, // the Watt bank is retired (§3.15) — money is CR
     runPower: 0,
     rp: 0,
     kp: 0,
@@ -25,7 +25,9 @@ export function createInitialState(now: number = Date.now(), rand: () => number 
     dispatch: { charge: 0, peakLeft: 0, nextPeakIn: 240 },
     grid: { vLevel: 0, aLevel: 0, rLevel: 0 },
     ...defaultTierTwistState(),
-    credits: 0,
+    // Enough to afford the first generator. Without this a new game is
+    // unwinnable: no sources → no generation → no CR → no sources.
+    credits: CONFIG.STARTING_CREDITS,
     puzzle: newPuzzle(0, rand),
     solvers: 0,
     solverProgress: 0,

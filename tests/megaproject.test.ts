@@ -5,14 +5,12 @@ import {
   authorizeStage,
   authorizedBoundary,
   canAuthorizeStage,
-  commitPower,
   isMegaprojectComplete,
   nextStageResearchBlock,
   routeIncome,
   stageRpCost,
   stagesCompleted,
 } from '../src/engine/megaproject';
-import { cheapestNextCost, maxSafeCommit } from '../src/engine/economy';
 import { buyResearch, researchModifiers } from '../src/engine/research';
 import { CONFIG } from '../src/content/config';
 
@@ -40,9 +38,8 @@ describe('stage authorization', () => {
     s.routePct = 1;
     expect(routeIncome(s, boundary * 10, mods)).toBeCloseTo(boundary);
     expect(s.megaproject.committed).toBeCloseTo(boundary);
-    // lump commits clamp too
-    s.power = 1e12;
-    expect(commitPower(s, 1e12)).toBe(0);
+    // and it stays clamped — more income cannot push past the boundary
+    expect(routeIncome(s, boundary * 10, mods)).toBe(0);
   });
 
   it('authorization needs RP', () => {
@@ -78,16 +75,23 @@ describe('stage authorization', () => {
     expect(canAuthorizeStage(s)).toBe(false); // nothing left to authorize
   });
 
-  it('completion requires all stages authorized and filled', () => {
+  it('completion requires all stages authorized, not just endless income', () => {
     const s = state();
     s.rp = 1e12;
-    s.power = 1e12;
+    s.routePct = 1;
     buyResearch(s, 'rp-t0');
     buyResearch(s, 'boost-battery-bank');
     buyResearch(s, 'global-t0');
     buyResearch(s, 'mega-t0');
+    const mods = researchModifiers(s);
+
+    // Pouring in unlimited income stalls at the authorized boundary.
+    routeIncome(s, 1e12, mods);
+    expect(isMegaprojectComplete(s)).toBe(false);
+
+    // Only clearing the RP/research gates lets the rest of it fill.
     for (let i = 0; i < 4; i++) authorizeStage(s);
-    commitPower(s, 1e12);
+    routeIncome(s, 1e12, mods);
     // mega-t0 reduces cost 15%, so completion compares against effective cost
     expect(isMegaprojectComplete(s)).toBe(true);
   });
@@ -136,25 +140,6 @@ describe('stage decommission', () => {
   });
 });
 
-describe('anti-softlock commit guard', () => {
-  it('with no income, always keeps enough for the cheapest source', () => {
-    const s = state(); // owns nothing → pps 0
-    s.power = 100;
-    const reserve = cheapestNextCost(s);
-    expect(reserve).toBe(10); // battery bank
-    expect(maxSafeCommit(s)).toBeCloseTo(90);
-  });
-
-  it('cannot commit at all when power barely covers the cheapest source', () => {
-    const s = state();
-    s.power = 10;
-    expect(maxSafeCommit(s)).toBe(0);
-  });
-
-  it('with income flowing, the full remainder is committable', () => {
-    const s = state();
-    s.sources['battery-bank'].owned = 5; // pps > 0
-    s.power = 100;
-    expect(maxSafeCommit(s)).toBeCloseTo(100);
-  });
-});
+// The "anti-softlock commit guard" suite lived here. It covered lump-sum
+// commits from the Watt bank, which no longer exist — the Project rail takes a
+// fraction of income, so there is no lump that could strand a run.

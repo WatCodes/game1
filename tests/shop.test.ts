@@ -23,6 +23,7 @@ const NOON = new Date(2026, 5, 1, 12, 0, 0).getTime();
 describe('daily streak', () => {
   it('first claim starts the streak', () => {
     const s = createInitialState(0);
+    s.credits = 0; // zero the ledger: this asserts what the claim PAYS
     expect(canClaimDaily(s, NOON)).toBe(true);
     expect(claimDaily(s, NOON)).toBe(CONFIG.DAILY_REWARDS[0]);
     expect(s.daily.streak).toBe(1);

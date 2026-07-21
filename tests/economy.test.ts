@@ -7,6 +7,7 @@ import {
   fireDispatch,
   generationPerSec,
   isSourceUnlocked,
+  nextCost,
   nextUnitNet,
   powerPerSec,
   runAutomation,
@@ -24,6 +25,28 @@ function state() {
   s.stats.lifetimePower = 1e9; // past every progressive-unlock gate
   return s;
 }
+
+describe('a new game is winnable', () => {
+  // Regression guard. This shipped broken: createInitialState seeded the
+  // RETIRED Watt bank instead of CR, so a fresh player had 0 CR, 0 sources and
+  // a 10 CR first purchase — no sources means no generation means no income,
+  // so the game was unwinnable from the title screen. Every save used in
+  // testing already had progress, which is exactly why it hid.
+  it('can afford and buy its very first generator', () => {
+    const s = createInitialState(0);
+    const first = Object.values(s.sources)[0];
+    expect(s.credits).toBeGreaterThanOrEqual(nextCost(first, 1));
+    expect(buy(s, first.id, 1)).toBe(1);
+    expect(s.sources[first.id].owned).toBe(1);
+  });
+
+  it('and that first generator actually produces', () => {
+    const s = createInitialState(0);
+    const first = Object.values(s.sources)[0];
+    buy(s, first.id, 1);
+    expect(generationPerSec(s)).toBeGreaterThan(0);
+  });
+});
 
 describe('buy', () => {
   it('deducts the exact cost and adds units', () => {

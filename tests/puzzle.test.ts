@@ -119,6 +119,7 @@ describe('rewards', () => {
 describe('auto-solvers', () => {
   it('grind solves for reduced credits and short surges', () => {
     const s = createInitialState(0, mulberry32(1));
+    s.credits = 0; // zero the ledger: this asserts what solvers PAY
     s.solvers = 2;
     runSolvers(s, CONFIG.SOLVER_SECONDS);
     const per = Math.round(CONFIG.PUZZLE_BASE_REWARD * CONFIG.SOLVER_REWARD_FACTOR);
@@ -129,6 +130,7 @@ describe('auto-solvers', () => {
 
   it('banks fractional progress between ticks', () => {
     const s = createInitialState(0, mulberry32(1));
+    s.credits = 0; // zero the ledger: this asserts what solvers PAY
     s.solvers = 1;
     runSolvers(s, CONFIG.SOLVER_SECONDS / 2);
     expect(s.credits).toBe(0);

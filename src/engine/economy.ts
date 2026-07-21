@@ -10,7 +10,7 @@ import {
   upkeepFor,
 } from './formulas';
 import { researchModifiers, type ResearchModifiers } from './research';
-import { authorizedBoundary, megaprojectMult, routeIncome } from './megaproject';
+import { megaprojectMult, routeIncome } from './megaproject';
 import { boostPowerMult } from './shop';
 import { achievementMult } from './achievements';
 import { deliverPower } from './grid';
@@ -177,29 +177,10 @@ export function runAutomation(s: GameState, mods: ResearchModifiers = researchMo
   }
 }
 
-/** Cheapest next unit among unlocked sources — the anti-softlock reserve. */
-export function cheapestNextCost(s: GameState, mods: ResearchModifiers = researchModifiers(s)): Num {
-  const mult = launchCostMult(s);
-  let min = Infinity;
-  for (const src of Object.values(s.sources)) {
-    if (!isSourceUnlocked(s, src, mods)) continue;
-    min = Math.min(min, nextCost(src, 1, mult));
-  }
-  return isFinite(min) ? min : 0;
-}
-
-/**
- * The most power that can be committed to the megaproject right now without
- * bricking the run: with no income, always keep enough for one cheapest source.
- */
-export function maxSafeCommit(s: GameState, mods: ResearchModifiers = researchModifiers(s)): Num {
-  const remaining = Math.max(0, authorizedBoundary(s, mods) - s.megaproject.committed);
-  let limit = Math.min(s.power, remaining);
-  if (powerPerSec(s, mods) <= 0) {
-    limit = Math.min(limit, s.power - cheapestNextCost(s, mods));
-  }
-  return Math.max(0, limit);
-}
+// `cheapestNextCost` / `maxSafeCommit` lived here to guard manual lump-sum
+// commits against softlocking a run. Both are gone: the Project rail commits a
+// *fraction of income* rather than a lump of banked currency, so there is no
+// lump to guard, and the anti-softlock reserve has nothing to protect.
 
 export interface DispatchResult {
   gained: Num; // power burst dispatched (W)

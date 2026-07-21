@@ -1,4 +1,4 @@
-# CLAUDE.md — Kardashev (working title)
+# CLAUDE.md — Electric Cats
 
 > Keep this file lean. It is injected into **every** Claude Code request, so it is a
 > per-turn token tax. Conventions and decisions only — not tutorials. Deep detail
@@ -7,7 +7,12 @@
 ## What we're building
 
 An **incremental / idle power-empire game** that climbs the **Kardashev scale** — from a
-single home circuit (kW) to universe-scale power (10³⁶ W and beyond). Runs in the browser.
+single kneading paw (W) to universe-scale power (10³⁶ W and beyond). Runs in the browser.
+
+**Theme:** humans are extinct; cats inherit the world and steal the first spark from the
+Temple of Zeus. The ladder runs Athens → the continents → the world → orbit → the sun →
+black holes → the galaxy → spacetime. Reskins touch **display names only** — content `id`s
+are load-bearing (saves key `owned` by them, research effects reference them).
 
 **Core loop:** grow a power economy → spend Research Points on a tech tree → construct a
 signature **megaproject** to gate each tier → **ascend** the Kardashev scale, resetting your

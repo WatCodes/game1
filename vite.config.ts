@@ -13,9 +13,9 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       manifest: {
-        name: 'Kardashev',
-        short_name: 'Kardashev',
-        description: 'Climb the Kardashev scale — from a home battery to the power of galaxies.',
+        name: 'Electric Cats',
+        short_name: 'Electric Cats',
+        description: 'Humans are gone. Cats inherit the world — and the lightning. Power a feline civilisation from one kneading paw to the whole galaxy.',
         theme_color: '#04070e',
         background_color: '#04070e',
         display: 'standalone',

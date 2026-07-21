@@ -23,15 +23,18 @@ export function kpDivisor(tier: number): number {
   return 1.2e5 * Math.pow(KP_DIV_STEP, tier);
 }
 
+// The cats' climb: Athens → the continents → the world → orbit → the sun →
+// the dark → the galaxy → spacetime. Greek names for the eras, because the
+// first spark was stolen from the Temple of Zeus.
 const TIERS: Omit<KardashevTier, 'baseCostMult' | 'kpDivisor'>[] = [
-  { index: 0, era: 'Fossil Age', scaleCopy: 'a household, then a city' },
-  { index: 1, era: 'Renewable Age', scaleCopy: 'an entire region' },
-  { index: 2, era: 'Atomic Age', scaleCopy: 'a nation, then a planet', kardashevLabel: 'Type I' },
-  { index: 3, era: 'Orbital Age', scaleCopy: 'near-Earth space' },
-  { index: 4, era: 'Stellar Age', scaleCopy: 'an entire star', kardashevLabel: 'Type II' },
-  { index: 5, era: 'Exotic Age', scaleCopy: 'black holes and stellar engines' },
-  { index: 6, era: 'Galactic Age', scaleCopy: 'the entire galaxy', kardashevLabel: 'Type III' },
-  { index: 7, era: 'Transcendent Age', scaleCopy: 'spacetime itself', kardashevLabel: 'Type IV' },
+  { index: 0, era: 'Age of Athens', scaleCopy: 'one shrine, then a city of cats' },
+  { index: 1, era: 'Age of Colonies', scaleCopy: 'a whole continent' },
+  { index: 2, era: 'Age of Dominion', scaleCopy: 'every continent, then the world', kardashevLabel: 'Type I' },
+  { index: 3, era: 'Age of Ascent', scaleCopy: 'orbit and the near sky' },
+  { index: 4, era: 'Age of Helios', scaleCopy: 'planet by planet, then the sun', kardashevLabel: 'Type II' },
+  { index: 5, era: 'Age of Erebus', scaleCopy: 'black holes and stellar engines' },
+  { index: 6, era: 'Age of Constellations', scaleCopy: 'system by system, the whole galaxy', kardashevLabel: 'Type III' },
+  { index: 7, era: 'Age of Aether', scaleCopy: 'spacetime itself', kardashevLabel: 'Type IV' },
 ];
 
 /** Tiers 0–7 are authored; 8+ is the procedural prestige tail. */
@@ -40,7 +43,7 @@ export function getTier(index: number): KardashevTier {
   if (base) return { ...base, baseCostMult: Math.pow(COST_STEP, index), kpDivisor: kpDivisor(index) };
   return {
     index,
-    era: `Kardashev IV.${index - 7}`,
+    era: `Aether ${index - 7}`,
     scaleCopy: 'realities beyond counting',
     kardashevLabel: `Type IV.${index - 7}`,
     baseCostMult: Math.pow(COST_STEP, index),

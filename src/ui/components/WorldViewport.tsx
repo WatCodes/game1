@@ -135,12 +135,13 @@ function RenewableScene({ owned, surge, live }: Scene) {
             className={live ? 'turbine-spin' : ''}
             style={{ transformOrigin: `${x}px ${52 - i * 4}px`, animationDelay: `${i * 0.7}s` }}
           >
-            {[0, 120, 240].map((a) => (
+            {/* four sailcloth arms — a windmill, not a wind turbine */}
+            {[0, 90, 180, 270].map((a) => (
               <line
                 key={a} x1={x} y1={52 - i * 4}
                 x2={x + 16 * Math.cos(((a - 90) * Math.PI) / 180)}
                 y2={52 - i * 4 + 16 * Math.sin(((a - 90) * Math.PI) / 180)}
-                stroke="var(--text)" strokeWidth={2}
+                stroke="var(--text)" strokeWidth={3}
               />
             ))}
           </g>
@@ -150,7 +151,7 @@ function RenewableScene({ owned, surge, live }: Scene) {
         <rect
           key={i} x={18 + i * 22} y={96} width={18} height={7}
           transform={`skewX(-18)`}
-          fill={i < panels ? 'var(--cyan)' : 'var(--bg-panel)'} stroke="var(--grid-line)"
+          fill={i < panels ? 'var(--amber)' : 'var(--bg-panel)'} stroke="var(--grid-line)"
         />
       ))}
     </>

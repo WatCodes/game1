@@ -3,9 +3,11 @@ import type { SceneData, TierScene } from '../types';
 import { C, NEON, addBackdrop, addLights, disposeGroup, glow, litCount, makeHalo, makeInstanced, matte } from './shared';
 import { starfield } from './orbital';
 
-// T2 — the home planet from orbit: an atmosphere-rimmed globe whose night side
-// lights up with city clusters as the grid spreads, wrapped by a planetary
-// power ring, a patrolling moon and a fusion-glow at the poles.
+// T2 "Age of Dominion" — the home world from orbit, taken continent by
+// continent: an atmosphere-rimmed globe whose night side lights up hearth by
+// hearth as the colonies join up, wrapped by the planetary ring main, with a
+// patrolling moon. The warm core glow is The World Hearth itself, brightening
+// as its stages complete.
 const CITY_LATLON: [number, number][] = [
   [15, 0], [35, 50], [-10, 90], [25, 140], [-30, 190], [5, 230], [45, 270], [-20, 310],
   [60, 40], [-45, 120], [10, 170], [30, 320], [-15, 20], [40, 100], [-35, 260], [20, 70],
@@ -54,6 +56,10 @@ export function atomicScene(): TierScene {
   });
   group.add(cityGroup);
 
+  // The World Hearth: a warm glow banked behind the globe, stoked by stages.
+  const hearth = makeHalo(0xffa23c, 7.5, 0);
+  group.add(hearth);
+
   const moonPivot = new THREE.Group();
   const moon = new THREE.Mesh(new THREE.SphereGeometry(0.34, 20, 20), matte(0x8a8fb0, 0.9));
   moon.position.set(4.6, 0.8, 0);
@@ -76,6 +82,9 @@ export function atomicScene(): TierScene {
       planet.rotation.y = t * 0.06;
       cityGroup.rotation.y = t * 0.06;
       moonPivot.rotation.y = t * 0.25;
+      // Hearth banks up as the project's stages land, breathing gently.
+      const stoked = Math.min(1, data.stagesDone / 5);
+      hearth.material.opacity = stoked * (0.28 + 0.06 * Math.sin(t * 0.8)) + (data.surge ? 0.1 : 0);
       ringMat.opacity = data.surge ? 0.8 : 0.45;
       stars.rotation.y = t * 0.004;
     },

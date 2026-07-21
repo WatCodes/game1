@@ -3,3 +3,9 @@ dist/
 coverage/
 *.local
 .DS_Store
+
+# Native shells are GENERATED (`npx cap add ios|android`), including in CI —
+# see docs/NATIVE.md. Commit them only once you need to hand-edit native config
+# (Info.plist keys, icons, capabilities), and then remove these two lines.
+ios/
+android/

@@ -1,0 +1,106 @@
+# Codemagic CI — builds the native apps without you owning a Mac.
+#
+# The trick: Codemagic's iOS machines ARE Macs, so CI runs `npx cap add ios`
+# itself. Nothing native is committed; the shell is generated fresh each build
+# from capacitor.config.ts. See docs/NATIVE.md.
+#
+# The Capacitor packages are installed here rather than being project
+# dependencies, so the web build stays free of native SDKs (src/platform
+# loads plugins at runtime — nothing imports them at build time).
+
+definitions:
+  scripts:
+    - &test
+      name: Typecheck, lint and test
+      script: |
+        npm run typecheck
+        npm run lint
+        npm test
+    - &build_web
+      name: Build the web bundle
+      # Capacitor ships whatever is in dist/, so this must run before cap sync.
+      script: npm run build
+
+workflows:
+  # ---------------------------------------------------------------------------
+  # Android — free, needs no Apple account, and runs on cheap Linux instances.
+  # Start here: it validates the whole native path (and later, real ads) for the
+  # price of a $25 one-off Play account instead of $99/yr.
+  # ---------------------------------------------------------------------------
+  android:
+    name: Android (Capacitor)
+    instance_type: linux_x2
+    max_build_duration: 45
+    environment:
+      node: 20
+      java: 21
+    scripts:
+      - name: Install dependencies
+        script: npm ci
+      - *test
+      - *build_web
+      - name: Generate the Android shell
+        script: |
+          npm i --no-save @capacitor/core @capacitor/cli @capacitor/android @capacitor-community/admob
+          npx cap add android || echo "android platform already present"
+          npx cap sync android
+      - name: Assemble debug APK
+        # Debug build: unsigned and installable by sideloading, so you can test
+        # on a real device before paying for anything.
+        script: |
+          cd android
+          ./gradlew assembleDebug
+    artifacts:
+      - android/app/build/outputs/**/*.apk
+
+  # ---------------------------------------------------------------------------
+  # iOS — requires an Apple Developer account. Set these up in the Codemagic UI
+  # (they are secrets and must never live in this file):
+  #   1. Teams > Integrations > App Store Connect  → add your API key
+  #   2. reference it below as `app_store_connect: <the integration name>`
+  #   3. set BUNDLE_ID below to your real bundle id if it ever changes
+  # Until that exists this workflow will fail at the signing step, which is
+  # expected — everything before it still verifies the build.
+  # ---------------------------------------------------------------------------
+  ios:
+    name: iOS (Capacitor)
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    environment:
+      node: 20
+      xcode: latest
+      cocoapods: default
+      vars:
+        BUNDLE_ID: 'com.watcodes.electriccats' # must match capacitor.config.ts
+      # ios_signing:
+      #   distribution_type: app_store
+      #   bundle_identifier: com.watcodes.electriccats
+      # integrations:
+      #   app_store_connect: <your API key name from the Codemagic UI>
+    scripts:
+      - name: Install dependencies
+        script: npm ci
+      - *test
+      - *build_web
+      - name: Generate the iOS shell
+        script: |
+          npm i --no-save @capacitor/core @capacitor/cli @capacitor/ios @capacitor-community/admob
+          npx cap add ios || echo "ios platform already present"
+          npx cap sync ios
+      - name: Fetch signing profiles
+        # No-op until the App Store Connect integration above is uncommented.
+        script: xcode-project use-profiles || echo "no signing configured yet"
+      - name: Build the ipa
+        script: |
+          xcode-project build-ipa \
+            --project "ios/App/App.xcodeproj" \
+            --scheme "App"
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+    # publishing:
+    #   app_store_connect:
+    #     auth: integration
+    #     submit_to_testflight: true
+    #   email:
+    #     recipients: [ your@email ]   # deliberately not committed

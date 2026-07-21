@@ -25,7 +25,29 @@ at runtime (`src/platform/native.ts`), so:
 Android can be built on Windows with Android Studio. iOS cannot — that is an
 Apple restriction, not a project one.
 
-## 2. One-time setup
+## 1b. You probably don't need to buy a Mac
+
+`codemagic.yaml` builds both apps in CI. Codemagic's iOS machines **are** Macs,
+so the pipeline runs `npx cap add ios` itself — the native shells are generated
+per build and never committed (they're in `.gitignore`).
+
+1. Sign in at [codemagic.io](https://codemagic.io) with GitHub, add `WatCodes/game1`.
+2. It picks up `codemagic.yaml` automatically. Run the **Android** workflow first —
+   it needs no accounts at all and produces a sideloadable debug APK.
+3. For iOS: Codemagic UI → *Teams → Integrations → App Store Connect*, add your
+   API key, then uncomment the `ios_signing` / `integrations` block in
+   `codemagic.yaml`. Until then the iOS workflow fails at signing **by design**;
+   everything before that step still verifies.
+
+Both workflows run typecheck, lint and the test suite before building, so a
+broken build never reaches a device.
+
+> Once you need to hand-edit native config — the AdMob `GADApplicationIdentifier`
+> in `Info.plist`, app icons, capabilities — generating the shell each build stops
+> being enough. At that point run `npx cap add ios` once, drop `ios/` and
+> `android/` from `.gitignore`, and commit them.
+
+## 2. One-time setup (only if building locally)
 
 ```bash
 npm run native:install     # capacitor core/cli/ios/android + admob plugin

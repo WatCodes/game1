@@ -16,6 +16,7 @@ import { achievementMult } from './achievements';
 import { deliverPower } from './grid';
 import { launchCostMult } from './tierTwists';
 import { brownoutMult, gridPrice } from './market';
+import { effectiveRoutePct, effectiveSellPct } from './unlocks';
 
 export function isSourceUnlocked(s: GameState, src: PowerSource, mods?: ResearchModifiers): boolean {
   const gate = src.unlockedBy;
@@ -132,8 +133,8 @@ export function dispatchGeneration(
   gain: Num,
   mods: ResearchModifiers = researchModifiers(s),
 ): DispatchSplit {
-  const sellPct = Math.max(0, Math.min(1, s.sellPct));
-  const intendedProject = gain * Math.max(0, Math.min(1, s.routePct));
+  const sellPct = effectiveSellPct(s);
+  const intendedProject = gain * effectiveRoutePct(s);
   const routed = routeIncome(s, gain, mods); // clamps to routePct AND the authorized boundary
   const overflow = Math.max(0, intendedProject - routed);
   const sold = gain * sellPct + overflow;

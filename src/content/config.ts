@@ -68,6 +68,13 @@ export const CONFIG = {
   // Grid rail: keep at least DEMAND_FRACTION of output on the grid or brown out.
   DEMAND_FRACTION: 0.25, // grid demand as a share of your own generation
   BROWNOUT_SEVERITY: 0.5, // output multiplier bottoms at 1−this when the grid is starved
+  // Progressive disclosure (GAME_DESIGN §3.16). Systems arrive one at a time,
+  // keyed on LIFETIME power so an unlock is permanent and survives ascension.
+  // Until each lands it is inert, not just hidden — a player can't be punished
+  // by a mechanic they haven't met. Prime M7 onboarding knobs.
+  UNLOCK_BOARD_POWER: 1_000, // Dispatch Board: sell-vs-build becomes a choice
+  UNLOCK_GRID_DEMAND_POWER: 15_000, // grid demand floor + brownout start biting
+  UNLOCK_TRANSMISSION_POWER: 60_000, // the V×A cap / loss panel appears
   // Megaproject source cost: completing a stage dismantles this fraction of your
   // total owned units, drawn lowest-output-source first. Escalates per stage, so
   // the final stages cut into your best plants — building the wonder cannibalizes

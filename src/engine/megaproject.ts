@@ -1,6 +1,7 @@
 import type { GameState, Id, Num } from './types';
 import { CONFIG } from '../content/config';
 import { researchModifiers, type ResearchModifiers } from './research';
+import { effectiveRoutePct } from './unlocks';
 
 /** Total power cost after research reductions. */
 export function effectiveCost(s: GameState, mods: ResearchModifiers = researchModifiers(s)): Num {
@@ -85,10 +86,11 @@ export function commitPower(s: GameState, amount: Num, mods?: ResearchModifiers)
 
 /** Route a share of fresh income into construction (called from tick). */
 export function routeIncome(s: GameState, gain: Num, mods: ResearchModifiers): Num {
-  if (s.routePct <= 0) return 0;
+  const pct = effectiveRoutePct(s);
+  if (pct <= 0) return 0;
   const remaining = authorizedBoundary(s, mods) - s.megaproject.committed;
   if (remaining <= 0) return 0;
-  const routed = Math.min(gain * s.routePct, remaining);
+  const routed = Math.min(gain * pct, remaining);
   s.megaproject.committed += routed;
   return routed;
 }

@@ -10,6 +10,7 @@ const HOUR_MS = 3_600_000;
 function producing(lastSaved: number) {
   const s = createInitialState(lastSaved);
   s.sources['battery-bank'].owned = 1; // 0.5 W/s
+  s.stats.lifetimePower = 1e9; // past every progressive-unlock gate
   return s;
 }
 

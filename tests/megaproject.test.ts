@@ -17,7 +17,9 @@ import { buyResearch, researchModifiers } from '../src/engine/research';
 import { CONFIG } from '../src/content/config';
 
 function state() {
-  return createInitialState(0);
+  const s = createInitialState(0);
+  s.stats.lifetimePower = 1e9; // past every progressive-unlock gate
+  return s;
 }
 
 describe('stage authorization', () => {

@@ -1,5 +1,6 @@
 import type { GameState, Num } from './types';
 import { CONFIG } from '../content/config';
+import { effectiveRoutePct, effectiveSellPct, isUnlocked } from './unlocks';
 
 /**
  * The Dispatch Board's market layer (GAME_DESIGN §3.14). Pure and self-
@@ -11,8 +12,10 @@ import { CONFIG } from '../content/config';
 
 const clamp01 = (x: number): number => (x < 0 ? 0 : x > 1 ? 1 : x);
 
-/** CR paid per Watt sold. Falls as the market saturates, recovers as it drains. */
+/** CR paid per Watt sold. Falls as the market saturates, recovers as it drains.
+ *  Flat at BASE_PRICE until the Board introduces the market. */
 export function gridPrice(s: GameState): Num {
+  if (!isUnlocked(s, 'board')) return CONFIG.BASE_PRICE;
   return CONFIG.BASE_PRICE / (1 + Math.max(0, s.market.saturation));
 }
 
@@ -23,7 +26,8 @@ export function gridPrice(s: GameState): Num {
  * equilibrium instead of overshooting.
  */
 export function tickMarket(s: GameState, dt: number): void {
-  const target = CONFIG.MARKET_SATURATION_GAIN * clamp01(s.sellPct);
+  if (!isUnlocked(s, 'board')) return; // no market yet — price stays flat
+  const target = CONFIG.MARKET_SATURATION_GAIN * effectiveSellPct(s);
   const k = Math.min(1, dt / CONFIG.MARKET_TAU_SECONDS);
   s.market.saturation += (target - s.market.saturation) * k;
   if (s.market.saturation < 1e-9) s.market.saturation = 0;
@@ -31,11 +35,13 @@ export function tickMarket(s: GameState, dt: number): void {
 
 /** Share of generation left on the grid rail after Sell and Project take theirs. */
 export function gridFraction(s: GameState): number {
-  return clamp01(1 - clamp01(s.sellPct) - clamp01(s.routePct));
+  return clamp01(1 - effectiveSellPct(s) - effectiveRoutePct(s));
 }
 
-/** 0 = grid demand fully met, 1 = grid rail completely starved. */
+/** 0 = grid demand fully met, 1 = grid rail completely starved.
+ *  Always 0 until the grid-demand system unlocks. */
 export function brownoutShortfall(s: GameState): number {
+  if (!isUnlocked(s, 'gridDemand')) return 0;
   const d = CONFIG.DEMAND_FRACTION;
   if (d <= 0) return 0;
   return clamp01((d - gridFraction(s)) / d);
@@ -59,5 +65,5 @@ export function demandFloor(genBase: Num): Num {
 
 /** CR/s the Sell rail is currently minting. `pps` is delivered generation. */
 export function creditsPerSec(s: GameState, pps: Num): Num {
-  return Math.max(0, pps) * clamp01(s.sellPct) * gridPrice(s);
+  return Math.max(0, pps) * effectiveSellPct(s) * gridPrice(s);
 }

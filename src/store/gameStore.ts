@@ -24,6 +24,7 @@ import {
   gridFraction,
   gridPrice,
 } from '../engine/market';
+import { effectiveRoutePct, effectiveSellPct, isUnlocked } from '../engine/unlocks';
 import {
   bindingConstraint,
   buyGridUpgrade,
@@ -173,6 +174,8 @@ export interface DisplaySnapshot {
     routePct: number;
     decommissionPct: number; // fraction of the fleet the NEXT stage will dismantle
   };
+  // Progressive disclosure — which systems the player has met yet.
+  unlocks: { board: boolean; gridDemand: boolean; transmission: boolean };
   // The Dispatch Board: how live generation is split, and the market it sells into.
   board: {
     sellPct: number; // Sell rail (0..1)
@@ -314,9 +317,14 @@ function buildDisplay(s: GameState): DisplaySnapshot {
       routePct: s.routePct,
       decommissionPct: done < s.megaproject.stages.length ? decommissionFraction(done) : 0,
     },
+    unlocks: {
+      board: isUnlocked(s, 'board'),
+      gridDemand: isUnlocked(s, 'gridDemand'),
+      transmission: isUnlocked(s, 'transmission'),
+    },
     board: {
-      sellPct: s.sellPct,
-      projPct: s.routePct,
+      sellPct: effectiveSellPct(s),
+      projPct: effectiveRoutePct(s),
       gridPct: gridFraction(s),
       price: gridPrice(s),
       creditsPerSec: creditsPerSec(s, pps),
@@ -514,6 +522,17 @@ function detectTransitions(prev: DisplaySnapshot, next: DisplaySnapshot): void {
   }
   if (next.mega.complete && !prev.mega.complete && prev.mega.name === next.mega.name) {
     pushToast('ascend', `${next.mega.name} complete — Ascension available`);
+  }
+  // Progressive disclosure: announce each system as it comes online, so it
+  // never just silently appears on screen.
+  if (next.unlocks.board && !prev.unlocks.board) {
+    pushToast('milestone', '⚡ Dispatch Board online — tap it to choose: sell for CR, or build the project');
+  }
+  if (next.unlocks.gridDemand && !prev.unlocks.gridDemand) {
+    pushToast('milestone', `🔌 The grid now needs ${Math.round(CONFIG.DEMAND_FRACTION * 100)}% of your output — starve it and you brown out`);
+  }
+  if (next.unlocks.transmission && !prev.unlocks.transmission) {
+    pushToast('milestone', '🔧 Transmission online — your lines can only carry so much power');
   }
   if (next.dispatch.peakActive && !prev.dispatch.peakActive) {
     pushToast('info', `⚡ PEAK DEMAND — dispatch pays ×${CONFIG.PEAK_MULT} for ${CONFIG.PEAK_DURATION_SECONDS}s`);

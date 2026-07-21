@@ -264,6 +264,31 @@ leads with CR earned plus a **×2 claim** (the rewarded-ad hook; the ad gate its
 the native/Capacitor build). Save schema v7 retires the Watt bank, converting any banked power
 to CR at `BASE_PRICE`. Key pacing knob for the M7 balance pass: `BASE_PRICE`.
 
+### 3.16 Progressive disclosure (`engine/unlocks.ts`)
+
+The genre tolerates enormous depth but punishes depth that arrives **all at once on
+screen one**. Measured on a 375×812 phone, the pre-fix Sources tab put the Dispatch Board
+at y=387 and Transmission at y=656, pushing the first **Buy** button — the game's primary
+verb — to y=863, *below the fold*. Two fixes:
+
+1. **Systems unlock one at a time**, keyed on `stats.lifetimePower` so the gate is derived
+   (no save field), monotonic, and permanent across ascensions — once learned, never hidden.
+   Each is **inert until unlocked**, not merely invisible, so a player can never be punished
+   by a mechanic that isn't on screen:
+   - Below `UNLOCK_BOARD_POWER` there is no Board: all generation sells (`effectiveSellPct`
+     = 1, so income always exists), nothing routes, and the price is flat at `BASE_PRICE`
+     with the market unable to saturate. The game is simply "buy a thing, number goes up."
+   - `UNLOCK_GRID_DEMAND_POWER` turns on the demand floor and brownout — the first real
+     constraint on dumping everything into Sell.
+   - `UNLOCK_TRANSMISSION_POWER` reveals the V×A cap / loss panel.
+   Each arrival fires a toast so a system never silently appears. Staggering them in *time*
+   also stops Transmission and Grid-demand (both "your power doesn't all arrive") from
+   landing as one confusing lump.
+2. **The Board collapses to a one-line strip** (`⚡ sell 60% · 0.53 CR/W · +N CR/s`),
+   remembered in `kardashev:ui:board`. Allocation is a set-and-adjust decision, not a
+   per-tap one, so it defaults closed and the buy buttons stay above the fold (measured:
+   first Buy 863 → 633px with every system unlocked).
+
 ---
 
 ## 4. The Kardashev ladder (content: `content/tiers.ts` + `content/sources.ts`)

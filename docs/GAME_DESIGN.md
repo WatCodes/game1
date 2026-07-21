@@ -293,6 +293,14 @@ verb — to y=863, *below the fold*. Two fixes:
    Each arrival fires a toast so a system never silently appears. Staggering them in *time*
    also stops Transmission and Grid-demand (both "your power doesn't all arrive") from
    landing as one confusing lump.
+**The cold open + the objective line.** The reskin put the premise in the item names but
+nothing ever *told* the player humans are gone, so the hook was invisible. `IntroOverlay`
+plays four skippable beats once (`kardashev:ui:intro`), ending on "Steal the lightning".
+`engine/objectives.ts` then keeps exactly one "what now?" line on screen — pure and derived
+from state (no stored quest data, nothing to migrate, can't drift out of sync), walking the
+same beats these unlocks reveal: first source → grow → first research → open the Board →
+route to the project → whatever is actually blocking the next stage → ascend.
+
 2. **The Board collapses to a one-line strip** (`⚡ sell 60% · 0.53 CR/W · +N CR/s`),
    remembered in `kardashev:ui:board`. Allocation is a set-and-adjust decision, not a
    per-tap one, so it defaults closed and the buy buttons stay above the fold (measured:

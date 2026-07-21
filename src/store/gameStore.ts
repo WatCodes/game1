@@ -25,6 +25,7 @@ import {
   gridPrice,
 } from '../engine/market';
 import { effectiveRoutePct, effectiveSellPct, isUnlocked } from '../engine/unlocks';
+import { nextObjective, type Objective } from '../engine/objectives';
 import {
   bindingConstraint,
   buyGridUpgrade,
@@ -177,6 +178,7 @@ export interface DisplaySnapshot {
   };
   // Progressive disclosure — which systems the player has met yet.
   unlocks: { board: boolean; gridDemand: boolean; transmission: boolean };
+  objective: Objective | null; // the single "what now?" line
   // The Dispatch Board: how live generation is split, and the market it sells into.
   board: {
     sellPct: number; // Sell rail (0..1)
@@ -327,6 +329,7 @@ function buildDisplay(s: GameState): DisplaySnapshot {
       gridDemand: isUnlocked(s, 'gridDemand'),
       transmission: isUnlocked(s, 'transmission'),
     },
+    objective: nextObjective(s),
     board: {
       sellPct: effectiveSellPct(s),
       projPct: effectiveRoutePct(s),

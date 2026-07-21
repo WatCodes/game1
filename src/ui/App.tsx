@@ -18,6 +18,8 @@ import { Toasts } from './components/Toasts';
 import { OfflineModal } from './components/OfflineModal';
 import { WorldViewport } from './components/WorldViewport';
 import { AscensionOverlay } from './components/AscensionOverlay';
+import { IntroOverlay } from './components/IntroOverlay';
+import { ObjectiveStrip } from './components/ObjectiveStrip';
 
 function DispatchBar() {
   const dispatch = useGame((s) => s.display.dispatch);
@@ -87,6 +89,7 @@ export default function App() {
         <header className="glass safe-top shrink-0">
           <PowerMeter />
           <ResourceBar />
+          <ObjectiveStrip />
           <WorldViewport />
         </header>
 
@@ -117,6 +120,8 @@ export default function App() {
       <Toasts />
       <OfflineModal />
       <AscensionOverlay />
+      {/* Last, and z-50: the cold open sits above everything on a first run. */}
+      <IntroOverlay />
     </div>
   );
 }

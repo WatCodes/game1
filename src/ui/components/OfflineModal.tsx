@@ -1,12 +1,15 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useGame } from '../../store/gameStore';
 import { formatPower, formatShort, formatTime } from '../../engine/format';
+import { adsAvailable } from '../../platform/ads';
 
 export function OfflineModal() {
   const offline = useGame((s) => s.offline);
   const dismissOffline = useGame((s) => s.actions.dismissOffline);
   const claimOfflineDouble = useGame((s) => s.actions.claimOfflineDouble);
   const doubleRef = useRef<HTMLButtonElement>(null);
+  // The ad is async; block re-entry so a double-tap can't fire two of them.
+  const [claiming, setClaiming] = useState(false);
 
   useEffect(() => {
     if (!offline) return;
@@ -50,13 +53,25 @@ export function OfflineModal() {
           <>
             <button
               ref={doubleRef}
-              className="mt-4 w-full rounded border border-ok/60 bg-ok/10 px-3 py-2.5 text-sm font-semibold text-ok transition-colors hover:bg-ok/20"
-              onClick={claimOfflineDouble}
+              className="mt-4 w-full rounded border border-ok/60 bg-ok/10 px-3 py-2.5 text-sm font-semibold text-ok transition-colors hover:bg-ok/20 disabled:opacity-60"
+              disabled={claiming}
+              onClick={async () => {
+                if (claiming) return;
+                setClaiming(true);
+                try {
+                  await claimOfflineDouble();
+                } finally {
+                  setClaiming(false);
+                }
+              }}
             >
-              ▶ Collect ×2 — +{formatShort(Math.floor(offline.creditsGained * 2))} CR
+              {claiming
+                ? 'Loading…'
+                : `▶ ${adsAvailable() ? 'Watch & collect' : 'Collect'} ×2 — +${formatShort(Math.floor(offline.creditsGained * 2))} CR`}
             </button>
             <button
               className="mt-2 w-full rounded border border-line px-3 py-1.5 text-xs text-ink-dim transition-colors hover:bg-raised hover:text-ink"
+              disabled={claiming}
               onClick={dismissOffline}
             >
               Collect ×1

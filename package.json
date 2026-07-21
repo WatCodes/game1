@@ -9,7 +9,11 @@
     "preview": "vite preview",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src tests"
+    "lint": "eslint src tests",
+    "native:install": "npm i @capacitor/core @capacitor/cli @capacitor/ios @capacitor/android @capacitor-community/admob",
+    "native:sync": "npm run build && npx cap sync",
+    "native:ios": "npm run native:sync && npx cap open ios",
+    "native:android": "npm run native:sync && npx cap open android"
   },
   "dependencies": {
     "react": "^18.3.1",

@@ -26,6 +26,7 @@ import {
 } from '../engine/market';
 import { effectiveRoutePct, effectiveSellPct, isUnlocked } from '../engine/unlocks';
 import { nextObjective, type Objective } from '../engine/objectives';
+import { showRewardedAd, shouldGrantReward } from '../platform/ads';
 import {
   bindingConstraint,
   buyGridUpgrade,
@@ -496,7 +497,7 @@ interface GameStore {
     buyShopSolver: () => void;
     buyShopBoost: (kind: 'power' | 'rp' | 'dispatch') => void;
     dismissOffline: () => void;
-    claimOfflineDouble: () => void;
+    claimOfflineDouble: () => Promise<void>;
     dismissCinematic: () => void;
     dismissToast: (id: number) => void;
     exportSaveString: () => string;
@@ -682,12 +683,13 @@ export const useGame = create<GameStore>((set) => {
         }
       },
       dismissOffline: () => set({ offline: null }),
-      // The "watch an ad for ×2" reward: grant the away CR a second time. The
-      // ad gate itself arrives with the native (Capacitor) build; for now the
-      // bonus is simply claimable.
-      claimOfflineDouble: () => {
+      // "Watch an ad for ×2": grant the away CR a second time. On native this
+      // shows a real rewarded ad; on web (and on any failure) it resolves to
+      // 'unavailable' and the bonus is granted anyway — see shouldGrantReward.
+      claimOfflineDouble: async () => {
         const summary = useGame.getState().offline;
-        if (summary && summary.creditsGained > 0) {
+        const result = await showRewardedAd();
+        if (summary && summary.creditsGained > 0 && shouldGrantReward(result)) {
           game.credits += summary.creditsGained;
           saveToStorage(game);
           refresh();

@@ -111,7 +111,17 @@ progression.
 - IAP is scaffolded as ids only. The purchase flow itself is not built — the
   usual choice is RevenueCat (`@revenuecat/purchases-capacitor`), which handles
   receipt validation and restore on both stores.
-- App icons and splash screens (`@capacitor/assets` generates every size from
-  one source image).
+- **App icons / splash — sources already exist.** `npm run icons` regenerates
+  them all from `scripts/make-icons.mjs` (no image dependencies; it encodes the
+  PNGs itself). It writes `public/icon-192|512|1024.png` and
+  `public/splash-2732.png`. The 192/512 are what the PWA already uses; the 1024
+  and 2732 are the sources `@capacitor/assets` expands into every native size:
+
+  ```bash
+  npx @capacitor/assets generate --iconBackgroundColor '#04070e' --splashBackgroundColor '#04070e'
+  ```
+
+  Edit the geometry at the top of the script (head circle, ear triangles, bolt
+  polygon) rather than hand-editing PNGs, so every size stays in sync.
 - ASO: title, subtitle, keywords, screenshots. Take screenshots on a fresh save
   so the **Athens** tier-0 world and the intro are what people see.

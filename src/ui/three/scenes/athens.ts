@@ -90,10 +90,27 @@ export function athensScene(): TierScene {
       const w = 0.7 + rand() * 0.7;
       const d = 0.7 + rand() * 0.7;
       const h = 0.5 + rand() * rand() * 1.9;
-      const house = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), matte(MARBLE[(gx + gz + 8) % MARBLE.length]));
+      // Pick the stone tone at random rather than by grid position — a
+      // positional formula banded the ruins into stripes of identical colour,
+      // which is what made them read as one grey mass.
+      const house = new THREE.Mesh(
+        new THREE.BoxGeometry(w, h, d),
+        matte(MARBLE[Math.floor(rand() * MARBLE.length)], 0.7 + rand() * 0.25),
+      );
       house.position.set(x, h / 2, z);
-      house.rotation.y = (rand() - 0.5) * 0.4;
+      house.rotation.y = (rand() - 0.5) * 0.7;
       group.add(house);
+
+      // Half-standing wall stub beside the taller ruins — breaks the boxiness.
+      if (h > 1.2 && rand() < 0.5) {
+        const stub = new THREE.Mesh(
+          new THREE.BoxGeometry(w * (0.3 + rand() * 0.3), h * (0.3 + rand() * 0.3), 0.12),
+          matte(MARBLE[Math.floor(rand() * MARBLE.length)]),
+        );
+        stub.position.set(x + (rand() - 0.5) * 1.4, h * 0.22, z + (rand() - 0.5) * 1.4);
+        stub.rotation.y = rand() * Math.PI;
+        group.add(stub);
+      }
 
       // A toppled column beside some ruins.
       if (rand() < 0.35) {
@@ -200,26 +217,37 @@ export function athensScene(): TierScene {
       catsNS.instanceMatrix.needsUpdate = true;
       catsEW.visible = catsNS.visible = data.live;
 
-      // Zeus's lightning crackles between the columns — only while generating.
+      // Zeus's lightning is always there — it predates you and hums whether or
+      // not you're drawing from it. That's the premise, and it keeps the very
+      // first frame (nothing owned, nothing generating) from being dead.
       bolts.forEach((b, i) => {
-        b.visible = data.live;
-        const flick = 0.35 + 0.65 * Math.abs(Math.sin(t * (7 + i * 3) + i));
-        (b.material as THREE.MeshBasicMaterial).opacity = data.surge ? Math.min(1, flick + 0.3) : flick;
-        b.scale.y = 0.85 + Math.sin(t * 9 + i * 2) * 0.15;
+        const mat = b.material as THREE.MeshBasicMaterial;
+        if (data.live) {
+          const flick = 0.35 + 0.65 * Math.abs(Math.sin(t * (7 + i * 3) + i));
+          mat.opacity = data.surge ? Math.min(1, flick + 0.3) : flick;
+          b.scale.y = 0.85 + Math.sin(t * 9 + i * 2) * 0.15;
+        } else {
+          // Dormant: a slow, faint pulse rather than a crackle.
+          mat.opacity = 0.16 + 0.1 * Math.sin(t * 1.4 + i * 2);
+          b.scale.y = 0.8;
+        }
       });
-      templeGlow.material.opacity = (data.live ? 0.35 : 0.12) + (data.surge ? 0.25 : 0);
+      templeGlow.material.opacity = (data.live ? 0.35 : 0.18) + (data.surge ? 0.25 : 0);
 
-      // Owl circles the acropolis.
+      // Owl circles the acropolis. Children flip too, not just the group, so
+      // the "goes dark when the grid is dark" contract is on real meshes.
       owl.visible = data.live;
+      owlBody.visible = owlEyes.visible = data.live;
       const a = t * 0.25;
       owl.position.set(Math.cos(a) * 5.5, 4.2 + Math.sin(t * 0.5) * 0.4, Math.sin(a) * 5.5);
       owl.rotation.y = -a + Math.PI / 2;
 
-      // Step flames gutter.
+      // The temple's flames never go out — they gutter down to embers, not to
+      // black, so the precinct always has some warmth in it.
       flames.forEach((f, i) => {
-        const s = 0.85 + Math.sin(t * 5 + i * 2) * 0.15;
-        f.scale.setScalar(data.live ? s : 0.6);
-        (f.material as THREE.MeshBasicMaterial).color.setHex(data.live ? FLAME : 0x3a2410);
+        const s = 0.85 + Math.sin(t * (data.live ? 5 : 1.6) + i * 2) * 0.15;
+        f.scale.setScalar(data.live ? s : s * 0.72);
+        (f.material as THREE.MeshBasicMaterial).color.setHex(data.live ? FLAME : 0x8a5220);
       });
 
       puffs.forEach((p, i) => {

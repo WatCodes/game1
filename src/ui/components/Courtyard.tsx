@@ -20,7 +20,7 @@ interface Pop {
 
 let popSeq = 0;
 
-function Cat({
+export function Cat({
   className = '',
   body,
   bodyDeep,

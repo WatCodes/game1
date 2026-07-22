@@ -2,6 +2,8 @@ import type { GameState } from './types';
 import { CONFIG } from '../content/config';
 import { formatPower } from './format';
 import { isUnlocked } from './unlocks';
+import { generationPerSec } from './economy';
+import { transmissionCap } from './grid';
 import { canAuthorizeStage, isMegaprojectComplete, nextStageResearchBlock } from './megaproject';
 
 /**
@@ -37,6 +39,18 @@ export function nextObjective(s: GameState): Objective | null {
       id: 'unlock-board',
       text: `Generate ${formatPower(CONFIG.UNLOCK_BOARD_POWER)} in total to open the Dispatch Board`,
     };
+  }
+  // A stranded grid is the most urgent thing on the board: generation keeps
+  // climbing but delivered power flatlines at the cap, and nothing else the
+  // player buys moves the headline number. The engine already knows the grid is
+  // the binding constraint ("which number is red"); surface it as the next step
+  // once Transmission is on screen and a real slice is being wasted, so a capped
+  // player is told to upgrade the grid instead of watching the number stall.
+  if (isUnlocked(s, 'transmission')) {
+    const gen = generationPerSec(s);
+    if (gen > transmissionCap(s) * (1 + CONFIG.GRID_STRANDED_HINT_FRACTION)) {
+      return { id: 'upgrade-grid', text: 'Your grid is maxed — upgrade Transmission to carry more power' };
+    }
   }
   if (isMegaprojectComplete(s)) {
     return { id: 'ascend', text: `${s.megaproject.name} is finished — ascend` };

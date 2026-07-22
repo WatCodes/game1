@@ -49,6 +49,25 @@ describe('nextObjective', () => {
     expect(nextObjective(s)!.id).toBe('stage-research');
   });
 
+  it('flags a stranded grid once transmission is on screen and output is wasted', () => {
+    const s = state();
+    s.sources['battery-bank'].owned = 5;
+    s.rp = 1e9;
+    buyResearch(s, 'boost-battery-bank');
+    s.megaproject.committed = 1; // past the route/authorize beats
+    s.stats.lifetimePower = CONFIG.UNLOCK_TRANSMISSION_POWER; // panel is on screen
+
+    // Pile on generators until generation badly overruns the transmission cap.
+    s.sources['battery-bank'].owned = 300;
+    const o = nextObjective(s)!;
+    expect(o.id).toBe('upgrade-grid');
+
+    // Leveling the grid up so the cap comfortably clears generation retreats the
+    // hint — a well-managed grid must not nag.
+    s.grid.vLevel = 12;
+    expect(nextObjective(s)!.id).not.toBe('upgrade-grid');
+  });
+
   it('ends the tier by pointing at ascension', () => {
     const s = state();
     s.sources['battery-bank'].owned = 5;

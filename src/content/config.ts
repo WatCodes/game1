@@ -74,6 +74,11 @@ export const CONFIG = {
   UNLOCK_BOARD_POWER: 1_000, // Dispatch Board: sell-vs-build becomes a choice
   UNLOCK_GRID_DEMAND_POWER: 15_000, // grid demand floor + brownout start biting
   UNLOCK_TRANSMISSION_POWER: 60_000, // the V×A cap / loss panel appears
+  // The "upgrade your grid" objective fires once generation overruns the
+  // transmission cap by this much — i.e. a real slice of output is stranded, not
+  // the momentary overshoot that's normal ("the pressure is the game"). At 0.33,
+  // a third of generation is being wasted before the player is nudged.
+  GRID_STRANDED_HINT_FRACTION: 0.33,
   // Megaproject source cost: completing a stage dismantles this fraction of your
   // total owned units, drawn lowest-output-source first. Escalates per stage, so
   // the final stages cut into your best plants — building the wonder cannibalizes

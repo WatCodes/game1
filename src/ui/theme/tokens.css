@@ -1,31 +1,55 @@
-/* Control-room palette (GAME_DESIGN §7): deep grid-blue-black, electric cyan
-   for live current, voltage amber for power, violet for ascension. */
+/* "Marble & Gold" — the Greek Courtyard direction (docs/REDESIGN.md).
+   Light parchment surfaces, carved-stone display type, gold + Aegean blue +
+   terracotta accents, with the monospace instrument readouts kept from the
+   old control-room look as a nod to the game's SCADA roots.
+
+   The Tailwind names in tailwind.config.ts map onto these, so changing a value
+   here restyles the whole app coherently rather than screen by screen. */
 :root {
-  --bg: #04070e;
-  --bg-panel: #0a101c;
-  --bg-raised: #111a2c;
-  --grid-line: #1a2842;
+  --bg: #f3ead4;
+  --bg-panel: #fbf6ea;
+  --bg-raised: #ffffff;
+  --grid-line: #e2d3ad;
 
-  --cyan: #22d3ee;
-  --cyan-dim: #0e7490;
-  --amber: #fbbf24;
-  --amber-dim: #92610a;
-  --violet: #a78bfa;
+  /* `cyan`/`amber` keep their names so every existing class still resolves;
+     they now carry the Aegean blue and gold of the new palette. */
+  --cyan: #2f6f86; /* info, generation, "current" */
+  --cyan-dim: #7ba6b8;
+  --amber: #b8892f; /* gold — accents, CTAs, money */
+  --amber-dim: #d9b769;
+  --violet: #7c5cbf; /* prestige only */
 
-  --text: #cbd5e1;
-  --text-dim: #64748b;
-  --ok: #34d399;
-  --danger: #f87171;
+  --text: #2c2318;
+  --text-dim: #8a7a5f;
+  --ok: #4b7f52;
+  --danger: #bb5334; /* terracotta */
+
+  /* Gold gradient pair for CTAs */
+  --gold-lit: #caa24a;
+  --gold-deep: #a9781f;
+
+  /* Scenery (courtyard diorama + 3D backdrops) */
+  --sky: #cfe4ea;
+  --stone: #d8c79c;
+  --stone-deep: #c7b487;
+  --marble: #efe6cf;
+  --marble-deep: #cdbf9d;
+  --sun: #f4b942;
 
   /* glow ingredients (rgba so they can layer on any bg) */
-  --cyan-glow: rgba(34, 211, 238, 0.55);
-  --cyan-haze: rgba(34, 211, 238, 0.14);
-  --amber-glow: rgba(251, 191, 36, 0.5);
-  --violet-glow: rgba(167, 139, 250, 0.55);
-  --grid-ink: rgba(34, 211, 238, 0.035);
+  --cyan-glow: rgba(47, 111, 134, 0.4);
+  --cyan-haze: rgba(47, 111, 134, 0.1);
+  --amber-glow: rgba(184, 137, 47, 0.45);
+  --violet-glow: rgba(124, 92, 191, 0.45);
+  --grid-ink: rgba(44, 35, 24, 0.04);
 
-  --font-mono: 'Cascadia Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  --font-display: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --scrim: rgba(44, 35, 24, 0.42);
+
+  /* Cinzel for headings/labels (always uppercase, wide tracking), Spectral for
+     body and names, JetBrains Mono for every number and readout. */
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --font-display: 'Cinzel', Georgia, 'Times New Roman', serif;
+  --font-body: 'Spectral', Georgia, 'Times New Roman', serif;
 }
 
 @media (prefers-reduced-motion: reduce) {

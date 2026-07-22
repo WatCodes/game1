@@ -18,11 +18,13 @@ export const SourceRow = memo(function SourceRow({ src, credits }: { src: Source
   const warn = src.nextUnitNet <= 0 && src.owned > 0;
   const milestoneFrac = Math.min(1, src.owned / src.nextMilestoneAt);
 
+  // White card on parchment — the design's contrast comes from the card
+  // lifting off the background, not from the border alone.
   return (
-    <div className="relative rounded border border-line bg-panel px-3 py-2 pl-4">
+    <div className="relative rounded-xl border border-line bg-raised px-3 py-2.5 pl-4 shadow-sm">
       <span className={`source-rail ${warn ? 'warn' : producing ? 'on' : ''}`} aria-hidden />
       <div className="flex items-baseline justify-between">
-        <span className="text-sm font-semibold">
+        <span className="font-body text-[15px] font-semibold">
           {src.name}
           {src.automated && (
             <button

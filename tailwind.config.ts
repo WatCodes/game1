@@ -20,8 +20,9 @@ export default {
         danger: 'var(--danger)',
       },
       fontFamily: {
-        mono: 'var(--font-mono)',
-        display: 'var(--font-display)',
+        mono: 'var(--font-mono)', // JetBrains Mono — every number/readout
+        display: 'var(--font-display)', // Cinzel — headings, always uppercase
+        body: 'var(--font-body)', // Spectral — names, descriptions, flavour
       },
     },
   },

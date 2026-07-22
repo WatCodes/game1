@@ -8,7 +8,9 @@ html,
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: var(--font-display);
+  /* Spectral is the reading face; Cinzel is reserved for headings and labels,
+     where it's always uppercase with wide tracking. */
+  font-family: var(--font-body);
   overscroll-behavior: none;
 }
 
@@ -55,13 +57,14 @@ button,
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-/* Control-room atmosphere: blueprint grid + a faint cyan vignette up top */
+/* Courtyard atmosphere: an Aegean sky washing down into warm parchment, over
+   a faint flagstone grid. */
 body {
   background-image:
-    radial-gradient(ellipse 120% 50% at 50% -10%, var(--cyan-haze), transparent 60%),
+    radial-gradient(ellipse 130% 55% at 50% -12%, var(--sky), transparent 62%),
     linear-gradient(var(--grid-ink) 1px, transparent 1px),
     linear-gradient(90deg, var(--grid-ink) 1px, transparent 1px);
-  background-size: 100% 100%, 28px 28px, 28px 28px;
+  background-size: 100% 100%, 34px 40px, 34px 40px;
   background-attachment: fixed;
 }
 
@@ -71,14 +74,14 @@ body {
    locks up compositors. `.glass-deep` = real frosted blur, reserved for
    transient overlays (toasts, modals) where nothing updates behind it. */
 .glass {
-  background: rgba(10, 16, 28, 0.72);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  background: rgba(251, 246, 234, 0.88);
+  box-shadow: inset 0 -1px 0 var(--grid-line);
 }
 .glass-deep {
-  background: rgba(4, 7, 14, 0.55);
-  -webkit-backdrop-filter: blur(22px) saturate(1.7);
-  backdrop-filter: blur(22px) saturate(1.7);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.09), 0 8px 32px rgba(0, 0, 0, 0.45);
+  background: rgba(251, 246, 234, 0.82);
+  -webkit-backdrop-filter: blur(22px) saturate(1.3);
+  backdrop-filter: blur(22px) saturate(1.3);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 20px 50px rgba(44, 35, 24, 0.35);
 }
 @supports not (backdrop-filter: blur(1px)) {
   .glass-deep { background: var(--bg-panel); }
@@ -118,13 +121,18 @@ body {
 
 /* ---------- instrument pieces ---------- */
 
-/* The big number: glowing like a backlit meter face */
+/* The big number: carved into the page rather than backlit. On parchment a
+   glow reads as blur, so the weight does the work instead. */
 .readout {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
-  color: var(--cyan);
-  text-shadow: 0 0 14px var(--cyan-glow), 0 0 44px var(--cyan-haze);
+  font-weight: 700;
+  color: var(--text);
   letter-spacing: 0.01em;
+}
+/* The unit suffix picks up the gold, per the design's readout treatment. */
+.readout .unit {
+  color: var(--amber);
 }
 
 /* Animated sweep line under the readout — the "instrument is alive" tick */
@@ -153,12 +161,12 @@ body {
   transition: background 300ms, box-shadow 300ms;
 }
 .led.lit {
-  background: var(--cyan);
-  box-shadow: 0 0 6px var(--cyan-glow);
-}
-.led.lit.hot {
   background: var(--amber);
   box-shadow: 0 0 6px var(--amber-glow);
+}
+.led.lit.hot {
+  background: var(--danger);
+  box-shadow: 0 0 6px rgba(187, 83, 52, 0.45);
 }
 
 /* Blinking LIVE dot */
@@ -166,8 +174,7 @@ body {
   width: 6px;
   height: 6px;
   border-radius: 999px;
-  background: var(--ok);
-  box-shadow: 0 0 6px rgba(52, 211, 153, 0.7);
+  background: var(--terra, var(--danger));
   animation: blink 2s ease-in-out infinite;
 }
 
@@ -182,55 +189,58 @@ body {
   background: var(--grid-line);
   transition: background 300ms, box-shadow 300ms;
 }
+/* Design: source cards carry a gold left-edge bar with a glow. */
 .source-rail.on {
-  background: var(--cyan);
-  box-shadow: 0 0 8px var(--cyan-glow);
+  background: var(--amber);
+  box-shadow: 0 0 8px var(--amber-glow);
 }
 .source-rail.warn {
   background: var(--danger);
-  box-shadow: 0 0 8px rgba(248, 113, 113, 0.5);
+  box-shadow: 0 0 8px rgba(187, 83, 52, 0.45);
 }
 
 .milestone-strip {
   height: 3px;
   border-radius: 999px;
-  background: var(--bg-raised);
+  background: var(--grid-line);
   overflow: hidden;
 }
 .milestone-strip > span {
   display: block;
   height: 100%;
   border-radius: 999px;
-  background: linear-gradient(90deg, var(--cyan-dim), var(--cyan));
+  background: linear-gradient(90deg, var(--amber-dim), var(--amber));
   transition: width 300ms ease-out;
 }
 
-/* Locked things get blueprint stripes */
+/* Locked things get carved-stone hatching */
 .striped {
   background-image: repeating-linear-gradient(
     -45deg,
     transparent 0 6px,
-    rgba(34, 211, 238, 0.05) 6px 7px
+    rgba(44, 35, 24, 0.05) 6px 7px
   );
 }
 
 /* Megaproject stage cells */
+/* Design 3a: 13px stage bars — complete = gold gradient + glow, current =
+   partial gold fill, future = plain line. */
 .stage-cell {
-  height: 12px;
+  height: 13px;
   border-radius: 3px;
-  background: var(--bg-raised);
+  background: var(--grid-line);
   overflow: hidden;
   position: relative;
 }
 .stage-cell > span {
   display: block;
   height: 100%;
-  background: linear-gradient(90deg, var(--cyan-dim), var(--cyan));
+  background: linear-gradient(90deg, var(--amber-dim), var(--amber));
   transition: width 400ms ease-out;
 }
 .stage-cell.done > span {
-  background: linear-gradient(90deg, var(--cyan), #7dd3fc);
-  box-shadow: 0 0 10px var(--cyan-glow);
+  background: linear-gradient(90deg, var(--gold-lit), var(--gold-deep));
+  box-shadow: 0 0 10px var(--amber-glow);
 }
 .stage-cell.filling > span {
   animation: stage-filling 1.6s ease-in-out infinite;
@@ -329,10 +339,14 @@ button:not(:disabled):active {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
 }
+/* Design 4a: the ascension takeover stays its own dark world — violet radial
+   above, gold below, on near-black. It is the one screen that isn't parchment. */
 .cine-bg {
   background:
-    radial-gradient(ellipse 90% 60% at 50% 40%, rgba(167, 139, 250, 0.16), transparent 65%),
-    rgba(4, 7, 14, 0.96);
+    radial-gradient(ellipse 90% 55% at 50% 12%, rgba(167, 139, 250, 0.22), transparent 62%),
+    radial-gradient(ellipse 90% 55% at 50% 92%, rgba(200, 162, 74, 0.18), transparent 62%),
+    #100c1c;
+  color: #efe6cf;
   animation: cine-fade 400ms ease-out;
 }
 .cine-item {
@@ -344,5 +358,5 @@ button:not(:disabled):active {
 }
 
 .stage-lit {
-  box-shadow: 0 0 8px var(--cyan);
+  box-shadow: 0 0 8px var(--amber-glow);
 }

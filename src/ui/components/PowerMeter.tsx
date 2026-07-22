@@ -43,8 +43,11 @@ export function PowerMeter() {
 
       <div className="sweep-track mt-2" aria-hidden />
 
-      <div className="mt-1.5 flex items-baseline justify-between font-mono text-xs text-ink-dim">
-        <span>
+      {/* Spectral/Cinzel run much wider than the old system font at the same
+          px, so this row needs explicit min-w-0 + truncate or the two halves
+          collide on a 375px screen. */}
+      <div className="mt-1.5 flex items-baseline justify-between gap-3 font-mono text-[11px] text-ink-dim">
+        <span className="shrink-0">
           {board.browned ? (
             <span className="text-danger">⚠ BROWNOUT −{board.brownoutPct}%</span>
           ) : (
@@ -53,7 +56,7 @@ export function PowerMeter() {
           {surgeLeft > 0 && <span className="ml-1.5 text-volt">SURGE ×1.5</span>}
           {powerBoostLeft > 0 && <span className="ml-1.5 text-ok">×2</span>}
         </span>
-        <span>Powering: {scaleCopy}</span>
+        <span className="min-w-0 truncate font-body italic">{scaleCopy}</span>
       </div>
 
       <div

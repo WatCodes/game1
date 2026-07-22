@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import type { SceneData, TierScene } from '../types';
-import { C, addBackdrop, addLights, disposeGroup, glow, litCount, makeHalo, makeInstanced, matte } from './shared';
+import { C, addBackdrop, disposeGroup, glow, litCount, makeHalo, makeInstanced, matte } from './shared';
 
 // T0 "Age of Athens" — the ruined city the cats inherited, under a night sky.
 // The Temple of Zeus stands on its plinth with the old lightning still crackling
@@ -22,9 +22,19 @@ const FLAME = 0xffb347;
 
 export function athensScene(): TierScene {
   const group = new THREE.Group();
-  addLights(group);
-  // Deep night overhead fading to distant firelight on the horizon.
-  addBackdrop(group, 0x050a1c, 0x4a2a22, 0x0f0c14);
+
+  // Daytime rig. The shared addLights() is a night setup built for the
+  // space-age tiers; the courtyard is a bright Aegean afternoon and needs its
+  // own, or the marble reads as grey slab against the parchment UI.
+  const hemi = new THREE.HemisphereLight(0xdff0f7, 0xbfa878, 1.05);
+  const sunKey = new THREE.DirectionalLight(0xfff0cf, 1.5);
+  sunKey.position.set(5, 7, 3);
+  const skyFill = new THREE.DirectionalLight(0xcfe4ea, 0.5);
+  skyFill.position.set(-5, 3, -4);
+  group.add(hemi, sunKey, skyFill);
+
+  // Aegean sky washing down to warm haze, over a pale stone floor.
+  addBackdrop(group, 0xcfe4ea, 0xe0cb9c, 0xd8c79c);
 
   const rand = rng(2718);
   const brazierSlots: THREE.Vector3[] = [];
@@ -167,12 +177,12 @@ export function athensScene(): TierScene {
   owl.position.set(0, 4.2, 0);
   group.add(owl);
 
-  // Moon over the ruins.
-  const moon = new THREE.Mesh(new THREE.SphereGeometry(0.8, 32, 32), glow(0xe8e2d0, 0.85));
-  moon.position.set(-8, 7.5, -9);
-  const moonGlow = makeHalo(0xefe8d2, 3.8, 0.45);
-  moonGlow.position.copy(moon.position);
-  group.add(moon, moonGlow);
+  // Sun over the ruins (design 2a puts it high and warm).
+  const sun = new THREE.Mesh(new THREE.SphereGeometry(0.9, 32, 32), glow(0xfff0c4, 1));
+  sun.position.set(-8, 8, -9);
+  const sunGlow = makeHalo(0xf4b942, 5.4, 0.55);
+  sunGlow.position.copy(sun.position);
+  group.add(sun, sunGlow);
 
   // Smoke drifting off the temple braziers.
   const puffs = [0, 1, 2].map((i) => {

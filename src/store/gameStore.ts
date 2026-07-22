@@ -468,6 +468,7 @@ export type DevCheat =
   | 'nextTier';
 
 export interface Cinematic {
+  fromEra: string; // the age being left behind — the title card strikes it through
   era: string;
   scaleCopy: string;
   kardashevLabel?: string;
@@ -633,11 +634,12 @@ export const useGame = create<GameStore>((set) => {
       },
       doAscend: () => {
         const before = game.tier;
+        const fromEra = getTier(before).era;
         const gained = ascend(game);
         if (game.tier !== before) {
           const t = getTier(game.tier);
           set({
-            cinematic: { era: t.era, scaleCopy: t.scaleCopy, kardashevLabel: t.kardashevLabel, kpGained: gained },
+            cinematic: { fromEra, era: t.era, scaleCopy: t.scaleCopy, kardashevLabel: t.kardashevLabel, kpGained: gained },
           });
           saveToStorage(game);
           refresh();

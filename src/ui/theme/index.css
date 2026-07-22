@@ -402,7 +402,21 @@ button:not(:disabled):active {
 }
 .cine-item {
   opacity: 0;
-  animation: cine-rise 600ms ease-out forwards;
+  animation: cine-rise 700ms ease-out forwards;
+}
+/* Medallion orbit ring (design 4a) — one slow revolution, 44s. */
+@keyframes spin-slow {
+  to { transform: rotate(360deg); }
+}
+.spin-slow {
+  animation: spin-slow 44s linear infinite;
+}
+@keyframes twinkle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.2; }
+}
+.twinkle {
+  animation: twinkle 3s ease-in-out infinite;
 }
 .cine-title {
   letter-spacing: 0.08em;

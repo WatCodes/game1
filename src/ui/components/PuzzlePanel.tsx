@@ -1,12 +1,17 @@
 import { useGame } from '../../store/gameStore';
 import { formatTime } from '../../engine/format';
 
-// The Load Balancer: a lights-out grid. Over-loaded districts glow amber;
-// tapping one sheds its load (and its neighbors', which ripples). Balance the
-// whole grid — every district dark/green — to score.
+/**
+ * The Works (design 6a). The mockup drew a circuit-rotation board; the shipped
+ * mechanic is the lights-out Load Balancer, so this takes the *treatment* —
+ * 10px tiles, gold-tinted and glowing when over-loaded, white and quiet when
+ * settled — with the moves / reward / surge meta row underneath.
+ *
+ * Tiles are grid fractions rather than the mockup's fixed 58px, because the
+ * board grows to 7×7 at higher tiers and would overflow the panel.
+ */
 export function PuzzlePanel() {
   const puzzle = useGame((s) => s.display.puzzle);
-  const credits = useGame((s) => s.display.credits);
   const surgeLeft = useGame((s) => s.display.boosts.surgeLeft);
   const tapPuzzleCell = useGame((s) => s.actions.tapPuzzleCell);
   const dealNewPuzzle = useGame((s) => s.actions.dealNewPuzzle);
@@ -14,83 +19,97 @@ export function PuzzlePanel() {
   const overloaded = puzzle.cells.filter(Boolean).length;
 
   return (
-    <div className="flex flex-col gap-3 p-3">
-      <div className="rounded border border-line bg-panel p-3">
-        <div className="flex items-baseline justify-between">
-          <h2 className="text-base font-semibold">{puzzle.name}</h2>
-          <span className="font-mono text-xs text-volt">{credits} CR</span>
-        </div>
-        <p className="mt-0.5 text-xs text-ink-dim">{puzzle.flavor}</p>
+    <div className="flex flex-col gap-3 px-4 py-3.5">
+      <p className="text-center font-body text-[11.5px] italic text-ink-dim">{puzzle.flavor}</p>
 
-        <div
-          className={`mx-auto mt-3 grid w-fit gap-1.5 rounded border p-2 transition-colors ${
-            puzzle.solved ? 'border-ok/50 bg-raised/40' : overloaded === 0 ? 'border-ok/40' : 'border-line'
-          }`}
-          style={{ gridTemplateColumns: `repeat(${puzzle.size}, minmax(0, 1fr))` }}
-          role="grid"
-          aria-label={`${puzzle.name}, ${puzzle.size} by ${puzzle.size}, ${overloaded} districts over-loaded`}
-        >
-          {puzzle.cells.map((hot, i) => (
-            <button
-              key={i}
-              className="h-11 w-11 rounded-md border-2 transition-all active:scale-90"
-              style={
-                hot
-                  ? { borderColor: 'var(--amber)', background: 'rgba(251,191,36,0.4)', boxShadow: '0 0 10px var(--amber-glow)' }
-                  : { borderColor: 'var(--ok)', background: 'rgba(52,211,153,0.28)' }
-              }
-              onClick={() => tapPuzzleCell(i)}
-              disabled={puzzle.solved}
-              aria-label={`District ${i + 1}: ${hot ? 'over-loaded' : 'balanced'}`}
-            />
-          ))}
-        </div>
-
-        <div className="mt-2 flex items-baseline justify-between font-mono text-[11px] text-ink-dim">
-          <span>
-            moves <span className={puzzle.bonusEligible ? 'text-ok' : 'text-ink'}>{puzzle.moves}</span> / par {puzzle.par}
-          </span>
-          <span>
-            {puzzle.solved ? 'balanced!' : `${overloaded} over-loaded`} · <span className="text-volt">+{puzzle.reward} CR</span>
-          </span>
-        </div>
-
-        {puzzle.solved ? (
+      <div
+        className="mx-auto grid w-full max-w-[300px] gap-1.5"
+        style={{ gridTemplateColumns: `repeat(${puzzle.size}, minmax(0, 1fr))` }}
+        role="grid"
+        aria-label={`${puzzle.name}, ${overloaded} districts over-loaded`}
+      >
+        {puzzle.cells.map((hot, i) => (
           <button
-            className="mt-3 w-full rounded border border-ok/60 px-3 py-2 text-sm font-semibold text-ok transition-colors hover:bg-raised"
-            onClick={dealNewPuzzle}
+            key={i}
+            className="flex aspect-square items-center justify-center rounded-[10px] transition-all active:scale-90"
+            style={
+              hot
+                ? {
+                    background: 'rgba(184,137,47,.16)',
+                    border: '1.5px solid var(--amber)',
+                    boxShadow: '0 0 10px rgba(184,137,47,.4)',
+                  }
+                : { background: 'var(--bg-raised)', border: '1.5px solid var(--grid-line)' }
+            }
+            onClick={() => tapPuzzleCell(i)}
+            disabled={puzzle.solved}
+            aria-label={`District ${i + 1}: ${hot ? 'over-loaded' : 'balanced'}`}
           >
-            ⚡ Balanced — deal a new grid
+            {/* Deep gold, not the light gradient — on a gold-tinted tile the
+                pale fill all but disappears. */}
+            {hot && (
+              <span
+                className="bolt-shape flick block h-5 w-3"
+                style={{ background: 'linear-gradient(var(--amber), var(--gold-deep))' }}
+              />
+            )}
           </button>
-        ) : (
-          <button
-            className="mt-3 w-full rounded border border-line px-3 py-1.5 text-xs text-ink-dim transition-colors hover:bg-raised hover:text-ink"
-            onClick={dealNewPuzzle}
-          >
-            Scrap and re-deal (no reward)
-          </button>
-        )}
+        ))}
       </div>
 
-      <div className="rounded border border-line bg-panel/60 p-3 text-xs">
-        <div className="flex items-baseline justify-between">
+      {/* moves · reward · surge */}
+      <div className="flex items-center justify-between font-mono text-[10px]">
+        <span className="text-ink-dim">
+          MOVES <b className={puzzle.bonusEligible ? 'text-ok' : 'text-ink'}>{puzzle.moves}</b> / {puzzle.par}
+        </span>
+        <span
+          className="rounded-full px-2.5 py-1 font-semibold"
+          style={{ background: 'rgba(184,137,47,.14)', border: '1px solid rgba(184,137,47,.4)', color: 'var(--amber)' }}
+        >
+          +{puzzle.reward} CR ON SOLVE
+        </span>
+        <span style={{ color: surgeLeft > 0 ? 'var(--danger)' : 'var(--text-dim)' }}>
+          {surgeLeft > 0 ? `SURGE · ${formatTime(surgeLeft)}` : 'NO SURGE'}
+        </span>
+      </div>
+
+      {puzzle.solved ? (
+        <button
+          className="w-full rounded-[13px] py-2.5 font-display text-[13px] font-bold transition-opacity hover:opacity-90"
+          style={{
+            background: 'linear-gradient(var(--gold-lit), var(--gold-deep))',
+            color: '#2c2318',
+            letterSpacing: '.16em',
+            boxShadow: '0 6px 16px -6px rgba(169,120,31,.8)',
+          }}
+          onClick={dealNewPuzzle}
+        >
+          BALANCED — DEAL A NEW GRID
+        </button>
+      ) : (
+        <button
+          className="w-full rounded-[11px] border border-line py-2 font-mono text-[11px] text-ink-dim transition-colors hover:text-ink"
+          onClick={dealNewPuzzle}
+        >
+          Scrap and re-deal — no reward
+        </button>
+      )}
+
+      <div className="rounded-xl border border-line bg-raised px-3.5 py-3">
+        <div className="flex items-baseline justify-between font-mono text-[10px]">
           <span className="text-ink-dim">
-            Auto-Solvers: <span className="text-ink">{puzzle.solvers}</span>
-            {puzzle.solvers > 0 && <span> — one solve every {formatTime(puzzle.solveEverySeconds)}</span>}
+            AUTO-SOLVERS <b className="text-ink">{puzzle.solvers}</b>
           </span>
-          <span className={surgeLeft > 0 ? 'font-mono text-volt' : 'font-mono text-ink-dim'}>
-            {surgeLeft > 0 ? `SURGE ×1.5 · ${formatTime(surgeLeft)}` : 'surge offline'}
-          </span>
+          {puzzle.solvers > 0 && <span className="text-ink-dim">one every {formatTime(puzzle.solveEverySeconds)}</span>}
         </div>
         {puzzle.solvers > 0 && (
           <div className="milestone-strip mt-2" aria-hidden>
             <span style={{ width: `${(puzzle.solverProgress % 1) * 100}%` }} />
           </div>
         )}
-        <p className="mt-2 leading-relaxed text-ink-dim">
-          Tapping a district sheds its load and ripples to its neighbors. Balance the grid to earn Credits and light a{' '}
-          <span className="text-volt">×1.5 Grid Surge</span>. Auto-Solvers (in the Shop) grind boards for you — stack
-          enough and the surge never goes out.
+        <p className="mt-2 font-body text-[10.5px] leading-snug text-ink-dim">
+          Tap a district to shed its load — it ripples to the neighbours. Settle them all to earn Credits and light the
+          Grid Surge.
         </p>
       </div>
     </div>

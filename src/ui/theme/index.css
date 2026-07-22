@@ -425,3 +425,30 @@ button:not(:disabled):active {
 .stage-lit {
   box-shadow: 0 0 8px var(--amber-glow);
 }
+
+/* ---------- age frames (design 4b) ---------- */
+/* Climbers on the Ascent elevator ribbon. */
+@keyframes climb {
+  0% { transform: translateY(0); opacity: 0; }
+  10% { opacity: 1; }
+  86% { opacity: 1; }
+  100% { transform: translateY(-190px); opacity: 0; }
+}
+.climb {
+  animation: climb 11s linear infinite;
+}
+/* Sails on the Colonies sea, and the wired links between star systems. */
+@keyframes sail-x {
+  from { transform: translateX(-40px); }
+  to { transform: translateX(440px); }
+}
+.sail-a { animation: sail-x 48s linear infinite; }
+.sail-b { animation: sail-x 66s linear infinite; }
+
+@keyframes shimmer {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 0.8; }
+}
+.shimmer {
+  animation: shimmer 5s ease-in-out infinite;
+}

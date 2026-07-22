@@ -1,6 +1,8 @@
 import { useCallback, useRef, useState } from 'react';
 import { useGame } from '../../store/gameStore';
 import { formatShort } from '../../engine/format';
+import { transmissionFor } from '../../content/transmissions';
+import { DEFAULT_CATS, devAgeOverride, frameForTier } from './AgeFrame';
 
 /**
  * The living courtyard (design 2a) — the home screen IS the game world.
@@ -10,6 +12,10 @@ import { formatShort } from '../../engine/format';
  * generation mechanic, it fires **dispatch**, which already means "channel a
  * burst of power and sell it" — so the courtyard drives a real system instead
  * of being scenery with a button glued on.
+ *
+ * The backdrop swaps per age (design 4b, `AgeFrame.tsx`); everything below —
+ * altar, plinth, installations, cats — is age-agnostic and recolours from the
+ * scenery tokens the frame sets.
  */
 
 interface Pop {
@@ -84,6 +90,11 @@ export function Courtyard() {
   const doDispatch = useGame((s) => s.actions.doDispatch);
   const credits = useGame((s) => s.display.credits);
 
+  const tier = useGame((s) => s.display.tier);
+  const lifetimePower = useGame((s) => s.display.lifetimePower);
+  const frame = frameForTier(devAgeOverride() ?? tier);
+  const cats = frame.cats ?? DEFAULT_CATS;
+
   const [pops, setPops] = useState<Pop[]>([]);
   const before = useRef(credits);
 
@@ -105,59 +116,11 @@ export function Courtyard() {
   }, [doDispatch]);
 
   return (
-    <div className="pointer-events-none absolute inset-0 overflow-hidden">
-      {/* sky */}
-      <div
-        className="absolute inset-0"
-        style={{ background: 'linear-gradient(var(--sky) 0%, var(--marble) 42%, #e0cb9c 100%)' }}
-      />
-      {/* sun */}
-      <div
-        className="absolute right-10 top-[52px] h-11 w-11 rounded-full"
-        style={{
-          background: 'radial-gradient(circle at 60% 40%, #fff0c4, var(--sun))',
-          boxShadow: '0 0 40px rgba(244,185,66,.55)',
-        }}
-      />
-      <div className="cloud-a absolute left-0 top-[104px] h-[15px] w-[60px] rounded-[10px] bg-white/70" />
-      <div className="cloud-b absolute left-0 top-[146px] h-3 w-11 rounded-[10px] bg-white/55" />
-
-      {/* receding stone floor + flagstone grid */}
-      <div
-        className="absolute inset-x-0 bottom-0 h-[62%]"
-        style={{
-          background: 'linear-gradient(var(--stone), var(--stone-deep))',
-          clipPath: 'polygon(24% 0, 76% 0, 100% 100%, 0 100%)',
-        }}
-      />
-      <div
-        className="absolute inset-x-0 bottom-0 h-[62%] opacity-50"
-        style={{
-          clipPath: 'polygon(24% 0, 76% 0, 100% 100%, 0 100%)',
-          backgroundImage:
-            'repeating-linear-gradient(#00000010 0 1px, transparent 1px 34px), repeating-linear-gradient(90deg, #00000010 0 1px, transparent 1px 40px)',
-        }}
-      />
-
-      {/* Back colonnade — anchored to the floor's back edge (bottom-[62%]), not
-          to the viewport top, or the temple floats in the sky. */}
-      <div className="absolute bottom-[62%] left-1/2 flex -translate-x-1/2 items-end gap-3">
-        {[46, 52, 56, 56, 52, 46].map((h, i) => (
-          <span
-            key={i}
-            className="w-[9px]"
-            style={{ height: h, background: 'linear-gradient(90deg, var(--marble), var(--marble-deep))' }}
-          />
-        ))}
-      </div>
-      <div
-        className="absolute bottom-[calc(62%+56px)] left-1/2 h-[10px] w-[104px] -translate-x-1/2"
-        style={{ background: 'var(--marble)' }}
-      />
-      <div
-        className="absolute bottom-[calc(62%+66px)] left-1/2 h-0 w-0 -translate-x-1/2"
-        style={{ borderLeft: '60px solid transparent', borderRight: '60px solid transparent', borderBottom: '22px solid #e7dcc0' }}
-      />
+    <div
+      className="pointer-events-none absolute inset-0 overflow-hidden"
+      style={frame.vars as React.CSSProperties}
+    >
+      <frame.Backdrop />
 
       {/* --- the altar: primary tap target --- */}
       <div
@@ -183,15 +146,15 @@ export function Courtyard() {
       {/* plinth, two tiers */}
       <div
         className="absolute left-1/2 top-[52%] h-[30px] w-[76px] -translate-x-1/2"
-        style={{ background: 'linear-gradient(var(--marble), #cbb98f)', clipPath: 'polygon(14% 0, 86% 0, 100% 100%, 0 100%)' }}
+        style={{ background: 'linear-gradient(var(--marble), var(--marble-deep))', clipPath: 'polygon(14% 0, 86% 0, 100% 100%, 0 100%)' }}
       />
       <div
         className="absolute left-1/2 top-[calc(52%+26px)] h-4 w-24 -translate-x-1/2"
-        style={{ background: '#bda879', clipPath: 'polygon(10% 0, 90% 0, 100% 100%, 0 100%)' }}
+        style={{ background: 'var(--stone-deep)', clipPath: 'polygon(10% 0, 90% 0, 100% 100%, 0 100%)' }}
       />
       <div
         className="absolute left-1/2 top-[calc(52%+46px)] -translate-x-1/2 whitespace-nowrap font-mono text-[8px] font-semibold"
-        style={{ letterSpacing: '.16em', color: '#6c6144' }}
+        style={{ letterSpacing: '.16em', color: 'var(--scene-ink)' }}
       >
         {dispatch.canFire ? 'TAP TO CHANNEL ⚡' : `CHARGING ${Math.floor(dispatch.charge * 100)}%`}
       </div>
@@ -212,13 +175,13 @@ export function Courtyard() {
         <div className="absolute bottom-[26%] left-8">
           <div
             className="h-[26px] w-10 rounded"
-            style={{ background: 'linear-gradient(var(--marble-deep), #a8946b)', boxShadow: '0 4px 8px rgba(0,0,0,.18)' }}
+            style={{ background: 'linear-gradient(var(--marble-deep), var(--stone-deep))', boxShadow: '0 4px 8px rgba(0,0,0,.18)' }}
           />
           <div
             className="absolute -top-[9px] left-1.5 h-3 w-7 rounded-[3px]"
             style={{ background: 'linear-gradient(90deg, var(--amber-dim), var(--amber))', boxShadow: '0 0 8px rgba(184,137,47,.6)' }}
           />
-          <div className="mt-1 text-center font-mono text-[8px] font-semibold" style={{ color: '#6c6144' }}>
+          <div className="mt-1 text-center font-mono text-[8px] font-semibold" style={{ color: 'var(--scene-ink)' }}>
             {built[0].name.split(' ')[0]} ×{built[0].owned}
           </div>
         </div>
@@ -227,38 +190,31 @@ export function Courtyard() {
         <div className="absolute bottom-[29%] right-10">
           <div
             className="h-[30px] w-11 rounded"
-            style={{ background: 'linear-gradient(#c4b287, #9e8a62)', boxShadow: '0 4px 8px rgba(0,0,0,.18)' }}
+            style={{ background: 'linear-gradient(var(--marble-deep), var(--stone))', boxShadow: '0 4px 8px rgba(0,0,0,.18)' }}
           />
-          <div className="absolute -top-[14px] left-[14px] h-4 w-[5px] rounded-sm" style={{ background: '#7a6c50' }} />
+          <div className="absolute -top-[14px] left-[14px] h-4 w-[5px] rounded-sm" style={{ background: 'var(--stone-deep)' }} />
           <div
             className="smoke absolute -top-6 left-[14px] h-1.5 w-1.5 rounded-full"
             style={{ background: 'rgba(120,110,90,.5)' }}
           />
-          <div className="mt-1 text-center font-mono text-[8px] font-semibold" style={{ color: '#6c6144' }}>
+          <div className="mt-1 text-center font-mono text-[8px] font-semibold" style={{ color: 'var(--scene-ink)' }}>
             {built[1].name.split(' ')[0]} ×{built[1].owned}
           </div>
         </div>
       )}
 
-      {/* the cats */}
-      <Cat
-        className="floaty bottom-[28%] left-24 scale-105"
-        body="#54493d"
-        bodyDeep="#2b241d"
-        ear="#443a30"
-        tail="#3a3229"
-        eye="#e9c25a"
-      />
-      <Cat
-        className="bottom-[24%] right-24 scale-[.82]"
-        body="#8a7458"
-        bodyDeep="#5c4a36"
-        ear="#6f5a42"
-        tail="#5a4a3a"
-        eye="#7fd0c0"
-        flip
-        delay={0.8}
-      />
+      {/* the cats — fur follows the age so they never sink into the floor */}
+      <Cat className="floaty bottom-[28%] left-24 scale-105" {...cats[0]} />
+      <Cat className="bottom-[24%] right-24 scale-[.82]" {...cats[1]} flip delay={0.8} />
+
+      {/* Grid chatter. This line came across with the old world viewport — it's
+          the only place the game talks about how big you've actually got. */}
+      <div
+        className="absolute inset-x-8 bottom-[13%] text-center font-body text-[10px] italic leading-snug"
+        style={{ color: 'var(--scene-ink)', opacity: 0.75 }}
+      >
+        {transmissionFor(lifetimePower)}
+      </div>
     </div>
   );
 }

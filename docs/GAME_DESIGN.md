@@ -179,13 +179,25 @@ The **Grid Exchange** — Credits only, acceleration only, no progression gates.
 streaks, and solvers. Each grants a permanent global ×(1+`ACHIEVEMENT_BONUS`). Earned
 list persists through ascension; shown as a grid in the Ascend tab, toast on earn.
 
-### 3.11 World viewport & transmissions (`ui/WorldViewport.tsx`, `content/transmissions.ts`)
+### 3.11 Age frames & transmissions (`ui/components/AgeFrame.tsx`, `content/transmissions.ts`)
 
-A live SVG scene under the resource bar — one per tier (city → planet → Dyson rings →
-galaxy → lattice) driven entirely by existing display data (sources owned, milestones,
-megaproject stages, surge). Dyson rings mirror stage authorization state 1:1. A
-transmission flavor line under the scene reacts to lifetime power. Ascension plays a
-title-card overlay (era, Kardashev badge, +KP) instead of a toast.
+The home screen **is** the world (design 2a), and each of the eight ages dresses it
+differently (design 4b): Athens → the colonies' coast → a dusk skyline under the Pharos →
+a space-elevator launch deck → a platform at the sun → the rim of a black hole → the
+galaxy → spacetime coming apart. A frame supplies era scenery tokens (`--sky`, `--stone`,
+`--marble`, `--sun`, `--scene-ink`, plus cat fur for the dark ages) and a backdrop; the
+altar, plinth and installations are age-agnostic and recolour from those tokens. The
+constant is the **colonnade**, present in every age — one civilisation climbing, not eight
+skins. A transmission flavour line low on the floor reacts to lifetime power. Ascension
+plays a title-card overlay (era, Kardashev badge, +KP) instead of a toast.
+
+Two constraints any new frame must respect: the HUD owns the top 26.5% and the floor's
+back edge sits at 38%, so **all sky detail lives in that ~93px band**; and the colonnade
+owns the centre, so landmarks belong off to one side. `?age=N` in dev pins a frame.
+
+The earlier three.js tier scenes (`ui/three/**`) were deleted once the courtyard replaced
+them — they had become an unreachable code path, and dropping them took `three` out of
+the dependency list entirely.
 
 ### 3.13 Grid physics — the three-lane bottleneck (`engine/grid.ts`, `content/grid.ts`)
 

@@ -21,6 +21,7 @@ import { ObjectiveStrip } from './components/ObjectiveStrip';
 import { Courtyard } from './components/Courtyard';
 import { Popup } from './components/Popup';
 import { RightRail, type RailId } from './components/RightRail';
+import { SoundToggle } from './components/SoundToggle';
 
 const TITLES: Record<RailId, string> = {
   lab: 'THE LAB',
@@ -62,7 +63,11 @@ export default function App() {
         {/* Top HUD — floats on a scrim so the courtyard reads behind it. */}
         <header
           className="safe-top pointer-events-none absolute inset-x-0 top-0 z-20"
-          style={{ background: 'linear-gradient(var(--bg) 55%, transparent)' }}
+          // The HUD used to fade out from 55%, which was fine over Athens's pale
+          // sky and illegible over the night ages — the courtyard bled straight
+          // through the readouts. It now stays solid and fades only at the very
+          // bottom edge, into the same parchment rather than into grey.
+          style={{ background: 'linear-gradient(var(--bg) 96%, rgba(243,234,212,0))' }}
         >
           <div className="pointer-events-auto">
             <PowerMeter />
@@ -70,6 +75,8 @@ export default function App() {
             <ObjectiveStrip />
           </div>
         </header>
+
+        <SoundToggle />
 
         <RightRail
           active={popup}

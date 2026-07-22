@@ -322,6 +322,57 @@ button:not(:disabled):active {
   animation: window-flicker 5s steps(1) infinite;
 }
 
+/* ---------- courtyard (design 2a) ----------
+   Ported from the Greek Courtyard mockup so the motion matches the spec
+   rather than being re-invented. */
+.bolt-shape {
+  clip-path: polygon(58% 0, 20% 54%, 46% 54%, 34% 100%, 82% 40%, 52% 40%);
+}
+@keyframes flick {
+  0%, 88%, 100% { opacity: 1; }
+  92% { opacity: 0.2; }
+  96% { opacity: 0.9; }
+}
+.flick {
+  animation: flick 5s linear infinite;
+}
+@keyframes rise {
+  0% { opacity: 0; transform: translateY(0) scale(0.7); }
+  18% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-54px) scale(1.05); }
+}
+.rise {
+  animation: rise 2.6s ease-out forwards;
+}
+@keyframes glowpulse {
+  0%, 100% { opacity: 0.5; transform: translate(-50%, -50%) scale(1); }
+  50% { opacity: 1; transform: translate(-50%, -50%) scale(1.18); }
+}
+.glowpulse {
+  animation: glowpulse 2.4s ease-in-out infinite;
+}
+@keyframes floaty {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+.floaty {
+  animation: floaty 4.5s ease-in-out infinite;
+}
+@keyframes tailflick {
+  0%, 100% { transform: rotate(24deg); }
+  50% { transform: rotate(14deg); }
+}
+.tail {
+  animation: tailflick 3.4s ease-in-out infinite;
+  transform-origin: top center;
+}
+@keyframes cloud-drift {
+  from { transform: translateX(-70px); }
+  to { transform: translateX(420px); }
+}
+.cloud-a { animation: cloud-drift 24s linear infinite; }
+.cloud-b { animation: cloud-drift 34s linear infinite; }
+
 @keyframes lattice-throb {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.45; }

@@ -13,58 +13,32 @@ import { AscendPanel } from './components/AscendPanel';
 import { DataControls } from './components/DataControls';
 import { AchievementsList } from './components/AchievementsList';
 import { CheatPanel } from './components/CheatPanel';
-import { Tabs, type TabId } from './components/Tabs';
 import { Toasts } from './components/Toasts';
 import { OfflineModal } from './components/OfflineModal';
-import { WorldViewport } from './components/WorldViewport';
 import { AscensionOverlay } from './components/AscensionOverlay';
 import { IntroOverlay } from './components/IntroOverlay';
 import { ObjectiveStrip } from './components/ObjectiveStrip';
+import { Courtyard } from './components/Courtyard';
+import { Popup } from './components/Popup';
+import { RightRail, type RailId } from './components/RightRail';
 
-function DispatchBar() {
-  const dispatch = useGame((s) => s.display.dispatch);
-  const doDispatch = useGame((s) => s.actions.doDispatch);
-  const pct = Math.floor(dispatch.charge * 100);
+const TITLES: Record<RailId, string> = {
+  lab: 'THE LAB',
+  wonder: 'THE WONDER',
+  works: 'THE WORKS',
+  agora: 'THE AGORA',
+  ascend: 'ASCEND',
+};
 
-  return (
-    <div className="border-t border-line/60 bg-transparent px-3 py-2">
-      <button
-        className={`relative w-full overflow-hidden rounded border py-2 font-mono text-xs uppercase tracking-widest transition-colors ${
-          dispatch.peakActive
-            ? 'dispatch-peak border-ascend text-ascend'
-            : dispatch.charge >= 1
-              ? 'dispatch-ready border-volt text-volt hover:bg-volt/10'
-              : dispatch.canFire
-                ? 'border-volt text-volt hover:bg-volt/10'
-                : 'border-line text-ink-dim cursor-not-allowed'
-        }`}
-        disabled={!dispatch.canFire}
-        onClick={doDispatch}
-        aria-label={`Dispatch, ${pct}% charged${dispatch.peakActive ? ', peak demand active' : ''}`}
-      >
-        {/* charge fill behind the label */}
-        <span
-          className={`absolute inset-y-0 left-0 transition-[width] duration-300 ${
-            dispatch.peakActive ? 'bg-ascend/15' : 'bg-volt/10'
-          }`}
-          style={{ width: `${pct}%` }}
-          aria-hidden
-        />
-        <span className="relative">
-          {dispatch.peakActive
-            ? `⚡ PEAK ×3 — fire now! (${Math.ceil(dispatch.peakLeft)}s)`
-            : dispatch.canFire
-              ? `⚡ Dispatch — ${pct}% charge`
-              : `Dispatch charging — ${pct}%`}
-        </span>
-      </button>
-    </div>
-  );
-}
-
+/**
+ * The home screen IS the courtyard (design 2a). The HUD floats over it, the
+ * right rail opens features as pop-ups (2b) rather than swapping full-screen
+ * tabs, and the source list lives in a bottom sheet that peeks and expands.
+ */
 export default function App() {
   useGameTick();
-  const [tab, setTab] = useState<TabId>('sources');
+  const [popup, setPopup] = useState<RailId | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
   const canAscend = useGame((s) => s.display.ascend.can);
   const dailyReady = useGame((s) => s.display.shop.canClaimDaily);
   const pps = useGame((s) => s.display.pps);
@@ -80,47 +54,87 @@ export default function App() {
   useEffect(() => setHum(pps), [pps]);
 
   return (
-    <div className="mx-auto flex h-dvh max-w-md flex-col">
-      {/* `inert` pulls the whole app out of the tab order and off-limits to
-          hit-testing while a modal is up — the modal's own focus/Escape
-          handling is otherwise not enough, since a sighted mouse/keyboard
-          user could still reach buttons hidden behind it. */}
+    <div className="relative mx-auto h-dvh max-w-md overflow-hidden">
       <div className="contents" {...(modalOpen ? { inert: '' } : {})}>
-        <header className="glass safe-top shrink-0">
-          <PowerMeter />
-          <ResourceBar />
-          <ObjectiveStrip />
-          <WorldViewport />
+        {/* The world, always rendered and always animating. */}
+        <Courtyard />
+
+        {/* Top HUD — floats on a scrim so the courtyard reads behind it. */}
+        <header
+          className="safe-top pointer-events-none absolute inset-x-0 top-0 z-20"
+          style={{ background: 'linear-gradient(var(--bg) 55%, transparent)' }}
+        >
+          <div className="pointer-events-auto">
+            <PowerMeter />
+            <ResourceBar />
+            <ObjectiveStrip />
+          </div>
         </header>
 
-        <main className="min-h-0 flex-1 overflow-y-auto">
-          {tab === 'sources' && <SourcesPanel />}
-          {tab === 'research' && <ResearchGraph />}
-          {tab === 'megaproject' && <MegaprojectPanel />}
-          {tab === 'puzzle' && <PuzzlePanel />}
-          {tab === 'shop' && <ShopPanel />}
-          {tab === 'ascend' && (
-            <>
-              <AscendPanel />
-              <div className="flex flex-col gap-2 px-3 pb-3">
-                <AchievementsList />
-                <DataControls />
-                <CheatPanel />
-              </div>
-            </>
-          )}
-        </main>
+        <RightRail
+          active={popup}
+          onSelect={(id) => setPopup((cur) => (cur === id ? null : id))}
+          badges={{ ascend: canAscend, agora: dailyReady }}
+        />
 
-        <footer className="glass safe-bottom shrink-0">
-          <DispatchBar />
-          <Tabs active={tab} onSelect={setTab} badges={{ ascend: canAscend, shop: dailyReady }} />
-        </footer>
+        {/* Bottom sheet: peek shows the header, tap to expand the full list. */}
+        {!popup && (
+          <div
+            className="absolute inset-x-0 bottom-0 z-20 rounded-t-[20px] border-t border-line"
+            style={{
+              background: 'var(--bg-panel)',
+              boxShadow: '0 -8px 24px rgba(0,0,0,.12)',
+              maxHeight: sheetOpen ? '68%' : undefined,
+            }}
+          >
+            <button
+              className="safe-bottom flex w-full flex-col items-center gap-1.5 px-4 pb-1 pt-2"
+              onClick={() => setSheetOpen((v) => !v)}
+              aria-expanded={sheetOpen}
+            >
+              <span className="h-1 w-[38px] rounded-full" style={{ background: 'var(--grid-line)' }} />
+              <span className="flex w-full items-center justify-between">
+                <span className="font-display text-xs font-semibold" style={{ letterSpacing: '.1em' }}>
+                  POWER SOURCES
+                </span>
+                <span className="font-mono text-[9px] text-ink-dim">{sheetOpen ? 'SWIPE DOWN ⌄' : 'SWIPE UP ⌃'}</span>
+              </span>
+            </button>
+            {sheetOpen && (
+              <div className="max-h-[calc(68vh-56px)] overflow-y-auto pb-3">
+                <SourcesPanel />
+              </div>
+            )}
+          </div>
+        )}
+
+        {popup && (
+          <Popup title={TITLES[popup]} onClose={() => setPopup(null)}>
+            {popup === 'lab' && (
+              <div className="h-[60vh]">
+                <ResearchGraph />
+              </div>
+            )}
+            {popup === 'wonder' && <MegaprojectPanel />}
+            {popup === 'works' && <PuzzlePanel />}
+            {popup === 'agora' && <ShopPanel />}
+            {popup === 'ascend' && (
+              <>
+                <AscendPanel />
+                <div className="flex flex-col gap-2 px-3 pb-3">
+                  <AchievementsList />
+                  <DataControls />
+                  <CheatPanel />
+                </div>
+              </>
+            )}
+          </Popup>
+        )}
       </div>
 
       <Toasts />
       <OfflineModal />
       <AscensionOverlay />
-      {/* Last, and z-50: the cold open sits above everything on a first run. */}
       <IntroOverlay />
     </div>
   );

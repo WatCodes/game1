@@ -16,8 +16,8 @@ export default defineConfig({
         name: 'Electric Cats',
         short_name: 'Electric Cats',
         description: 'Humans are gone. Cats inherit the world — and the lightning. Power a feline civilisation from one kneading paw to the whole galaxy.',
-        theme_color: '#04070e',
-        background_color: '#04070e',
+        theme_color: '#f3ead4',
+        background_color: '#f3ead4',
         display: 'standalone',
         orientation: 'portrait',
         icons: [

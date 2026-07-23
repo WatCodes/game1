@@ -1,0 +1,17 @@
+{
+  // Deploy the built site as a static-assets-only Cloudflare Worker.
+  //
+  // Cloudflare's git integration detects "Vite" and, without this file, tries to
+  // auto-configure its Vite *plugin* on `wrangler deploy` — which requires Vite 6
+  // and fails on our Vite 5 build. This app is a plain static SPA, so we skip all
+  // of that: build to dist/ (the `npm run build` step already ran), then publish
+  // dist/ as edge assets. No Worker script (`main`) is needed.
+  "name": "game1",
+  "compatibility_date": "2025-07-23",
+  "assets": {
+    "directory": "./dist",
+    // The app is a single page; serve index.html for any unknown path so a deep
+    // link or refresh never 404s.
+    "not_found_handling": "single-page-application"
+  }
+}

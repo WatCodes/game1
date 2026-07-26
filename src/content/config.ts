@@ -73,7 +73,12 @@ export const CONFIG = {
   // by a mechanic they haven't met. Prime M7 onboarding knobs.
   UNLOCK_BOARD_POWER: 1_000, // Dispatch Board: sell-vs-build becomes a choice
   UNLOCK_GRID_DEMAND_POWER: 15_000, // grid demand floor + brownout start biting
-  UNLOCK_TRANSMISSION_POWER: 60_000, // the V×A cap / loss panel appears
+  // The V×A cap / loss panel appears. Lowered from 60k after simulation: a fresh
+  // run hits the transmission cap around 11 min but only crossed 60k lifetime at
+  // ~12 min, so players were throttled for ~30s with the remedy still hidden and
+  // no objective able to name it. The panel now arrives before the wall does.
+  // (Unlocks key off lifetime power, so lowering one only ever unlocks earlier.)
+  UNLOCK_TRANSMISSION_POWER: 40_000,
   // The "upgrade your grid" objective fires once generation overruns the
   // transmission cap by this much — i.e. a real slice of output is stranded, not
   // the momentary overshoot that's normal ("the pressure is the game"). At 0.33,

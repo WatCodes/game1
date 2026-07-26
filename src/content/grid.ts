@@ -15,11 +15,34 @@ export const GRID = {
   LOSS_V_STEP: 1.35, // each transformer level divides losses (V↑ ⇒ I↓ ⇒ I²R↓↓)
   LOSS_R_STEP: 1.6, // each superconductor level divides losses
   LOSS_FLOOR: 0.005,
-  // Upgrade costs (Power), as a slice of the tier's megaproject
-  V_COST_DIV: 50,
-  V_COST_GROWTH: 3.2,
-  A_COST_DIV: 120,
-  A_COST_GROWTH: 2.2,
+  // Upgrade costs (CR), as a slice of the tier's megaproject.
+  //
+  // M7: these were retuned after a simulation showed the tier-0 grid was a wall,
+  // not a decision. Two separate faults, both fixed here:
+  //
+  // 1. ENTRY PRICE. The cap binds ~11 min into a fresh run, but the cheapest
+  //    upgrade cost 2917 CR — far more than a casual player holds at that point.
+  //    The remedy was priced out of reach exactly when the problem appeared, so
+  //    output sat flat for 11 MINUTES with up to 58% of generation stranded.
+  //    Divisors raised → first conductor 1750 CR, first transformer 3889 CR.
+  //
+  // 2. EFFICIENCY DRIFT. Cost grew faster than capacity (A: ×2.2 cost vs ×1.8
+  //    cap; V: ×3.2 vs ×2.0), so every upgrade was 1.22×/1.6× worse value than
+  //    the last — a tightening noose rather than a solvable problem. Growth now
+  //    sits just above the cap step, which keeps mild pressure ("the run's
+  //    multipliers outgrow the grid") without the value collapsing.
+  //
+  // Deliberately NOT changed: the *_CAP_STEP values. Lowering them would have
+  // given more frequent, smaller decisions, but cap level is persisted — a save
+  // with 6 conductor levels would silently lose 73% of its capacity on update.
+  // Cheaper upgrades are a pure buff and can't hurt an existing save.
+  V_COST_DIV: 90,
+  V_COST_GROWTH: 2.2,
+  A_COST_DIV: 200,
+  A_COST_GROWTH: 1.9,
+  // The loss lane is untouched: it raises no cap, so the sim never modelled it.
+  // Its 11.7k CR entry looks steep for a 15%-loss saving — worth measuring, but
+  // not guessed at here.
   R_COST_DIV: 30,
   R_COST_GROWTH: 4.0,
   // Display flavor: volts/amps ladders (cosmetic — cap math is direct)

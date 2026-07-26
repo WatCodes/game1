@@ -29,9 +29,15 @@ Alternates if that reads too generic to you:
 | `Electric Cats — Idle Power` | 26 | Most on-theme, weakest keyword pull |
 | `Electric Cats` | 13 | Cleanest brand, worst discoverability |
 
-⚠️ **Check availability first.** If another app holds "Electric Cats", everything
-downstream changes — icon, screenshots, this whole file. Reserve the name in App
-Store Connect before writing anything else.
+✅ **"Electric Cats" confirmed available** (checked 26 Jul 2026). Reserve the exact
+name you intend to ship the moment enrolment clears — App Store Connect locks a
+name when you create the app record, and availability today is not a hold.
+
+> Note that reserving `Electric Cats: Idle Tycoon` does **not** also reserve plain
+> `Electric Cats` — they're distinct strings. If protecting the bare brand matters
+> more to you than the keyword, reserve `Electric Cats` and carry "idle" in the
+> subtitle instead. My call: take the longer name. The keyword is worth more than a
+> brand nobody is competing for yet, and the subtitle is better spent on the hook.
 
 ## 2. Subtitle (30 max)
 

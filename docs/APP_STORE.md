@@ -49,10 +49,12 @@ references them** (verified), so there are no dead buttons — good. Keep it tha
 A declared-but-nonfunctional purchase path is a Guideline 2.1 rejection. IAP is a
 1.1 feature, once RevenueCat is actually wired.
 
-### ⬜ Reserve the name
+### ✅ Name is available
 
-Check `Electric Cats` is free in App Store Connect **first**. If it's taken, the
-icon, screenshots and all of ASO.md change. Don't build assets on an unowned name.
+`Electric Cats` confirmed free (26 Jul 2026), so the icon, screenshots and ASO copy
+are safe to build on. **Still to do:** actually reserve it by creating the app record
+as soon as enrolment clears — availability is not a hold, and the name is only locked
+once the record exists.
 
 ---
 
@@ -67,8 +69,9 @@ icon, screenshots and all of ASO.md change. Don't build assets on an unowned nam
   - `https://<your-site>/support.html`
 
   Both URLs are **mandatory** fields in App Store Connect.
-- ⬜ Decide the support email. Both pages currently use a personal Gmail — fine to
-  launch with, but a dedicated address is worth it once the app is public.
+- ✅ Support email: **electriccatsofzeus@gmail.com**, used on both pages and to be
+  entered as the App Store Connect support contact. Enable 2FA on it — the same
+  address is the AdMob login, and that account holds the payment and tax details.
 
 ## Phase 2 — Flip the monetization switches (⬜ all)
 

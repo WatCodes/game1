@@ -12,6 +12,16 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      workbox: {
+        /**
+         * The default glob omits fonts, so an offline launch fell back to Georgia
+         * even after the faces were bundled — self-hosting them is only half the
+         * fix. `woff2` only: Fontsource also emits legacy `.woff`, which no
+         * browser we target will ever request (the @font-face src lists woff2
+         * first), so precaching it would be ~200 KB of dead cache.
+         */
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,webmanifest}'],
+      },
       manifest: {
         name: 'Electric Cats',
         short_name: 'Electric Cats',

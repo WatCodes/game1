@@ -13,15 +13,10 @@
     <meta name="apple-mobile-web-app-title" content="Electric Cats" />
     <link rel="apple-touch-icon" href="/icon-192.png" />
     <link rel="icon" type="image/png" href="/icon-192.png" />
-    <!-- Cinzel (carved-stone headings) / Spectral (body) / JetBrains Mono
-         (every number and readout). Preconnect first so the display face isn't
-         the thing holding up first paint. -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Spectral:ital,wght@0,400;0,500;0,600;1,500&family=JetBrains+Mono:wght@500;600;700&display=swap"
-      rel="stylesheet"
-    />
+    <!-- Cinzel (carved-stone headings) / Spectral (body) / JetBrains Mono (every
+         number and readout) are BUNDLED via @fontsource — imported in main.tsx,
+         not fetched from Google. A native app launched offline would otherwise
+         render entirely in Georgia. -->
     <title>Electric Cats</title>
   </head>
   <body>

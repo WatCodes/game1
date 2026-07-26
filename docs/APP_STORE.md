@@ -7,24 +7,35 @@ Ordered so that everything not needing a Mac happens first. Listing copy lives i
 
 ---
 
-## Phase 0 — Blockers to clear before any of this matters
+## Phase 0 — Blockers
 
-### ⛔ Bundle the fonts (must fix before submitting)
+One down, two live. Both remaining ones are decisions, not work.
 
-`index.html` loads Cinzel, Spectral and JetBrains Mono from `fonts.googleapis.com`.
-In a native app that is a real defect, three ways over:
+### ✅ Bundle the fonts — **DONE**
 
-1. **First launch with no signal renders the whole game in Georgia.** Every heading,
-   every readout. The Marble & Gold look depends on those three faces.
-2. It undercuts the offline story, which is part of what argues the app is more than
-   a website (see Guideline 4.2 below).
-3. It sends a request to Google on every cold start, which we'd then have to
-   disclose — and the privacy policy currently, correctly, says we don't.
+`index.html` used to load Cinzel, Spectral and JetBrains Mono from
+`fonts.googleapis.com`, which was a real native defect: a first launch with no
+signal rendered the entire game in Georgia, it undercut the offline story that
+argues against Guideline 4.2, and it put a third-party request on every cold start
+that the privacy policy (correctly) says we don't make.
 
-**Fix:** download the `.woff2` files, drop them in `public/fonts/`, replace the
-`<link>` with local `@font-face` rules, `font-display: swap`. One afternoon,
-no Mac needed. Do it before the icon work, because it changes what the splash
-looks like.
+Now self-hosted via `@fontsource/*`, imported in `src/main.tsx` — only the weights
+the design uses, latin subset only (~200 KB of woff2).
+
+**The non-obvious half:** bundling alone was not enough. `vite-plugin-pwa`'s default
+`globPatterns` omits fonts, so the service worker never precached them and an
+offline launch *still* fell back to Georgia. `vite.config.ts` now globs `woff2`
+explicitly — precache went 9 → 22 entries. If you ever add a font weight, check the
+precache count moves.
+
+Verified: zero requests to `fonts.googleapis.com`/`gstatic.com`, all faces served
+locally, and `document.fonts.check()` returns true for Cinzel 600, Spectral 400,
+Spectral 500 italic and JetBrains Mono 700.
+
+> Fontsource also emits legacy `.woff` next to each `.woff2`. Nothing we target
+> requests them (the `@font-face` src lists woff2 first — confirmed in the network
+> log), so they're inert weight in `dist/` and deliberately excluded from precache.
+> Not worth hand-rolling `@font-face` rules to strip ~200 KB from the IPA.
 
 ### ⛔ Ship v1 with no in-app purchases
 

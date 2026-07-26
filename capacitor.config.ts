@@ -14,14 +14,27 @@ const config = {
   appId: 'com.watcodes.electriccats',
   appName: 'Electric Cats',
   webDir: 'dist',
-  // Dark shell everywhere so there's no white flash before the app paints.
-  backgroundColor: '#04070e',
+  // Parchment shell everywhere, matching --bg. These were #04070e from the old
+  // dark theme, which meant every launch flashed near-black before the Marble &
+  // Gold app painted — it read as a crash on slower devices.
+  backgroundColor: '#f3ead4',
   ios: {
     contentInset: 'never',
-    backgroundColor: '#04070e',
+    backgroundColor: '#f3ead4',
   },
   android: {
-    backgroundColor: '#04070e',
+    backgroundColor: '#f3ead4',
+  },
+  plugins: {
+    // The app is light, so the status bar needs DARK glyphs. Capacitor's naming
+    // is the opposite of what you'd guess: Style.Light means "dark text, for
+    // light backgrounds". Ignored unless @capacitor/status-bar is installed
+    // (it's in `npm run native:install`).
+    StatusBar: {
+      style: 'LIGHT',
+      backgroundColor: '#f3ead4',
+      overlaysWebView: false,
+    },
   },
 };
 

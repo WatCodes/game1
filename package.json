@@ -11,7 +11,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint src tests",
     "icons": "node scripts/make-icons.mjs",
-    "native:install": "npm i @capacitor/core @capacitor/cli @capacitor/ios @capacitor/android @capacitor-community/admob",
+    "native:install": "npm i @capacitor/core @capacitor/cli @capacitor/ios @capacitor/android @capacitor/status-bar @capacitor-community/admob",
     "native:sync": "npm run build && npx cap sync",
     "native:ios": "npm run native:sync && npx cap open ios",
     "native:android": "npm run native:sync && npx cap open android"

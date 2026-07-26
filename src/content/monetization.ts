@@ -13,6 +13,16 @@ export const ADS = {
   rewardedIos: 'ca-app-pub-3940256099942544/1712485313',
   rewardedAndroid: 'ca-app-pub-3940256099942544/5224354917',
   testing: true,
+  /**
+   * Request NON-personalized ads only. This is a deliberate product/compliance
+   * trade, not a default: personalized ads count as tracking, which would oblige
+   * us to show Apple's App Tracking Transparency prompt, add a tracking usage
+   * string, and declare tracking in App Privacy. Most users decline ATT anyway,
+   * so the eCPM we give up is smaller than it looks — and in exchange the app
+   * collects no advertising identifier, needs no ATT prompt, and has a much
+   * simpler (and more honest) privacy story. Revisit only with a real reason.
+   */
+  nonPersonalized: true,
 } as const;
 
 /**

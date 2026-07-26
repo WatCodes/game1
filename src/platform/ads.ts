@@ -45,7 +45,12 @@ export async function showRewardedAd(): Promise<RewardResult> {
       initialized = true;
     }
     const adId = platformName() === 'ios' ? ADS.rewardedIos : ADS.rewardedAndroid;
-    await plugin.AdMob.prepareRewardVideoAd({ adId, isTesting: ADS.testing });
+    await plugin.AdMob.prepareRewardVideoAd({
+      adId,
+      isTesting: ADS.testing,
+      // No advertising identifier, no ATT prompt — see ADS.nonPersonalized.
+      npa: ADS.nonPersonalized,
+    });
     const reward = await plugin.AdMob.showRewardVideoAd();
     // The plugin resolves with a reward item when it was actually earned.
     return reward ? 'rewarded' : 'dismissed';

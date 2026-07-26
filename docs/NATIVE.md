@@ -1,8 +1,12 @@
 # Shipping Electric Cats as a native app
 
 The web build in `dist/` **is** the app. Capacitor only wraps it in a native
-shell, so nothing here changes how the game is written — and the PWA on Netlify
-keeps working exactly as it does today.
+shell, so nothing here changes how the game is written — and the PWA on Cloudflare
+Pages keeps working exactly as it does today.
+
+> **Submitting to the App Store?** Follow [APP_STORE.md](APP_STORE.md) — it's the
+> ordered runbook (accounts, privacy answers, review notes, blockers). This file is
+> the native-build reference it points at.
 
 Nothing in `src/` imports a native SDK at build time. Plugins are loaded by name
 at runtime (`src/platform/native.ts`), so:
@@ -73,7 +77,8 @@ Everything to change lives in **`src/content/monetization.ts`**:
 | `APP_ID` | `com.watcodes.electriccats` | your real bundle id (must match `capacitor.config.ts`) |
 | `ADS.rewardedIos` / `rewardedAndroid` | Google's public **test** unit ids | your real AdMob unit ids |
 | `ADS.testing` | `true` | **`false`** before submitting |
-| `PRODUCTS.*` | placeholder skus | the product ids you create in App Store Connect / Play Console |
+| `ADS.nonPersonalized` | `true` | **leave `true`** — personalized ads would require an ATT prompt (see APP_STORE.md) |
+| `PRODUCTS.*` | placeholder skus | **nothing for v1** — ship without IAP; a declared-but-unbuilt purchase path is a 2.1 rejection |
 
 > ⚠️ `ADS.testing` and the unit ids must move together. Serving **real** ads with
 > `testing: true`, or **test** ads in production, is the classic way to get an
@@ -118,8 +123,11 @@ progression.
   and 2732 are the sources `@capacitor/assets` expands into every native size:
 
   ```bash
-  npx @capacitor/assets generate --iconBackgroundColor '#04070e' --splashBackgroundColor '#04070e'
+  npx @capacitor/assets generate --iconBackgroundColor '#f3ead4' --splashBackgroundColor '#f3ead4'
   ```
+
+  Parchment (`#f3ead4`), **not** the `#04070e` these notes used before the Marble &
+  Gold redesign — that dark value flashed near-black on every launch.
 
   Edit the geometry at the top of the script (head circle, ear triangles, bolt
   polygon) rather than hand-editing PNGs, so every size stays in sync.

@@ -1,4 +1,4 @@
-import type { GameState, Id, Num, PuzzleState } from '../engine/types';
+import type { FuturesPosition, GameState, Id, Num, PuzzleState } from '../engine/types';
 import { CONFIG } from '../content/config';
 import { SAVE_VERSION, createInitialState } from '../engine/state';
 import { reapplyPurchasedEffects } from '../engine/research';
@@ -34,7 +34,10 @@ export interface SaveData {
   decommissionedStages?: number; // absent on pre-v7 saves → grandfathered on load
   routePct: number; // Project rail share (0..1)
   sellPct: number; // Sell rail share (0..1); sellPct + routePct ≤ 1
-  market: { saturation: number };
+  // `index`/`indexHistory`/`sampleIn` and `futures` arrive in v8; both are
+  // optional so a v7 save hydrates with a neutral market and no open position.
+  market: { saturation: number; index?: number; indexHistory?: number[]; sampleIn?: number };
+  futures?: FuturesPosition | null;
   dispatch: { charge: number; peakLeft: number; nextPeakIn: number };
   grid: { vLevel: number; aLevel: number; rLevel: number };
   launchWindow: { active: boolean; timeLeft: number; nextIn: number };
@@ -49,6 +52,31 @@ export interface SaveData {
   achievements: Id[];
   lastSaved: number;
   stats: { lifetimePower: Num; ascensions: number; startedAt: number; puzzlesSolved: number };
+}
+
+const clampIndex = (n: number): number =>
+  Math.max(CONFIG.INDEX_MIN, Math.min(CONFIG.INDEX_MAX, Number.isFinite(n) ? n : CONFIG.INDEX_MEAN));
+
+/**
+ * An open futures position is money already spent, so a malformed or hostile one
+ * must never be able to mint Credits: every field is bounded, and anything that
+ * doesn't parse is dropped entirely (the stake is simply forfeit rather than
+ * settling for an arbitrary payout).
+ */
+function hydrateFutures(raw: unknown): FuturesPosition | null {
+  if (!isRecord(raw)) return null;
+  const { stake, up, entryIndex, secondsLeft } = raw as Record<string, unknown>;
+  if (typeof stake !== 'number' || !Number.isFinite(stake) || stake <= 0) return null;
+  if (typeof up !== 'boolean') return null;
+  if (typeof entryIndex !== 'number' || !Number.isFinite(entryIndex)) return null;
+  if (typeof secondsLeft !== 'number' || !Number.isFinite(secondsLeft)) return null;
+  return {
+    stake: Math.floor(stake),
+    up,
+    entryIndex: clampIndex(entryIndex),
+    // Clamp the window so a doctored save can't hold a position open forever.
+    secondsLeft: Math.max(0, Math.min(CONFIG.FUTURES_WINDOW_SECONDS, secondsLeft)),
+  };
 }
 
 export function serialize(s: GameState): SaveData {
@@ -70,7 +98,8 @@ export function serialize(s: GameState): SaveData {
     decommissionedStages: s.megaproject.decommissionedStages,
     routePct: s.routePct,
     sellPct: s.sellPct,
-    market: { ...s.market },
+    market: { ...s.market, indexHistory: [...s.market.indexHistory] },
+    futures: s.futures ? { ...s.futures } : null,
     dispatch: { ...s.dispatch },
     grid: { ...s.grid },
     launchWindow: { ...s.launchWindow },
@@ -164,7 +193,18 @@ export function hydrate(save: SaveData): GameState {
   s.sellPct = Math.max(0, Math.min(1, save.sellPct ?? 0.6));
   // Enforce the rail invariant: Sell + Project can't exceed 100% of generation.
   if (s.sellPct + s.routePct > 1) s.sellPct = Math.max(0, 1 - s.routePct);
-  s.market = { saturation: Math.max(0, save.market?.saturation ?? 0) };
+  const rawIndex = save.market?.index;
+  s.market = {
+    saturation: Math.max(0, save.market?.saturation ?? 0),
+    // A pre-v8 save has no index; a neutral 1 is the honest default, and the
+    // walk re-diverges within a few seconds of play.
+    index: clampIndex(typeof rawIndex === 'number' ? rawIndex : CONFIG.INDEX_MEAN),
+    indexHistory: Array.isArray(save.market?.indexHistory)
+      ? save.market.indexHistory.filter((n) => typeof n === 'number' && Number.isFinite(n)).map(clampIndex).slice(-CONFIG.INDEX_HISTORY)
+      : [],
+    sampleIn: Math.max(0, save.market?.sampleIn ?? 0),
+  };
+  s.futures = hydrateFutures(save.futures);
   s.credits = Math.max(0, save.credits);
   s.solvers = Math.max(0, Math.floor(save.solvers));
   s.solverProgress = Math.max(0, save.solverProgress);
@@ -288,6 +328,18 @@ export function migrate(raw: Record<string, unknown>): Record<string, unknown> {
       credits: oldCredits + oldPower * CONFIG.BASE_PRICE,
       sellPct: Math.max(0, Math.min(1 - routePct, 0.6)),
       market: { saturation: 0 },
+    };
+  }
+  // v8 — the demand index and the Futures Desk. Purely additive: hydrate
+  // defaults a missing index to neutral and a missing position to none, so this
+  // only needs to stamp the version. Keyed on the field as well as the version,
+  // for the same reason as v5 above.
+  if ((save.version as number) < 8 || typeof (save.market as { index?: unknown })?.index !== 'number') {
+    save = {
+      ...save,
+      version: 8,
+      market: { ...(isRecord(save.market) ? save.market : { saturation: 0 }), index: CONFIG.INDEX_MEAN },
+      futures: null,
     };
   }
   return save;

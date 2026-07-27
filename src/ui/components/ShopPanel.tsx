@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { useGame } from '../../store/gameStore';
 import { formatTime } from '../../engine/format';
 import { CONFIG } from '../../content/config';
+import { FuturesDesk } from './FuturesDesk';
 
 /**
  * The Agora (design 5a). Item rows are white cards on parchment with a tinted
@@ -191,6 +192,10 @@ export function ShopPanel() {
         activeLabel={dispatch.charge >= 1 ? 'full' : undefined}
         onBuy={() => buyShopBoost('dispatch')}
       />
+
+      {/* Speculation lives in the marketplace, below the goods — it's a place to
+          put a surplus, not the first thing the Agora offers you. */}
+      <FuturesDesk />
 
       <div className="mt-1 flex items-center gap-2 font-body text-[10.5px] italic text-ink-dim">
         <span className="h-1.5 w-1.5 rotate-45" style={{ background: 'var(--amber)' }} />

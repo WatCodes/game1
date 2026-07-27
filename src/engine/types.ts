@@ -69,6 +69,19 @@ export interface PuzzleState {
   solved: boolean; // latched until a new board is dealt
 }
 
+/**
+ * A stake on where the exogenous demand index goes. Deliberately bets on the
+ * INDEX rather than the delivered price: the price also carries the player's own
+ * saturation, which they steer with the Sell slider, so a price bet could be won
+ * every time by moving that slider after placing it.
+ */
+export interface FuturesPosition {
+  stake: Num; // CR committed, already deducted
+  up: boolean; // true = betting the index rises
+  entryIndex: number; // index at the moment of placing
+  secondsLeft: number; // counts down to settlement
+}
+
 export interface KardashevTier {
   index: number;
   era: string;
@@ -94,7 +107,22 @@ export interface GameState {
   // floor or the run takes a brownout penalty.
   routePct: number; // % of generation routed to the megaproject (0..1)
   sellPct: number; // % of generation sold to the grid for CR (0..1)
-  market: { saturation: number }; // ≥0; rises as you sell, decays back; depresses price
+  market: {
+    saturation: number; // ≥0; rises as you sell, decays back; depresses price
+    /**
+     * Exogenous demand — the half of the price the player does NOT control.
+     * Mean-reverts toward 1 on a random walk. Without it the market only ever
+     * reacted to the Sell slider, which made the "live economy" inert and made
+     * betting on the price a free win (slide Sell to 0, price always rises).
+     */
+    index: number;
+    /** Recent index samples, newest last — drives the Agora chart. Capped. */
+    indexHistory: number[];
+    /** Seconds until the next history sample is taken. */
+    sampleIn: number;
+  };
+  /** At most one open futures position; null when the desk is idle. */
+  futures: FuturesPosition | null;
   dispatch: {
     charge: number; // 0..1, builds over time; firing spends it
     peakLeft: number; // seconds remaining of an active peak-demand window

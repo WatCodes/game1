@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { tick } from '../../engine/loop';
-import { game, publishDisplay } from '../../store/gameStore';
+import { game, publishDisplay, reportSettlement } from '../../store/gameStore';
 import { saveToStorage } from '../../store/save';
 import { CONFIG } from '../../content/config';
 
@@ -24,7 +24,10 @@ export function useGameTick(): void {
       dt = Math.min(dt, 0.25); // clamp after tab-away; offline handles long gaps
       acc += dt;
       while (acc >= STEP) {
-        tick(game, STEP);
+        // A settled futures position is returned rather than toasted by the
+        // engine, which must stay DOM-free.
+        const settled = tick(game, STEP);
+        if (settled) reportSettlement(settled);
         acc -= STEP;
       }
       disp += dt;

@@ -12,11 +12,52 @@ import { effectiveRoutePct, effectiveSellPct, isUnlocked } from './unlocks';
 
 const clamp01 = (x: number): number => (x < 0 ? 0 : x > 1 ? 1 : x);
 
-/** CR paid per Watt sold. Falls as the market saturates, recovers as it drains.
- *  Flat at BASE_PRICE until the Board introduces the market. */
+/**
+ * CR paid per Watt sold — two independent halves:
+ *   • saturation, which the player drives with the Sell slider, and
+ *   • the demand index, which drifts on its own.
+ * Flat at BASE_PRICE until the Board introduces the market.
+ */
 export function gridPrice(s: GameState): Num {
   if (!isUnlocked(s, 'board')) return CONFIG.BASE_PRICE;
-  return CONFIG.BASE_PRICE / (1 + Math.max(0, s.market.saturation));
+  return (CONFIG.BASE_PRICE / (1 + Math.max(0, s.market.saturation))) * marketIndex(s);
+}
+
+/** The exogenous half. 1 (neutral) until the Board exists, so early pricing is
+ *  perfectly predictable while the player is still learning the basics. */
+export function marketIndex(s: GameState): number {
+  if (!isUnlocked(s, 'board')) return 1;
+  return s.market.index;
+}
+
+/**
+ * Mean-reverting random walk (a discrete Ornstein–Uhlenbeck step): pulled gently
+ * toward INDEX_MEAN, kicked each step by volatility scaled with √dt so the walk
+ * behaves the same whether stepped at 20 Hz or in one offline slab. Clamped, so
+ * demand can never vanish or run away.
+ */
+export function tickMarketIndex(s: GameState, dt: number, rand: () => number = Math.random): void {
+  if (!isUnlocked(s, 'board') || dt <= 0) return;
+  // Long gaps (offline) settle to the mean rather than compounding one huge
+  // random kick — you should never return from a night away to a rigged market.
+  const step = Math.min(dt, CONFIG.MARKET_TAU_SECONDS);
+  const pull = (CONFIG.INDEX_MEAN - s.market.index) * CONFIG.INDEX_REVERSION * step;
+  // Box–Muller would be tidier, but a mean-zero uniform kick is plenty here and
+  // keeps this dependency-free and trivially deterministic in tests.
+  const shock = (rand() * 2 - 1) * CONFIG.INDEX_VOLATILITY * Math.sqrt(step);
+  const next = s.market.index + pull + shock;
+  s.market.index = Math.max(CONFIG.INDEX_MIN, Math.min(CONFIG.INDEX_MAX, next));
+
+  // Sample the chart on a fixed cadence so history is time-uniform regardless of
+  // tick rate.
+  s.market.sampleIn -= dt;
+  if (s.market.sampleIn <= 0) {
+    s.market.sampleIn = CONFIG.INDEX_SAMPLE_SECONDS;
+    s.market.indexHistory.push(s.market.index);
+    if (s.market.indexHistory.length > CONFIG.INDEX_HISTORY) {
+      s.market.indexHistory.splice(0, s.market.indexHistory.length - CONFIG.INDEX_HISTORY);
+    }
+  }
 }
 
 /**

@@ -123,6 +123,70 @@ describe('migration', () => {
     expect(migrated.puzzle).toBeNull();
   });
 
+  it('upgrades a v7 save without disturbing a run in progress (v8: demand index)', () => {
+    // A realistic live v7 save — the shape real players are on today.
+    const v7 = {
+      version: 7,
+      tier: 2,
+      power: 0,
+      runPower: 5e6,
+      rp: 900,
+      kp: 12,
+      owned: { 'fission-reactor': 40 },
+      purchased: [],
+      committed: 1234,
+      stagesAuthorized: 2,
+      routePct: 0.25,
+      sellPct: 0.5,
+      market: { saturation: 0.8 },
+      dispatch: { charge: 0.5, peakLeft: 0, nextPeakIn: 100 },
+      grid: { vLevel: 2, aLevel: 3, rLevel: 1 },
+      credits: 5000,
+      solvers: 2,
+      solverProgress: 0.3,
+      launchWindow: { active: false, timeLeft: 0, nextIn: 90 },
+      accretion: { feedRate: 0, heat: 0 },
+      relay: { researchAllocation: 0 },
+      boosts: { surgeLeft: 0, powerLeft: 0, rpLeft: 0 },
+      daily: { lastClaimDay: '', streak: 0 },
+      achievements: [],
+      puzzle: null,
+      lastSaved: 42,
+      stats: { lifetimePower: 9e6, ascensions: 2, startedAt: 0, puzzlesSolved: 7 },
+    };
+    const m = validateSave(v7);
+    expect(m.version).toBe(SAVE_VERSION);
+    // The new market half defaults to neutral, so nobody's income silently moves.
+    expect(m.market.index).toBe(CONFIG.INDEX_MEAN);
+    expect(m.futures ?? null).toBeNull();
+    // Everything the player actually earned is untouched.
+    expect(m.market.saturation).toBe(0.8);
+    expect(m.credits).toBe(5000);
+    expect(m.kp).toBe(12);
+    expect(m.grid).toEqual({ vLevel: 2, aLevel: 3, rLevel: 1 });
+    expect(m.stats.lifetimePower).toBe(9e6);
+
+    const s = hydrate(m);
+    expect(s.market.index).toBe(CONFIG.INDEX_MEAN);
+    expect(s.market.indexHistory).toEqual([]);
+    expect(s.futures).toBeNull();
+    expect(s.credits).toBe(5000);
+  });
+
+  it('refuses to mint credits from a doctored futures position', () => {
+    const save = JSON.parse(JSON.stringify(serialize(playedState()))) as Record<string, unknown>;
+    const s = hydrate(validateSave({ ...save, futures: { stake: 'lots', up: 'yes' } }));
+    expect(s.futures).toBeNull(); // unparseable → dropped, never settled
+  });
+
+  it('clamps a futures window that has been stretched open', () => {
+    const save = JSON.parse(JSON.stringify(serialize(playedState()))) as Record<string, unknown>;
+    const s = hydrate(
+      validateSave({ ...save, futures: { stake: 50, up: true, entryIndex: 1, secondsLeft: 1e9 } }),
+    );
+    expect(s.futures!.secondsLeft).toBe(CONFIG.FUTURES_WINDOW_SECONDS);
+  });
+
   it('upgrades a v1 save: cooldown dispatch dropped, stages derived from progress', () => {
     const v1 = {
       version: 1,

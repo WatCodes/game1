@@ -80,9 +80,18 @@ const BOLT = [
   [0.539, 0.44], [0.36, 0.64], [0.472, 0.64], [0.438, 0.8], [0.64, 0.587], [0.517, 0.587],
 ];
 
-const BG = [10, 16, 28, 255]; // --bg-panel
-const FUR = [251, 191, 36, 255]; // --amber
-const BOLT_COLOR = [34, 211, 238, 255]; // --cyan
+// Marble & Gold. These were the pre-redesign dark values (navy #0a101c, neon
+// amber #fbbf24, electric cyan #22d3ee) — a dark tile with a neon cat opening
+// into a warm parchment game.
+//
+// Composition note: the bolt is punched OUT of the fur, so its contrast is
+// against FUR, not BG. A gold bolt on gold fur would vanish at 40px, which is
+// why the cat is the courtyard's dark tabby and the bolt is the lit pale gold.
+// A light tile also stands out on a home screen where nearly every other game
+// icon is dark.
+const BG = [243, 234, 212, 255]; // --bg, parchment
+const FUR = [84, 73, 61, 255]; // the courtyard tabby (DEFAULT_CATS[0].body)
+const BOLT_COLOR = [244, 201, 93, 255]; // lit gold, between --amber and --gold-lit
 
 function inHead(x, y) {
   const dx = x - HEAD.cx;

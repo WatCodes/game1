@@ -22,6 +22,7 @@ import { Courtyard } from './components/Courtyard';
 import { Popup } from './components/Popup';
 import { RightRail, type RailId } from './components/RightRail';
 import { SoundToggle } from './components/SoundToggle';
+import { StrandedBanner } from './components/StrandedBanner';
 
 const TITLES: Record<RailId, string> = {
   lab: 'THE LAB',
@@ -73,6 +74,15 @@ export default function App() {
             <PowerMeter />
             <ResourceBar />
             <ObjectiveStrip />
+            {/* Only shows when output is actually being thrown away, and is
+                itself the route to the fix — the Transmission lanes live inside
+                the sources sheet, which is collapsed by default. */}
+            <StrandedBanner
+              onOpen={() => {
+                setPopup(null);
+                setSheetOpen(true);
+              }}
+            />
           </div>
         </header>
 

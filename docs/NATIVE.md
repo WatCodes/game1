@@ -84,6 +84,39 @@ Everything to change lives in **`src/content/monetization.ts`**:
 > `testing: true`, or **test** ads in production, is the classic way to get an
 > AdMob account suspended.
 
+### App ID vs ad unit ID — they are different things
+
+AdMob hands out two shapes of identifier and mixing them up breaks the build in
+two different ways:
+
+| | Looks like | Where it goes |
+|---|---|---|
+| **App ID** | `ca-app-pub-…**~**5611430610` (tilde) | the **native manifest**, below |
+| **Ad unit ID** | `ca-app-pub-…**/**1712485313` (slash) | `ADS.rewardedIos` / `rewardedAndroid` |
+
+The real App IDs are recorded in `ADMOB_APP_ID` in `src/content/monetization.ts`.
+No TypeScript reads them — the Google SDK loads them from the native manifests,
+and **it throws on launch if they are missing**, so this is a crash-on-open bug
+rather than a "no ads" bug. Once the native shells exist:
+
+**iOS** — `ios/App/App/Info.plist`:
+
+```xml
+<key>GADApplicationIdentifier</key>
+<string>ca-app-pub-2102762899981380~5611430610</string>
+```
+
+**Android** — `android/app/src/main/AndroidManifest.xml`, inside `<application>`:
+
+```xml
+<meta-data
+    android:name="com.google.android.gms.ads.APPLICATION_ID"
+    android:value="ca-app-pub-2102762899981380~1867892655"/>
+```
+
+This is the point where generating the native shells per build stops being
+enough — once these are edited, commit `ios/` and `android/`.
+
 ## 4. Build and run
 
 ```bash

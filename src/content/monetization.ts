@@ -1,7 +1,24 @@
 // Monetization identifiers. Everything here is a PLACEHOLDER until the real
 // accounts exist — see docs/NATIVE.md for exactly what to swap and where.
 
+/** The app's bundle identifier — must match `appId` in capacitor.config.ts. */
 export const APP_ID = 'com.watcodes.electriccats';
+
+/**
+ * AdMob **App** IDs (note the `~`, which is what distinguishes them from ad
+ * *unit* ids, which use `/`). These are NOT consumed by any TypeScript here —
+ * the Google SDK reads them from the native manifests, and it throws on launch
+ * if they're absent. They live here so the values aren't lost between now and
+ * the native build. See docs/NATIVE.md for exactly where they go:
+ *
+ *   iOS      ios/App/App/Info.plist        → GADApplicationIdentifier
+ *   Android  android/app/src/main/AndroidManifest.xml
+ *            → <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" …>
+ */
+export const ADMOB_APP_ID = {
+  ios: 'ca-app-pub-2102762899981380~5611430610',
+  android: 'ca-app-pub-2102762899981380~1867892655',
+} as const;
 
 export const ADS = {
   /**
@@ -9,6 +26,11 @@ export const ADS = {
    * swap for the real AdMob unit ids before submitting, and set testing:false.
    * Using real units with testing:true (or test units in production) is what
    * gets AdMob accounts suspended, so these two move together.
+   *
+   * ⚠ STILL PLACEHOLDERS. Ad *unit* ids contain a `/`; if what you're pasting
+   * has a `~` it's the App ID (see ADMOB_APP_ID above) and belongs in the native
+   * manifest instead. Create the units in AdMob under each app:
+   * Ad units → Add ad unit → **Rewarded**.
    */
   rewardedIos: 'ca-app-pub-3940256099942544/1712485313',
   rewardedAndroid: 'ca-app-pub-3940256099942544/5224354917',

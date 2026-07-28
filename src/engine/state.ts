@@ -6,7 +6,7 @@ import { buildResearch } from '../content/research';
 import { newPuzzle } from './puzzle';
 import { defaultTierTwistState } from './tierTwists';
 
-export const SAVE_VERSION = 8;
+export const SAVE_VERSION = 9;
 
 export function createInitialState(now: number = Date.now(), rand: () => number = Math.random): GameState {
   const s: GameState = {
@@ -22,7 +22,7 @@ export function createInitialState(now: number = Date.now(), rand: () => number 
     routePct: 0,
     sellPct: 0.6, // default: sell most, reserve 40% for the grid, none to project yet
     market: { saturation: 0, index: CONFIG.INDEX_MEAN, indexHistory: [], sampleIn: 0 },
-    futures: null,
+    reserve: { stored: 0, avgPrice: 0 },
     dispatch: { charge: 0, peakLeft: 0, nextPeakIn: 240 },
     grid: { vLevel: 0, aLevel: 0, rLevel: 0 },
     ...defaultTierTwistState(),

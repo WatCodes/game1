@@ -70,16 +70,17 @@ export interface PuzzleState {
 }
 
 /**
- * A stake on where the exogenous demand index goes. Deliberately bets on the
- * INDEX rather than the delivered price: the price also carries the player's own
- * saturation, which they steer with the Sell slider, so a price bet could be won
- * every time by moving that slider after placing it.
+ * Stored Watts held back from the market, with the average price paid for them.
+ *
+ * This replaced a futures *wager* deliberately. A stake on a random outcome is
+ * gambling however it's dressed — Apple's "simulated gambling" definition covers
+ * betting virtual currency on races, and betting on a price tick is the same
+ * shape. Holding an asset and choosing when to sell is not: there is no stake at
+ * risk, no forced settlement, and no clock. The player can always wait.
  */
-export interface FuturesPosition {
-  stake: Num; // CR committed, already deducted
-  up: boolean; // true = betting the index rises
-  entryIndex: number; // index at the moment of placing
-  secondsLeft: number; // counts down to settlement
+export interface ReserveState {
+  stored: Num; // Watts in the battery
+  avgPrice: number; // CR/W cost basis, for honest profit/loss reporting
 }
 
 export interface KardashevTier {
@@ -121,8 +122,8 @@ export interface GameState {
     /** Seconds until the next history sample is taken. */
     sampleIn: number;
   };
-  /** At most one open futures position; null when the desk is idle. */
-  futures: FuturesPosition | null;
+  /** The battery: Watts bought off your own grid, awaiting a better price. */
+  reserve: ReserveState;
   dispatch: {
     charge: number; // 0..1, builds over time; firing spends it
     peakLeft: number; // seconds remaining of an active peak-demand window

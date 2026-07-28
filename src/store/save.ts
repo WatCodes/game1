@@ -1,4 +1,4 @@
-import type { FuturesPosition, GameState, Id, Num, PuzzleState } from '../engine/types';
+import type { GameState, Id, Num, PuzzleState, ReserveState } from '../engine/types';
 import { CONFIG } from '../content/config';
 import { SAVE_VERSION, createInitialState } from '../engine/state';
 import { reapplyPurchasedEffects } from '../engine/research';
@@ -37,7 +37,7 @@ export interface SaveData {
   // `index`/`indexHistory`/`sampleIn` and `futures` arrive in v8; both are
   // optional so a v7 save hydrates with a neutral market and no open position.
   market: { saturation: number; index?: number; indexHistory?: number[]; sampleIn?: number };
-  futures?: FuturesPosition | null;
+  reserve?: { stored: number; avgPrice: number };
   dispatch: { charge: number; peakLeft: number; nextPeakIn: number };
   grid: { vLevel: number; aLevel: number; rLevel: number };
   launchWindow: { active: boolean; timeLeft: number; nextIn: number };
@@ -58,25 +58,19 @@ const clampIndex = (n: number): number =>
   Math.max(CONFIG.INDEX_MIN, Math.min(CONFIG.INDEX_MAX, Number.isFinite(n) ? n : CONFIG.INDEX_MEAN));
 
 /**
- * An open futures position is money already spent, so a malformed or hostile one
- * must never be able to mint Credits: every field is bounded, and anything that
- * doesn't parse is dropped entirely (the stake is simply forfeit rather than
- * settling for an arbitrary payout).
+ * Stored Watts are paid for, so a malformed reserve must never mint value:
+ * anything that doesn't parse becomes an empty battery, and a stored amount
+ * without a sane cost basis is treated as free (basis 0) rather than trusted.
  */
-function hydrateFutures(raw: unknown): FuturesPosition | null {
-  if (!isRecord(raw)) return null;
-  const { stake, up, entryIndex, secondsLeft } = raw as Record<string, unknown>;
-  if (typeof stake !== 'number' || !Number.isFinite(stake) || stake <= 0) return null;
-  if (typeof up !== 'boolean') return null;
-  if (typeof entryIndex !== 'number' || !Number.isFinite(entryIndex)) return null;
-  if (typeof secondsLeft !== 'number' || !Number.isFinite(secondsLeft)) return null;
-  return {
-    stake: Math.floor(stake),
-    up,
-    entryIndex: clampIndex(entryIndex),
-    // Clamp the window so a doctored save can't hold a position open forever.
-    secondsLeft: Math.max(0, Math.min(CONFIG.FUTURES_WINDOW_SECONDS, secondsLeft)),
-  };
+function hydrateReserve(raw: unknown): ReserveState {
+  const empty: ReserveState = { stored: 0, avgPrice: 0 };
+  if (!isRecord(raw)) return empty;
+  const { stored, avgPrice } = raw as Record<string, unknown>;
+  if (typeof stored !== 'number' || !Number.isFinite(stored) || stored <= 0) return empty;
+  const basis = typeof avgPrice === 'number' && Number.isFinite(avgPrice) && avgPrice >= 0 ? avgPrice : 0;
+  // Capacity depends on live generation, so it can't be checked here; the loop's
+  // settleOvercapacity refunds any spill on the first tick after load.
+  return { stored, avgPrice: basis };
 }
 
 export function serialize(s: GameState): SaveData {
@@ -99,7 +93,7 @@ export function serialize(s: GameState): SaveData {
     routePct: s.routePct,
     sellPct: s.sellPct,
     market: { ...s.market, indexHistory: [...s.market.indexHistory] },
-    futures: s.futures ? { ...s.futures } : null,
+    reserve: { ...s.reserve },
     dispatch: { ...s.dispatch },
     grid: { ...s.grid },
     launchWindow: { ...s.launchWindow },
@@ -204,7 +198,7 @@ export function hydrate(save: SaveData): GameState {
       : [],
     sampleIn: Math.max(0, save.market?.sampleIn ?? 0),
   };
-  s.futures = hydrateFutures(save.futures);
+  s.reserve = hydrateReserve(save.reserve);
   s.credits = Math.max(0, save.credits);
   s.solvers = Math.max(0, Math.floor(save.solvers));
   s.solverProgress = Math.max(0, save.solverProgress);
@@ -330,17 +324,29 @@ export function migrate(raw: Record<string, unknown>): Record<string, unknown> {
       market: { saturation: 0 },
     };
   }
-  // v8 — the demand index and the Futures Desk. Purely additive: hydrate
-  // defaults a missing index to neutral and a missing position to none, so this
-  // only needs to stamp the version. Keyed on the field as well as the version,
-  // for the same reason as v5 above.
+  // v8 — the demand index. Purely additive: hydrate defaults a missing index to
+  // neutral, so this only needs to stamp the version. Keyed on the field as well
+  // as the version, for the same reason as v5 above.
   if ((save.version as number) < 8 || typeof (save.market as { index?: unknown })?.index !== 'number') {
     save = {
       ...save,
       version: 8,
       market: { ...(isRecord(save.market) ? save.market : { saturation: 0 }), index: CONFIG.INDEX_MEAN },
-      futures: null,
     };
+  }
+  // v9 — the Futures Desk (a wager) became the Arbitrage Desk (a battery). Any
+  // position still open when the mechanic was removed is REFUNDED at its stake:
+  // the stake was already deducted on placing, and settling a bet whose rules no
+  // longer exist would be arbitrary. Nobody loses money to a feature being cut.
+  if ((save.version as number) < 9) {
+    const open = (save as { futures?: unknown }).futures;
+    const stake =
+      isRecord(open) && typeof open.stake === 'number' && Number.isFinite(open.stake) && open.stake > 0
+        ? open.stake
+        : 0;
+    const credits = typeof save.credits === 'number' ? save.credits : 0;
+    save = { ...save, version: 9, credits: credits + stake, reserve: { stored: 0, avgPrice: 0 } };
+    delete (save as { futures?: unknown }).futures;
   }
   return save;
 }

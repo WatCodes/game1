@@ -37,6 +37,14 @@ Spectral 500 italic and JetBrains Mono 700.
 > log), so they're inert weight in `dist/` and deliberately excluded from precache.
 > Not worth hand-rolling `@font-face` rules to strip ~200 KB from the IPA.
 
+### ⛔ Never sell Credits while the Arbitrage Desk exists
+
+`PRODUCTS` reserves `creditsSmall` / `creditsLarge`. Selling Credits for real money
+**and** letting players trade Credits against a randomly-moving market would make
+this a real-money speculation loop — a regulated combination, whatever the desk is
+called. The two features are individually fine and jointly a problem. If Credits
+ever go on sale, the desk has to be re-examined first.
+
 ### ⛔ Ship v1 with no in-app purchases
 
 `src/content/monetization.ts` defines three `PRODUCTS` ids. **Nothing in the UI
@@ -120,8 +128,23 @@ non-personalized decision.
 
 ### Other fields
 
-- **Age rating:** answer honestly — no violence, no gambling (the market price is not
-  a wager), no user-generated content, no unrestricted web. Ads set the floor.
+- **Age rating:** no violence, no user-generated content, no unrestricted web. Ads
+  set the floor. **Simulated Gambling → None**, and the reasoning matters:
+
+  > Apple defines simulated gambling as *wagering virtual currency on an outcome*,
+  > and explicitly includes betting on races. A **futures desk** — stake Credits,
+  > wait for a clock, win or lose on a price tick — would have qualified, whatever
+  > it was called. It was built, then deliberately replaced.
+  >
+  > The shipped **Arbitrage Desk** is not a wager: you buy Watts into a battery and
+  > choose when to sell them. There is **no stake at risk, no clock, and no forced
+  > settlement** — you can hold indefinitely. The outcome follows from when the
+  > player acts, not from a draw. That's the same category as selling crops at a
+  > good price in a farming game.
+  >
+  > If the desk ever regains a timer, a forced settlement, or a random payout,
+  > this answer has to change. Getting it wrong isn't just a rejection —
+  > misdescribing content can pull a live app.
 - **Export compliance:** the app uses only standard HTTPS. Answer "uses encryption"
   → "only exempt encryption" (the standard OS-provided-HTTPS exemption). No ERN.
 - **Sign-in required?** No. No accounts anywhere, so account-deletion rules don't

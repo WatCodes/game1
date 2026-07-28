@@ -26,11 +26,12 @@ import {
   marketIndex,
 } from '../engine/market';
 import {
-  futuresUnlocked,
-  maxStake,
-  placeFuture,
-  type FuturesSettlement,
-} from '../engine/futures';
+  arbitrageUnlocked,
+  chargeReserve,
+  maxChargeWatts,
+  releaseReserve,
+  reserveCapacity,
+} from '../engine/arbitrage';
 import { effectiveRoutePct, effectiveSellPct, isUnlocked } from '../engine/unlocks';
 import { nextObjective, type Objective } from '../engine/objectives';
 import { showRewardedAd, shouldGrantReward } from '../platform/ads';
@@ -200,17 +201,19 @@ export interface DisplaySnapshot {
     browned: boolean; // grid rail below demand → brownout
     brownoutPct: number; // % output lost to brownout
   };
-  /** The Futures Desk (Agora): speculate on the exogenous half of the price. */
-  futures: {
+  /** The Arbitrage Desk (Agora): store Watts cheap, release them dear. */
+  arbitrage: {
     unlocked: boolean;
     index: number; // current demand index
     history: number[]; // recent samples for the chart, newest last
-    minStake: Num;
-    maxStake: Num;
-    payout: number;
-    windowSeconds: number;
-    /** The open position, if any — plus how it's currently doing. */
-    open: { stake: Num; up: boolean; entryIndex: number; secondsLeft: number; winning: boolean } | null;
+    price: number; // CR/W right now — what a charge costs and a release pays
+    stored: Num; // Watts in the battery
+    capacity: Num;
+    avgPrice: number; // cost basis of what's held
+    maxCharge: Num; // Watts affordable AND fitting right now
+    efficiency: number;
+    /** Realised now if released: proceeds − cost basis. Negative = hold longer. */
+    unrealised: Num;
   };
   ascend: { can: boolean; projected: number; nextEra: string; nextScale: string };
   dispatch: { charge: number; canFire: boolean; peakActive: boolean; peakLeft: number };
@@ -361,7 +364,7 @@ function buildDisplay(s: GameState): DisplaySnapshot {
       browned: brownoutShortfall(s, mods.demandMult) > 0,
       brownoutPct: Math.round((1 - brownoutMult(s, mods.demandMult)) * 100),
     },
-    futures: buildFuturesView(s),
+    arbitrage: buildArbitrageView(s),
     ascend: {
       can: canAscend(s),
       projected: projectedKp(s),
@@ -416,27 +419,22 @@ function buildTierTwistView(s: GameState): DisplaySnapshot['tierTwist'] {
   return { kind: 'none' };
 }
 
-function buildFuturesView(s: GameState): DisplaySnapshot['futures'] {
-  const pos = s.futures;
-  const index = marketIndex(s);
+function buildArbitrageView(s: GameState): DisplaySnapshot['arbitrage'] {
+  const price = gridPrice(s);
+  const { stored, avgPrice } = s.reserve;
   return {
-    unlocked: futuresUnlocked(s),
-    index,
+    unlocked: arbitrageUnlocked(s),
+    index: marketIndex(s),
     history: s.market.indexHistory,
-    minStake: CONFIG.FUTURES_MIN_STAKE,
-    maxStake: maxStake(s),
-    payout: CONFIG.FUTURES_PAYOUT,
-    windowSeconds: CONFIG.FUTURES_WINDOW_SECONDS,
-    open: pos
-      ? {
-          stake: pos.stake,
-          up: pos.up,
-          entryIndex: pos.entryIndex,
-          secondsLeft: Math.max(0, pos.secondsLeft),
-          // Live "if it settled right now" state, so the countdown has tension.
-          winning: pos.up ? index > pos.entryIndex : index < pos.entryIndex,
-        }
-      : null,
+    price,
+    stored,
+    capacity: reserveCapacity(s),
+    avgPrice,
+    maxCharge: maxChargeWatts(s),
+    efficiency: CONFIG.RESERVE_EFFICIENCY,
+    // What releasing everything would actually net, efficiency included — the
+    // number the player needs to decide "hold or sell", shown even when negative.
+    unrealised: stored > 0 ? stored * price * CONFIG.RESERVE_EFFICIENCY - stored * avgPrice : 0,
   };
 }
 
@@ -532,7 +530,8 @@ interface GameStore {
     authorizeNextStage: () => void;
     setRoutePct: (pct: number) => void;
     setSellPct: (pct: number) => void;
-    placeFuturesBet: (stake: number, up: boolean) => void;
+    chargeBattery: (watts: number) => void;
+    releaseBattery: () => void;
     setAccretionFeedRate: (rate: number) => void;
     setRelayAllocation: (pct: number) => void;
     doDispatch: () => void;
@@ -558,21 +557,6 @@ let toastSeq = 0;
 
 const pushToast = (kind: Toast['kind'], text: string) =>
   useGame.setState((st) => ({ toasts: [...st.toasts.slice(-4), { id: ++toastSeq, kind, text }] }));
-
-/**
- * Report a settled futures position. The engine returns the settlement rather
- * than toasting it, so `loop.ts` stays free of any UI dependency.
- */
-export function reportSettlement(r: FuturesSettlement): void {
-  const move = r.exitIndex > r.position.entryIndex ? 'rose' : r.exitIndex < r.position.entryIndex ? 'fell' : 'held';
-  pushToast(
-    r.won ? 'milestone' : 'info',
-    r.won
-      ? `Futures: demand ${move} — +${formatShort(Math.round(r.payout))} CR`
-      : `Futures: demand ${move} — ${formatShort(Math.round(r.position.stake))} CR lost`,
-  );
-  saveToStorage(game);
-}
 
 /** Ambient toasts fire on state transitions, whether from a buy or a tick. */
 function detectTransitions(prev: DisplaySnapshot, next: DisplaySnapshot): void {
@@ -663,11 +647,24 @@ export const useGame = create<GameStore>((set) => {
           refresh();
         }
       },
-      placeFuturesBet: (stake, up) => {
-        if (placeFuture(game, stake, up)) {
-          saveToStorage(game); // an open stake is spent money — never lose it to a crash
+      chargeBattery: (watts) => {
+        if (chargeReserve(game, watts)) {
+          saveToStorage(game); // stored Watts are paid for — never lose them to a crash
           refresh();
         }
+      },
+      releaseBattery: () => {
+        const r = releaseReserve(game);
+        if (!r) return;
+        const sign = r.profit >= 0 ? '+' : '';
+        // Report the loss as plainly as the gain — selling low is a real outcome
+        // of a real decision, and hiding it would make the desk feel rigged.
+        pushToast(
+          r.profit >= 0 ? 'milestone' : 'info',
+          `Released ${formatPower(r.watts)} at ${r.price.toFixed(2)} CR/W — ${sign}${formatShort(Math.round(r.profit))} CR`,
+        );
+        saveToStorage(game);
+        refresh();
       },
       // The two Dispatch Board sliders share a budget: sell + project ≤ 1, and
       // the grid takes whatever's left. Raising one first eats into the grid

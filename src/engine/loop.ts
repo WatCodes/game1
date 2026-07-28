@@ -2,7 +2,7 @@ import type { GameState } from './types';
 import { dispatchGeneration, powerPerSec, runAutomation, tickDispatch } from './economy';
 import { applyStageDecommission } from './megaproject';
 import { tickMarket, tickMarketIndex } from './market';
-import { tickFutures, type FuturesSettlement } from './futures';
+import { settleOvercapacity } from './arbitrage';
 import { researchModifiers, researchRate } from './research';
 import { runSolvers } from './puzzle';
 import { tickBoosts } from './shop';
@@ -14,7 +14,7 @@ import { tickAccretion, tickLaunchWindow } from './tierTwists';
  * clocks (rand is injectable for deterministic tests). Milestones and other
  * derived values are computed on read, not stored.
  */
-export function tick(s: GameState, dt: number, rand: () => number = Math.random): FuturesSettlement | null {
+export function tick(s: GameState, dt: number, rand: () => number = Math.random): void {
   const mods = researchModifiers(s);
   const pps = powerPerSec(s, mods);
   const gain = pps * dt;
@@ -26,10 +26,10 @@ export function tick(s: GameState, dt: number, rand: () => number = Math.random)
   s.runPower += gain;
   s.stats.lifetimePower += gain;
   tickMarket(s, dt);
-  // Index moves before futures settle, so a position resolves against the price
-  // the player can actually see this tick.
   tickMarketIndex(s, dt, rand);
-  const settlement = tickFutures(s, dt);
+  // If generation fell (decommission, brownout, ascension) the battery may now
+  // exceed capacity; refund the spill at cost rather than deleting paid-for Watts.
+  settleOvercapacity(s);
   s.rp += researchRate(s) * dt;
   runAutomation(s, mods);
   tickDispatch(s, dt, rand);
@@ -38,6 +38,4 @@ export function tick(s: GameState, dt: number, rand: () => number = Math.random)
   checkAchievements(s);
   tickLaunchWindow(s, dt, rand);
   tickAccretion(s, dt, pps);
-  // Handed back so the store can toast the result; the engine stays DOM-free.
-  return settlement;
 }

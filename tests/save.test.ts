@@ -158,7 +158,6 @@ describe('migration', () => {
     expect(m.version).toBe(SAVE_VERSION);
     // The new market half defaults to neutral, so nobody's income silently moves.
     expect(m.market.index).toBe(CONFIG.INDEX_MEAN);
-    expect(m.futures ?? null).toBeNull();
     // Everything the player actually earned is untouched.
     expect(m.market.saturation).toBe(0.8);
     expect(m.credits).toBe(5000);
@@ -169,22 +168,41 @@ describe('migration', () => {
     const s = hydrate(m);
     expect(s.market.index).toBe(CONFIG.INDEX_MEAN);
     expect(s.market.indexHistory).toEqual([]);
-    expect(s.futures).toBeNull();
+    expect(s.reserve).toEqual({ stored: 0, avgPrice: 0 });
     expect(s.credits).toBe(5000);
   });
 
-  it('refuses to mint credits from a doctored futures position', () => {
+  it('refunds a futures stake left open when the wager mechanic was removed (v8→v9)', () => {
+    // The Futures Desk shipped briefly and became the Arbitrage Desk. A stake is
+    // deducted on placing, so settling a bet whose rules no longer exist would be
+    // arbitrary — the player gets their Credits back instead.
     const save = JSON.parse(JSON.stringify(serialize(playedState()))) as Record<string, unknown>;
-    const s = hydrate(validateSave({ ...save, futures: { stake: 'lots', up: 'yes' } }));
-    expect(s.futures).toBeNull(); // unparseable → dropped, never settled
+    const before = save.credits as number;
+    const m = validateSave({
+      ...save,
+      version: 8,
+      futures: { stake: 250, up: true, entryIndex: 1, secondsLeft: 20 },
+    });
+    expect(m.version).toBe(SAVE_VERSION);
+    expect(m.credits).toBe(before + 250);
+    expect(hydrate(m).reserve).toEqual({ stored: 0, avgPrice: 0 });
   });
 
-  it('clamps a futures window that has been stretched open', () => {
+  it('ignores a malformed futures remnant instead of refunding garbage', () => {
     const save = JSON.parse(JSON.stringify(serialize(playedState()))) as Record<string, unknown>;
-    const s = hydrate(
-      validateSave({ ...save, futures: { stake: 50, up: true, entryIndex: 1, secondsLeft: 1e9 } }),
-    );
-    expect(s.futures!.secondsLeft).toBe(CONFIG.FUTURES_WINDOW_SECONDS);
+    const before = save.credits as number;
+    const m = validateSave({ ...save, version: 8, futures: { stake: 'lots', up: 'yes' } });
+    expect(m.credits).toBe(before);
+  });
+
+  it('refuses to trust a doctored reserve', () => {
+    const save = JSON.parse(JSON.stringify(serialize(playedState()))) as Record<string, unknown>;
+    const s = hydrate(validateSave({ ...save, reserve: { stored: 'plenty', avgPrice: -5 } }));
+    expect(s.reserve).toEqual({ stored: 0, avgPrice: 0 });
+    // Stored Watts with a nonsense basis are kept but treated as free, never as
+    // a credit-minting negative cost.
+    const s2 = hydrate(validateSave({ ...save, reserve: { stored: 100, avgPrice: -5 } }));
+    expect(s2.reserve.avgPrice).toBe(0);
   });
 
   it('upgrades a v1 save: cooldown dispatch dropped, stages derived from progress', () => {

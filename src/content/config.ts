@@ -66,9 +66,8 @@ export const CONFIG = {
   MARKET_TAU_SECONDS: 20, // how fast the price reacts to a change in sell share
   // Exogenous demand index — the half of the price the player does NOT set.
   // Mean-reverts toward 1 on a random walk, so the market moves on its own
-  // ("a live economy") and there is something honest to speculate on: a bet on
-  // the *delivered price* could always be won by moving the Sell slider after
-  // placing it, because saturation is entirely player-driven.
+  // ("a live economy") instead of merely echoing the Sell slider. It's also what
+  // the Arbitrage Desk trades against: buy the battery cheap, release it dear.
   INDEX_MEAN: 1,
   INDEX_VOLATILITY: 0.055, // per sqrt-second of drift
   INDEX_REVERSION: 0.05, // pull back toward the mean, per second
@@ -76,15 +75,14 @@ export const CONFIG = {
   INDEX_MAX: 1.75,
   INDEX_SAMPLE_SECONDS: 3, // chart resolution
   INDEX_HISTORY: 48, // samples kept (≈2.5 min of chart)
-  // The Futures Desk: stake CR on the index, settle after a fixed window.
-  FUTURES_WINDOW_SECONDS: 45,
-  // <2 so the desk is a net CR sink rather than an income source. Speculation
-  // should be a place to spend a surplus, never the optimal way to earn.
-  FUTURES_PAYOUT: 1.85,
-  FUTURES_MIN_STAKE: 25,
-  // Ceiling as a share of current CR, so it can't become a one-tap all-in.
-  FUTURES_MAX_STAKE_FRACTION: 0.5,
-  UNLOCK_FUTURES_POWER: 25_000, // the desk opens once the market itself matters
+  // The Arbitrage Desk: buy Watts off your own grid, hold, release at a better
+  // price. Skill, not chance — no stake at risk and no forced settlement.
+  // Battery size, as seconds of current generation — scales across tiers for free.
+  RESERVE_CAPACITY_SECONDS: 90,
+  // Round-trip loss, as real batteries have. Also stops "buy and instantly sell"
+  // from being free, so holding for a genuinely better price is the only edge.
+  RESERVE_EFFICIENCY: 0.92,
+  UNLOCK_ARBITRAGE_POWER: 25_000, // the desk opens once the market itself matters
   // Grid rail: keep at least DEMAND_FRACTION of output on the grid or brown out.
   DEMAND_FRACTION: 0.25, // grid demand as a share of your own generation
   BROWNOUT_SEVERITY: 0.5, // output multiplier bottoms at 1−this when the grid is starved

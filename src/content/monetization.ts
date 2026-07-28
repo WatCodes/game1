@@ -21,19 +21,24 @@ export const ADMOB_APP_ID = {
 } as const;
 
 export const ADS = {
+  /** Real rewarded unit for iOS — the platform v1 ships on. */
+  rewardedIos: 'ca-app-pub-2102762899981380/9091279115',
   /**
-   * Google's official public TEST rewarded unit. Safe to ship in development;
-   * swap for the real AdMob unit ids before submitting, and set testing:false.
-   * Using real units with testing:true (or test units in production) is what
-   * gets AdMob accounts suspended, so these two move together.
-   *
-   * ⚠ STILL PLACEHOLDERS. Ad *unit* ids contain a `/`; if what you're pasting
-   * has a `~` it's the App ID (see ADMOB_APP_ID above) and belongs in the native
-   * manifest instead. Create the units in AdMob under each app:
-   * Ad units → Add ad unit → **Rewarded**.
+   * ⚠ STILL GOOGLE'S PUBLIC TEST UNIT. Android is not in v1 (iPhone-only), so
+   * this is harmless for now — but it MUST be replaced with the real Android
+   * rewarded unit before any Play build. `TEST_AD_UNITS` below makes forgetting
+   * fail safe rather than silently serving test ads as real.
    */
-  rewardedIos: 'ca-app-pub-3940256099942544/1712485313',
   rewardedAndroid: 'ca-app-pub-3940256099942544/5224354917',
+  /**
+   * Test mode. **Leave `true` until the moment you archive for submission.**
+   *
+   * Both directions are dangerous, but only one is dangerous *now*: real units
+   * with `testing: true` just serve test ads (safe), whereas `testing: false`
+   * during development means YOU are looking at — and possibly tapping — live
+   * ads on your own inventory, which is the classic way to get an AdMob account
+   * suspended. So this flips last, not first.
+   */
   testing: true,
   /**
    * Request NON-personalized ads only. This is a deliberate product/compliance
@@ -46,6 +51,18 @@ export const ADS = {
    */
   nonPersonalized: true,
 } as const;
+
+/**
+ * Google's public sample unit ids. Shipping one of these with `testing: false`
+ * would send *test* traffic to the live ad network — a policy violation that can
+ * suspend the account. `ads.ts` checks this list and refuses to serve rather
+ * than trusting us to remember, which matters because the Android id above is
+ * still a placeholder.
+ */
+export const TEST_AD_UNITS: readonly string[] = [
+  'ca-app-pub-3940256099942544/1712485313', // rewarded, iOS
+  'ca-app-pub-3940256099942544/5224354917', // rewarded, Android
+];
 
 /**
  * Ads are rewarded-only, by design — Wyatt's brief: no interstitials, nothing

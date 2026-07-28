@@ -88,12 +88,22 @@ In `src/content/monetization.ts`:
 | Constant | Now | Change to |
 |---|---|---|
 | `APP_ID` | `com.watcodes.electriccats` | keep, or your real bundle id (must match `capacitor.config.ts`) |
-| `ADS.rewardedIos` / `rewardedAndroid` | Google's public **test** units | your real AdMob unit ids |
-| `ADS.testing` | `true` | **`false`** |
+| `ADS.rewardedIos` | ✅ real unit `…/9091279115` | done |
+| `ADS.rewardedAndroid` | ⚠️ still Google's **test** unit | real Android unit — **before any Play build** |
+| `ADS.testing` | `true` | **`false`, as the LAST step before archiving** |
 | `ADS.nonPersonalized` | `true` | **leave `true`** — see below |
 
-⚠️ **`ADS.testing` and the unit ids move together.** Real units with `testing: true`,
-or test units in production, is the classic way to get an AdMob account suspended.
+⚠️ **Flip `ADS.testing` last, not first.** The two mistakes are not symmetric:
+
+- Real unit + `testing: true` → serves *test* ads. Harmless.
+- Test unit + `testing: false` → sends test traffic to live inventory. **Suspension risk.**
+- `testing: false` while you're still building → **you** see and may tap live ads on
+  your own inventory. Also a suspension risk, and the easiest one to walk into.
+
+So it stays `true` through development and TestFlight, and flips only in the commit
+you archive from. `TEST_AD_UNITS` in `monetization.ts` backs this up: `ads.ts`
+refuses to serve a known sample unit when `testing` is false, returning
+`unavailable` — which still grants the player their reward. Forgetting fails safe.
 
 **Why `nonPersonalized` stays `true`:** personalized ads count as *tracking*, which
 would require Apple's App Tracking Transparency prompt, an

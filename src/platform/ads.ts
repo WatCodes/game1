@@ -1,4 +1,4 @@
-import { ADS } from '../content/monetization';
+import { ADS, TEST_AD_UNITS } from '../content/monetization';
 import { isNative, loadPlugin, platformName } from './native';
 
 export type RewardResult = 'rewarded' | 'dismissed' | 'unavailable';
@@ -32,6 +32,19 @@ interface AdMobPlugin {
 let initialized = false;
 
 /**
+ * Refuse to serve a Google *sample* unit as live inventory.
+ *
+ * Shipping a test unit with `testing: false` sends test traffic to the real ad
+ * network, which is a policy violation that can suspend an AdMob account. The
+ * Android id is still a placeholder, so this is a live hazard rather than a
+ * hypothetical one — and the cost of the guard is nil, because `unavailable`
+ * already grants the player their reward (see `shouldGrantReward`).
+ */
+function misconfigured(adId: string): boolean {
+  return !ADS.testing && TEST_AD_UNITS.includes(adId);
+}
+
+/**
  * Show a rewarded ad. Never throws and never blocks progression — every
  * failure path resolves to `unavailable`, which still grants the bonus.
  */
@@ -45,6 +58,7 @@ export async function showRewardedAd(): Promise<RewardResult> {
       initialized = true;
     }
     const adId = platformName() === 'ios' ? ADS.rewardedIos : ADS.rewardedAndroid;
+    if (misconfigured(adId)) return 'unavailable'; // fail safe, still rewards
     await plugin.AdMob.prepareRewardVideoAd({
       adId,
       isTesting: ADS.testing,

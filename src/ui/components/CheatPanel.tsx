@@ -1,8 +1,20 @@
 import { useGame, type DevCheat } from '../../store/gameStore';
 
-// Dev tools: visible in `npm run dev`, or on any build with ?dev in the URL.
-export const DEV_MODE =
-  import.meta.env.DEV || (typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('dev'));
+/**
+ * Dev tools: `npm run dev` only.
+ *
+ * There used to be an `|| ?dev` escape hatch here, which meant the shipped web
+ * build and the App Store binary both handed out free Credits, KP and tier
+ * skips to anyone who guessed a five-character URL suffix. An idle game is
+ * *only* its progression curve — a public skip button doesn't cheapen the game
+ * for one player, it makes reviews and retention data meaningless.
+ *
+ * Keeping this a bare `import.meta.env.DEV` also earns something the runtime
+ * check never could: Vite substitutes it with `false` at build time, so the
+ * panel and its cheat table are dead code that never reach the bundle at all.
+ * Not shipped and hidden — not shipped.
+ */
+export const DEV_MODE = import.meta.env.DEV;
 
 const CHEATS: [DevCheat, string][] = [
   ['power', '+1h power'],

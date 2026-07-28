@@ -112,6 +112,19 @@ refuses to serve a known sample unit when `testing` is false, returning
 npm run test && npm run build
 ```
 
+Then confirm the dev console didn't ride along. It's gated on a bare
+`import.meta.env.DEV`, which Vite folds to `false` at build time, so the whole
+panel tree-shakes out — this should print nothing:
+
+```bash
+grep -r "Force-ascend to next tier" dist/assets/
+```
+
+It used to also accept `?dev` in the URL, which put free Credits, KP and
+tier-skips in the shipped binary behind a five-character guess. If anyone
+re-adds a *runtime* check, the code starts shipping again and this grep is how
+you'd notice.
+
 **Why `nonPersonalized` stays `true`:** personalized ads count as *tracking*, which
 would require Apple's App Tracking Transparency prompt, an
 `NSUserTrackingUsageDescription` string, and a "Data Used to Track You" declaration.

@@ -21,15 +21,12 @@ export const ADMOB_APP_ID = {
 } as const;
 
 export const ADS = {
-  /** Real rewarded unit for iOS — the platform v1 ships on. */
-  rewardedIos: 'ca-app-pub-2102762899981380/9091279115',
   /**
-   * ⚠ STILL GOOGLE'S PUBLIC TEST UNIT. Android is not in v1 (iPhone-only), so
-   * this is harmless for now — but it MUST be replaced with the real Android
-   * rewarded unit before any Play build. `TEST_AD_UNITS` below makes forgetting
-   * fail safe rather than silently serving test ads as real.
+   * Real rewarded units. Note the `/` — an id with a `~` is the *App* ID and
+   * belongs in the native manifest instead (see ADMOB_APP_ID above).
    */
-  rewardedAndroid: 'ca-app-pub-3940256099942544/5224354917',
+  rewardedIos: 'ca-app-pub-2102762899981380/9091279115',
+  rewardedAndroid: 'ca-app-pub-2102762899981380/1096670800',
   /**
    * Test mode. **Leave `true` until the moment you archive for submission.**
    *
@@ -55,9 +52,9 @@ export const ADS = {
 /**
  * Google's public sample unit ids. Shipping one of these with `testing: false`
  * would send *test* traffic to the live ad network — a policy violation that can
- * suspend the account. `ads.ts` checks this list and refuses to serve rather
- * than trusting us to remember, which matters because the Android id above is
- * still a placeholder.
+ * suspend the account. Both real units are in place now, so this is a standing
+ * tripwire rather than an active hazard: `ads.ts` checks the list and refuses to
+ * serve, so a future placeholder can never quietly reach production.
  */
 export const TEST_AD_UNITS: readonly string[] = [
   'ca-app-pub-3940256099942544/1712485313', // rewarded, iOS

@@ -27,10 +27,16 @@ describe('test-unit guard', () => {
     expect(TEST_AD_UNITS).toContain('ca-app-pub-3940256099942544/1712485313');
   });
 
-  it('does not ship a sample unit as the real iOS unit', () => {
-    // iOS is the platform v1 launches on; this must be a genuine unit.
-    expect(TEST_AD_UNITS).not.toContain(ADS.rewardedIos);
-    expect(ADS.rewardedIos).toMatch(/^ca-app-pub-\d+\/\d+$/); // unit ids use "/", app ids use "~"
+  it('ships real, correctly-shaped units on both platforms', () => {
+    for (const unit of [ADS.rewardedIos, ADS.rewardedAndroid]) {
+      expect(TEST_AD_UNITS).not.toContain(unit);
+      // Unit ids use "/", App ids use "~" — pasting the wrong one is the single
+      // easiest mistake here, and it fails silently at runtime.
+      expect(unit).toMatch(/^ca-app-pub-\d+\/\d+$/);
+    }
+    // Both units must belong to the same publisher account.
+    const pub = (id: string) => id.split('/')[0];
+    expect(pub(ADS.rewardedAndroid)).toBe(pub(ADS.rewardedIos));
   });
 
   it('keeps testing mode on until the submission build', () => {

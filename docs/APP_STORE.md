@@ -89,7 +89,7 @@ In `src/content/monetization.ts`:
 |---|---|---|
 | `APP_ID` | `com.watcodes.electriccats` | keep, or your real bundle id (must match `capacitor.config.ts`) |
 | `ADS.rewardedIos` | ✅ real unit `…/9091279115` | done |
-| `ADS.rewardedAndroid` | ⚠️ still Google's **test** unit | real Android unit — **before any Play build** |
+| `ADS.rewardedAndroid` | ✅ real unit `…/1096670800` | done |
 | `ADS.testing` | `true` | **`false`, as the LAST step before archiving** |
 | `ADS.nonPersonalized` | `true` | **leave `true`** — see below |
 
@@ -104,6 +104,13 @@ So it stays `true` through development and TestFlight, and flips only in the com
 you archive from. `TEST_AD_UNITS` in `monetization.ts` backs this up: `ads.ts`
 refuses to serve a known sample unit when `testing` is false, returning
 `unavailable` — which still grants the player their reward. Forgetting fails safe.
+
+**This is the very last code change before submitting.** One line, one commit:
+
+```bash
+# in src/content/monetization.ts, set  testing: false  — then:
+npm run test && npm run build
+```
 
 **Why `nonPersonalized` stays `true`:** personalized ads count as *tracking*, which
 would require Apple's App Tracking Transparency prompt, an

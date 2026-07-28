@@ -1,5 +1,6 @@
 import type { GameState, Num } from './types';
 import { CONFIG } from '../content/config';
+import { canAfford } from './formulas';
 import { gridPrice } from './market';
 import { isUnlocked } from './unlocks';
 import { powerPerSec } from './economy';
@@ -58,7 +59,7 @@ export function chargeReserve(s: GameState, watts: Num): boolean {
   if (!Number.isFinite(amount) || amount <= 0) return false;
   const price = gridPrice(s);
   const cost = amount * price;
-  if (cost > s.credits) return false;
+  if (!canAfford(s.credits, cost)) return false;
 
   const prior = s.reserve.stored;
   s.credits -= cost;

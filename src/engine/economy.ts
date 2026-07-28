@@ -2,6 +2,7 @@ import type { GameState, Id, Num, PowerSource } from './types';
 import { CONFIG } from '../content/config';
 import {
   buyMaxCount,
+  canAfford,
   eraMult,
   globalMilestoneMult,
   prestigeMult,
@@ -150,9 +151,9 @@ export function buy(s: GameState, sourceId: Id, count: number | 'max'): number {
   if (!src || !isSourceUnlocked(s, src)) return 0;
   const mult = launchCostMult(s);
   const n = count === 'max' ? maxAffordable(src, s.credits, mult) : count;
-  if (n <= 0) return 0;
+  if (!Number.isFinite(n) || n <= 0) return 0;
   const cost = nextCost(src, n, mult);
-  if (cost > s.credits) return 0;
+  if (!canAfford(s.credits, cost)) return 0;
   s.credits -= cost;
   src.owned += n;
   return n;

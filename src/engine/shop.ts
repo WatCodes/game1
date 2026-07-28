@@ -1,5 +1,6 @@
 import { CONFIG } from '../content/config';
 import type { GameState, Num } from './types';
+import { canAfford } from './formulas';
 
 /** Local calendar day, e.g. "2026-7-6" — daily rewards reset at local midnight. */
 export function dayKey(nowMs: number): string {
@@ -42,28 +43,28 @@ export function solverCost(owned: number): Num {
 
 export function buySolver(s: GameState): boolean {
   const cost = solverCost(s.solvers);
-  if (s.credits < cost) return false;
+  if (!canAfford(s.credits, cost)) return false;
   s.credits -= cost;
   s.solvers += 1;
   return true;
 }
 
 export function buyPowerBoost(s: GameState): boolean {
-  if (s.credits < CONFIG.BOOST_POWER_COST) return false;
+  if (!canAfford(s.credits, CONFIG.BOOST_POWER_COST)) return false;
   s.credits -= CONFIG.BOOST_POWER_COST;
   s.boosts.powerLeft += CONFIG.BOOST_SECONDS;
   return true;
 }
 
 export function buyRpBoost(s: GameState): boolean {
-  if (s.credits < CONFIG.BOOST_RP_COST) return false;
+  if (!canAfford(s.credits, CONFIG.BOOST_RP_COST)) return false;
   s.credits -= CONFIG.BOOST_RP_COST;
   s.boosts.rpLeft += CONFIG.BOOST_SECONDS;
   return true;
 }
 
 export function buyDispatchRecharge(s: GameState): boolean {
-  if (s.credits < CONFIG.DISPATCH_RECHARGE_COST || s.dispatch.charge >= 1) return false;
+  if (!canAfford(s.credits, CONFIG.DISPATCH_RECHARGE_COST) || s.dispatch.charge >= 1) return false;
   s.credits -= CONFIG.DISPATCH_RECHARGE_COST;
   s.dispatch.charge = 1;
   return true;

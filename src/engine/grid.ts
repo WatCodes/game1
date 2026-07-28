@@ -1,6 +1,6 @@
 import type { GameState, Num } from './types';
 import { GRID, gridCapBase, gridCostBase } from '../content/grid';
-import { prestigeMult } from './formulas';
+import { canAfford, prestigeMult } from './formulas';
 
 export type GridLane = 'v' | 'a' | 'r';
 
@@ -44,7 +44,7 @@ export function gridUpgradeCost(s: GameState, lane: GridLane): Num {
 
 export function buyGridUpgrade(s: GameState, lane: GridLane): boolean {
   const cost = gridUpgradeCost(s, lane);
-  if (s.credits < cost) return false;
+  if (!canAfford(s.credits, cost)) return false;
   s.credits -= cost;
   if (lane === 'v') s.grid.vLevel += 1;
   else if (lane === 'a') s.grid.aLevel += 1;

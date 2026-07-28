@@ -3,6 +3,23 @@ import type { Num } from './types';
 
 const EPS = 1e-9; // absorbs float error at exact milestone boundaries
 
+/**
+ * The single affordability test for every spend path.
+ *
+ * It exists because the obvious spellings are unsafe. Every comparison against
+ * NaN evaluates false, so `if (balance < cost) return false` and
+ * `if (cost > balance) return false` both *pass* a NaN balance straight through
+ * and hand out the purchase for free. Affordability has to be asserted
+ * positively — `cost <= balance` fails closed on NaN, which is what we want.
+ *
+ * A non-finite cost is refused outright: there is no purchase to make, and
+ * subtracting Infinity would put NaN into the balance and, from there, into the
+ * save (which `validateSave` then rejects, costing the player their run).
+ */
+export function canAfford(balance: Num, cost: Num): boolean {
+  return Number.isFinite(cost) && cost <= balance;
+}
+
 /** Total cost of buying `count` units when `owned` are already held (geometric series). */
 export function sourceCost(baseCost: Num, costGrowth: number, owned: number, count = 1): Num {
   if (count <= 0) return 0;
@@ -13,8 +30,16 @@ export function sourceCost(baseCost: Num, costGrowth: number, owned: number, cou
 /** Largest affordable purchase count given `budget` power. Inverse of sourceCost. */
 export function buyMaxCount(baseCost: Num, costGrowth: number, owned: number, budget: Num): number {
   const first = baseCost * Math.pow(costGrowth, owned);
-  if (budget < first) return 0;
+  // Negated comparison so a NaN budget falls out here rather than flowing into
+  // the log below and returning NaN units.
+  if (!(budget >= first)) return 0;
   let n = Math.floor(Math.log((budget * (costGrowth - 1)) / first + 1) / Math.log(costGrowth) + EPS);
+  // An infinite budget makes the log infinite, and the verify-and-back-off loop
+  // below can't correct that (Infinity > Infinity is false, so it never runs).
+  // Buying Infinity units would put NaN into `owned` and, from there, into every
+  // output number and the save — which validateSave then rejects, costing the
+  // player the run. Nothing in normal play reaches this, and that's the point.
+  if (!Number.isFinite(n)) return 0;
   // float error can overshoot by one at exact boundaries — verify and back off
   while (n > 0 && sourceCost(baseCost, costGrowth, owned, n) > budget + EPS) n--;
   return n;

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   buyMaxCount,
+  canAfford,
   globalMilestoneCount,
   globalMilestoneMult,
   kpGain,
@@ -50,6 +51,29 @@ describe('buyMaxCount', () => {
       expect(sourceCost(10, 1.13, 12, n)).toBeLessThanOrEqual(budget * (1 + 1e-9));
       expect(sourceCost(10, 1.13, 12, n + 1)).toBeGreaterThan(budget);
     }
+  });
+});
+
+describe('canAfford', () => {
+  it('behaves like <= for ordinary numbers', () => {
+    expect(canAfford(100, 100)).toBe(true);
+    expect(canAfford(100, 99.99)).toBe(true);
+    expect(canAfford(100, 100.01)).toBe(false);
+    expect(canAfford(0, 0)).toBe(true);
+  });
+
+  it('fails closed on NaN — the reason this helper exists', () => {
+    // `balance < cost` and `cost > balance` are both FALSE for NaN, so the
+    // natural spellings let a corrupted balance buy anything for free.
+    expect(canAfford(Number.NaN, 10)).toBe(false);
+    expect(canAfford(100, Number.NaN)).toBe(false);
+    expect(canAfford(Number.NaN, Number.NaN)).toBe(false);
+  });
+
+  it('refuses an infinite cost, but an infinite balance still pays finite costs', () => {
+    expect(canAfford(Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY)).toBe(false);
+    expect(canAfford(100, Number.POSITIVE_INFINITY)).toBe(false);
+    expect(canAfford(Number.POSITIVE_INFINITY, 100)).toBe(true);
   });
 });
 

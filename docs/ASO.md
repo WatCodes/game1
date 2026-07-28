@@ -108,6 +108,11 @@ Board: sell it for Credits at a floating market price, pour it into your Wonder,
 keep the city's lights on. Flood the market and the price sags. Starve the grid and
 you brown out. Balance is the game.
 
+THE MARKET HAS A MIND OF ITS OWN
+Demand rises and falls whether you're watching or not, and it moves what every Watt
+is worth. Run the battery at the Arbitrage Desk: store power while it's cheap, sell
+it back when it isn't. No timers, no stakes — just your read on the chart.
+
 RAISE A WONDER
 Each era is gated by one signature megaproject — the Temple of Zeus, the Nine
 Roads, the Great Sunbed. They're built stage by stage from routed power, gated by
@@ -158,7 +163,8 @@ the rest down.
 | 2 | Dispatch Board expanded | Board open, all three rails non-zero | **Sell it, build with it, or keep the lights on** |
 | 3 | The Wonder | Wonder pop-up, 2–3 stages lit | **Raise a Wonder to climb an era** |
 | 4 | A later age | `?age=5` (Erebus) or a real high-tier save | **Athens to the event horizon** |
-| 5 | While you were away | Backdate a save's `lastSaved` | **The cats keep working** |
+| 5 | Arbitrage Desk | Agora, once the chart has ~30s of history | **Read the market. Time the trade.** |
+| 6 | While you were away | Backdate a save's `lastSaved` | **The cats keep working** |
 
 **Use a fresh tier-0 save for shots 1–3.** The Athens courtyard and readable early
 numbers sell the game; a maxed Aether run shows `1.36e27 W/s`, which means nothing

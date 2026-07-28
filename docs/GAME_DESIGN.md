@@ -344,6 +344,54 @@ a rebalance never re-prices a build already underway; a save without it keeps th
 `ascend` also seeds **CR**, not Watts — the Watt bank has been retired since §3.15, and seeding
 it would strand a player with no money at a new tier.
 
+### 3.18 The demand index & the Arbitrage Desk (`engine/market.ts`, `engine/arbitrage.ts`)
+
+**The market used to only echo the player.** `gridPrice` was `BASE / (1 + saturation)`, and
+saturation is driven entirely by the Sell slider — so the "live economy" moved only when you
+moved it. The **demand index** is the missing half: a mean-reverting random walk (a discrete
+Ornstein–Uhlenbeck step, `√dt`-scaled so it behaves the same at 20 Hz or in one offline slab)
+that multiplies the price. Now the market moves on its own, and watching it matters whether or
+not you ever trade.
+
+    price = BASE_PRICE / (1 + saturation) × index
+            └── you control this ──┘       └── you don't ──┘
+
+**The Arbitrage Desk** (Agora) trades against it: buy Watts off your own grid into a battery
+when demand is low, release them when it's high. Battery capacity is a window of current
+generation (`RESERVE_CAPACITY_SECONDS`), so it scales across tiers with no per-tier table, and
+a weighted-average cost basis is kept so profit — including losses — can be reported honestly.
+
+**`RESERVE_EFFICIENCY` is load-bearing, not flavour.** Without a round-trip loss, store→release
+in the same instant would be free money. At 0.92 an immediate flip loses 8%, so only genuine
+price movement pays. Verified live: 18,884 CR stored and instantly released returned 17,374.
+
+#### Why this is not gambling — and the shape that would make it gambling
+
+This shipped first as a **futures desk**: stake Credits, wait out a clock, win or lose on a
+price tick. That was a mistake. Apple's *Simulated Gambling* rating covers wagering virtual
+currency on an outcome and explicitly includes betting on races; a bet on a price tick is the
+same shape however it's dressed, and misdescribing content can pull a live app.
+
+The replacement is categorically different, and each property is deliberate:
+
+| Wager (removed) | Arbitrage (shipped) |
+|---|---|
+| Stake at risk | You hold **Watts**, not a bet |
+| Fixed settlement clock | **No timer** — hold indefinitely |
+| Outcome from a draw | Outcome from **when you act** |
+| House edge on payout | Round-trip efficiency loss |
+
+A test asserts that five minutes of ticking never touches an open position — the engine cannot
+close it, only the player can. **If the desk ever regains a timer, a forced settlement, or a
+random payout, the age-rating answer must change** (see `docs/APP_STORE.md`).
+
+> ⚠️ **Selling Credits as IAP would re-regulate this.** Real-money currency purchase *plus*
+> trading that currency against a moving market is a speculation loop, even though each half is
+> fine alone. `PRODUCTS.creditsSmall/Large` must stay unshipped while this desk exists.
+
+Also guarded: if generation collapses (decommission, brownout, ascension) the battery shrinks,
+and `settleOvercapacity` refunds the spill **at cost** rather than deleting paid-for Watts.
+
 ---
 
 ## 4. The Kardashev ladder (content: `content/tiers.ts` + `content/sources.ts`)

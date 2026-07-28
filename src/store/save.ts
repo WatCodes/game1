@@ -34,8 +34,8 @@ export interface SaveData {
   decommissionedStages?: number; // absent on pre-v7 saves → grandfathered on load
   routePct: number; // Project rail share (0..1)
   sellPct: number; // Sell rail share (0..1); sellPct + routePct ≤ 1
-  // `index`/`indexHistory`/`sampleIn` and `futures` arrive in v8; both are
-  // optional so a v7 save hydrates with a neutral market and no open position.
+  // `index`/`indexHistory`/`sampleIn` arrive in v8 and `reserve` in v9; both are
+  // optional so a v7 save hydrates with a neutral market and an empty battery.
   market: { saturation: number; index?: number; indexHistory?: number[]; sampleIn?: number };
   reserve?: { stored: number; avgPrice: number };
   dispatch: { charge: number; peakLeft: number; nextPeakIn: number };

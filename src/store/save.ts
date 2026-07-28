@@ -381,11 +381,42 @@ export function validateSave(raw: unknown): SaveData {
 const BACKUP_KEY = 'kardashev:backup';
 let backupLifetime = -1; // lazily learned from storage on first save
 
-export function saveToStorage(s: GameState, now: number = Date.now()): void {
-  if (typeof localStorage === 'undefined') return;
+/**
+ * Every write goes through here, and it never throws.
+ *
+ * `localStorage.setItem` can fail for reasons that have nothing to do with us:
+ * the quota is full, or the WebView is in a mode that reports storage but
+ * refuses writes. An exception escaping a save would abort whatever action
+ * triggered it half-done — and, in the autosave interval, do it every 8s.
+ */
+function writeKey(key: string, value: string): boolean {
+  try {
+    localStorage.setItem(key, value);
+    return true;
+  } catch (err) {
+    console.error(`Save failed writing "${key}"`, err);
+    return false;
+  }
+}
+
+/**
+ * Whether the most recent write failed — i.e. whether saving is broken *right
+ * now*. The UI reads this to warn the player, because the alternative (playing
+ * for hours against storage that is silently discarding every save) is the
+ * worst outcome this file can produce. It clears again if a later write lands,
+ * since a full quota can be freed.
+ */
+let saveFailed = false;
+export const hasSaveFailed = (): boolean => saveFailed;
+
+/** Returns false if progress could NOT be persisted. Never throws. */
+export function saveToStorage(s: GameState, now: number = Date.now()): boolean {
+  if (typeof localStorage === 'undefined') return false;
   s.lastSaved = now;
-  localStorage.setItem(SAVE_KEY, JSON.stringify(serialize(s)));
-  maybeBackup(s);
+  const ok = writeKey(SAVE_KEY, JSON.stringify(serialize(s)));
+  if (ok) maybeBackup(s);
+  saveFailed = !ok;
+  return ok;
 }
 
 /**
@@ -398,8 +429,11 @@ function maybeBackup(s: GameState): void {
     backupLifetime = backupInfo()?.lifetimePower ?? 0;
   }
   if (s.stats.lifetimePower >= backupLifetime) {
-    localStorage.setItem(BACKUP_KEY, JSON.stringify(serialize(s)));
-    backupLifetime = s.stats.lifetimePower;
+    // Only advance the watermark if the write actually landed, so a failed
+    // backup is retried next tick instead of being remembered as done.
+    if (writeKey(BACKUP_KEY, JSON.stringify(serialize(s)))) {
+      backupLifetime = s.stats.lifetimePower;
+    }
   }
 }
 
@@ -433,6 +467,28 @@ export function resetBackupCache(): void {
 }
 
 const RECOVERY_KEY = 'kardashev:recovery';
+const RECOVERY_KEEP = 3;
+
+/**
+ * Recovery snapshots are written on every failed load and never read back by
+ * the game — they exist so a human can rescue a save by hand. Left unbounded
+ * they are a slow storage leak, and a load failure that recurs on every launch
+ * would fill the quota with full copies of the save until the saves that DO
+ * work start failing too. Keep only the newest few.
+ */
+function pruneRecovery(): void {
+  const ls = localStorage;
+  // The test shim (and any minimal Storage polyfill) has no enumeration API.
+  if (typeof ls.length !== 'number' || typeof ls.key !== 'function') return;
+  const prefix = `${RECOVERY_KEY}:`;
+  const keys: string[] = [];
+  for (let i = 0; i < ls.length; i++) {
+    const k = ls.key(i);
+    if (k?.startsWith(prefix)) keys.push(k);
+  }
+  keys.sort((a, b) => Number(a.slice(prefix.length)) - Number(b.slice(prefix.length)));
+  for (const k of keys.slice(0, Math.max(0, keys.length - RECOVERY_KEEP))) ls.removeItem(k);
+}
 
 export function loadFromStorage(): GameState | null {
   if (typeof localStorage === 'undefined') return null;
@@ -444,11 +500,8 @@ export function loadFromStorage(): GameState | null {
     // NEVER lose a save to a load bug: stash the raw payload so it can be
     // recovered (import it, or a fixed build can re-read it), then start fresh.
     console.error('Failed to load save — preserved under kardashev:recovery', err);
-    try {
-      localStorage.setItem(`${RECOVERY_KEY}:${Date.now()}`, raw);
-    } catch {
-      /* storage full — nothing more we can do */
-    }
+    writeKey(`${RECOVERY_KEY}:${Date.now()}`, raw);
+    pruneRecovery();
     return null;
   }
 }

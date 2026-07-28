@@ -36,7 +36,12 @@ export function useGameTick(): void {
     };
     raf = requestAnimationFrame(frame);
 
-    const autosave = window.setInterval(() => saveToStorage(game), CONFIG.AUTOSAVE_INTERVAL_MS);
+    // A save that silently stops working is the worst failure this game has:
+    // the player keeps playing, everything looks fine, and the session is gone
+    // when they close the app. Tell them the moment it happens.
+    const autosave = window.setInterval(() => {
+      if (!saveToStorage(game)) useGame.getState().actions.reportSaveFailure();
+    }, CONFIG.AUTOSAVE_INTERVAL_MS);
 
     /**
      * Hiding saves (stamping `lastSaved`, which marks the start of the away

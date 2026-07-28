@@ -5,9 +5,11 @@ import { buyResearch } from '../src/engine/research';
 import {
   backupInfo,
   exportSave,
+  hasSaveFailed,
   hydrate,
   importSave,
   loadBackup,
+  loadFromStorage,
   migrate,
   resetBackupCache,
   saveToStorage,
@@ -393,5 +395,77 @@ describe('rolling backup', () => {
     expect(recovered).not.toBeNull();
     expect(recovered!.stats.lifetimePower).toBe(5e10);
     expect(recovered!.sources['battery-bank'].owned).toBe(42);
+  });
+});
+
+/**
+ * Storage that refuses writes is not hypothetical on a phone: the quota fills,
+ * or the WebView reports storage it won't actually persist to. The rule is that
+ * this degrades loudly and never takes the game down with it.
+ */
+describe('storage failure', () => {
+  /** A Storage shim with a working enumeration API and a settable write fault. */
+  function installStorage(opts: { failWrites?: boolean } = {}) {
+    const store = new Map<string, string>();
+    const api = {
+      getItem: (k: string) => store.get(k) ?? null,
+      setItem: (k: string, v: string) => {
+        if (api.failWrites) throw new DOMException('quota', 'QuotaExceededError');
+        store.set(k, v);
+      },
+      removeItem: (k: string) => void store.delete(k),
+      key: (i: number) => [...store.keys()][i] ?? null,
+      get length() {
+        return store.size;
+      },
+      failWrites: !!opts.failWrites,
+    };
+    (globalThis as Record<string, unknown>).localStorage = api;
+    resetBackupCache();
+    return { store, api };
+  }
+
+  afterEach(() => {
+    delete (globalThis as Record<string, unknown>).localStorage;
+    resetBackupCache();
+  });
+
+  it('a full quota reports failure instead of throwing', () => {
+    const { api } = installStorage({ failWrites: true });
+    const s = playedState();
+    expect(() => saveToStorage(s, 1000)).not.toThrow();
+    expect(saveToStorage(s, 1000)).toBe(false);
+    expect(hasSaveFailed()).toBe(true);
+    // ...and recovers once there's room again, so the warning isn't permanent.
+    api.failWrites = false;
+    expect(saveToStorage(s, 2000)).toBe(true);
+    expect(hasSaveFailed()).toBe(false);
+  });
+
+  it('a failed backup write is retried rather than remembered as done', () => {
+    const { api } = installStorage();
+    const s = playedState();
+    s.stats.lifetimePower = 5e10;
+    api.failWrites = true;
+    saveToStorage(s, 1000);
+    expect(backupInfo()).toBeNull(); // nothing landed
+    api.failWrites = false;
+    saveToStorage(s, 2000);
+    // The watermark must not have advanced past a write that never happened.
+    expect(backupInfo()?.lifetimePower).toBe(5e10);
+  });
+
+  it('recovery snapshots are capped, not accumulated forever', () => {
+    const { store } = installStorage();
+    // A load failure that recurs on every launch used to write an unbounded
+    // pile of full save copies — a slow leak that eventually breaks the saves
+    // that DO work.
+    for (let i = 0; i < 8; i++) {
+      store.set('kardashev:v1', '{"not":"a valid save"');
+      loadFromStorage();
+    }
+    const recovery = [...store.keys()].filter((k) => k.startsWith('kardashev:recovery:'));
+    expect(recovery.length).toBeLessThanOrEqual(3);
+    expect(recovery.length).toBeGreaterThan(0); // still rescuable by hand
   });
 });

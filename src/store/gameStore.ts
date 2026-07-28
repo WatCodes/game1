@@ -559,6 +559,7 @@ interface GameStore {
     buyShopSolver: () => void;
     buyShopBoost: (kind: 'power' | 'rp' | 'dispatch') => void;
     creditAwayTime: () => void;
+    reportSaveFailure: () => void;
     dismissOffline: () => void;
     claimOfflineDouble: () => Promise<void>;
     dismissCinematic: () => void;
@@ -572,6 +573,7 @@ interface GameStore {
 }
 
 let toastSeq = 0;
+let warnedSaveFailure = false;
 
 const pushToast = (kind: Toast['kind'], text: string) =>
   useGame.setState((st) => ({ toasts: [...st.toasts.slice(-4), { id: ++toastSeq, kind, text }] }));
@@ -794,6 +796,13 @@ export const useGame = create<GameStore>((set) => {
           return;
         }
         set((st) => ({ offline: st.offline ? mergeOffline(st.offline, summary) : summary }));
+      },
+      // Warned at most once per session: repeating it every 8s would bury the
+      // export button that's the actual way out.
+      reportSaveFailure: () => {
+        if (warnedSaveFailure) return;
+        warnedSaveFailure = true;
+        pushToast('error', '⚠ Progress can’t be saved — device storage is full. Export your save from ASCEND → Data.');
       },
       dismissOffline: () => set({ offline: null }),
       // "Watch an ad for ×2": grant the away CR a second time. On native this

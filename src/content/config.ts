@@ -13,6 +13,12 @@ export const CONFIG = {
   BASE_RESEARCH_RATE: 0.5, // RP/sec at start
   OFFLINE_CAP_SECONDS: 28800, // 8h base, raised by research — idle games punish absence at their peril
   OFFLINE_MIN_SECONDS: 30, // gaps shorter than this aren't worth a summary
+  // Returning from a *backgrounded* app is a much more frequent event than a
+  // cold launch — every glance at a text message triggers it. Below this, the
+  // away time is still credited, but as a toast rather than a full-screen
+  // modal. Kept short enough that a reviewer following the App Review note
+  // ("leave the app for two minutes") reliably sees the rewarded-ad placement.
+  RESUME_SUMMARY_SECONDS: 120,
   // Dispatch: charge builds over time; firing early is weak, firing at full
   // charge (or inside a peak-demand window) is the payoff.
   DISPATCH_SECONDS: 30, // burst = pps × this × charge × demand

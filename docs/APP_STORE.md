@@ -173,8 +173,13 @@ non-personalized decision.
   > no in-app purchases in this version. Rewarded video ads (Google AdMob,
   > non-personalized) are strictly optional and never required to progress; if an ad
   > fails to load the bonus is granted anyway. To see the optional ad placement,
-  > close the app for a minute and reopen it — the "while you were away" summary
-  > offers a ×2 reward video.
+  > send the app to the background for two minutes and reopen it — the "while you
+  > were away" summary offers a ×2 reward video.
+
+  The two minutes is `RESUME_SUMMARY_SECONDS`. Shorter absences still pay out, but
+  as a toast instead of a modal, so an app-switch doesn't interrupt play. Keep the
+  note and the constant in step: if that number rises, a reviewer following these
+  words will background the app, see nothing, and file the ad feature as broken.
 
 ## Phase 4 — Device family: iPhone only for v1 (🍎 one checkbox)
 

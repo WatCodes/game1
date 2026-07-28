@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { tick } from '../../engine/loop';
-import { game, publishDisplay } from '../../store/gameStore';
+import { game, publishDisplay, useGame } from '../../store/gameStore';
 import { saveToStorage } from '../../store/save';
 import { CONFIG } from '../../content/config';
 
@@ -37,17 +37,39 @@ export function useGameTick(): void {
     raf = requestAnimationFrame(frame);
 
     const autosave = window.setInterval(() => saveToStorage(game), CONFIG.AUTOSAVE_INTERVAL_MS);
-    const onHide = () => {
-      if (document.visibilityState === 'hidden') saveToStorage(game);
+
+    /**
+     * Hiding saves (stamping `lastSaved`, which marks the start of the away
+     * window); showing credits the span that just elapsed.
+     *
+     * The show half matters more than it looks: a phone suspends the WebView
+     * instead of unloading it, so nothing else in the app ever notices that
+     * hours passed. rAF is paused throughout, so no simulation happened.
+     */
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') {
+        saveToStorage(game);
+        return;
+      }
+      // performance.now() kept advancing while rAF was parked, so rebase the
+      // clock before crediting — otherwise the first frame back also bills a
+      // (clamped) slice of a window the offline path has already paid out.
+      last = performance.now();
+      acc = 0;
+      useGame.getState().actions.creditAwayTime();
     };
+    // beforeunload is unreliable on iOS; pagehide is the one that actually
+    // fires there. Both are cheap, and saving twice is harmless.
     const onUnload = () => saveToStorage(game);
-    document.addEventListener('visibilitychange', onHide);
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('pagehide', onUnload);
     window.addEventListener('beforeunload', onUnload);
 
     return () => {
       cancelAnimationFrame(raf);
       clearInterval(autosave);
-      document.removeEventListener('visibilitychange', onHide);
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('pagehide', onUnload);
       window.removeEventListener('beforeunload', onUnload);
     };
   }, []);

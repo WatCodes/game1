@@ -224,7 +224,13 @@ functions**, never stored — this prevents save/load drift and makes them unit-
   break a save silently — migrate or clearly reset with a notice.
 - **Autosave** every 5–10s and on significant actions (buy-max, research, ascend) and on
   `visibilitychange`/`beforeunload`.
-- **Offline:** on load, run `creditOffline(state, now)` before the first render.
+- **Offline:** on load, run `creditOffline(state, now)` before the first render — **and
+  again on every `visibilitychange` → `visible`.** Load alone is not enough: phones
+  *suspend* a WebView rather than unloading it, so a player who backgrounds the app for
+  four hours returns to the same live page, where nothing would otherwise notice the gap.
+  The hide half of the same handler stamps `lastSaved`, which is what the resume half
+  measures from. `creditOffline` advances `lastSaved` itself, so calling it on every
+  resume cannot double-credit.
 - **Export/Import:** base64-encode the JSON for a copy-paste backup string (a nice cheap
   feature; ship in M5). Validate on import; reject malformed with a clear message.
 - Content (sources/research definitions) is **rehydrated from `content/**`, not stored** —

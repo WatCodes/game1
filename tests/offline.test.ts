@@ -1,8 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { createInitialState } from '../src/engine/state';
 import { creditOffline, offlineCap } from '../src/engine/offline';
 import { buyResearch } from '../src/engine/research';
 import { powerPerSec } from '../src/engine/economy';
+import { saveToStorage } from '../src/store/save';
 import { CONFIG } from '../src/content/config';
 
 const HOUR_MS = 3_600_000;
@@ -97,5 +98,71 @@ describe('creditOffline', () => {
     const summary = creditOffline(s, HOUR_MS)!;
     expect(summary.projectGained).toBeCloseTo(pps * 3600 * 0.5);
     expect(s.megaproject.committed).toBeCloseTo(pps * 3600 * 0.5);
+  });
+});
+
+/**
+ * The phone lifecycle, which is the common one and was silently unhandled: iOS
+ * and Android SUSPEND a WebView rather than unloading it. The page survives, so
+ * the app's one-shot load-time credit never runs again — only an explicit
+ * resume hook can pay out the time away. These lock in the arithmetic that hook
+ * depends on.
+ */
+describe('background → resume', () => {
+  // Node has no localStorage, and saveToStorage no-ops without one — but the
+  // `lastSaved` stamp it writes is exactly what the resume path measures from.
+  function installStorage() {
+    const store = new Map<string, string>();
+    (globalThis as Record<string, unknown>).localStorage = {
+      getItem: (k: string) => store.get(k) ?? null,
+      setItem: (k: string, v: string) => void store.set(k, v),
+      removeItem: (k: string) => void store.delete(k),
+    };
+  }
+
+  afterEach(() => {
+    delete (globalThis as Record<string, unknown>).localStorage;
+  });
+
+  it('credits the whole suspended span, measured from the hide-time save', () => {
+    installStorage();
+    const s = producing(0);
+    const pps = powerPerSec(s);
+    saveToStorage(s, 5_000); // visibilitychange:hidden, 5s into the session
+    const summary = creditOffline(s, 5_000 + HOUR_MS)!; // ...an hour later, resumed
+    expect(summary.seconds).toBe(3600);
+    expect(summary.powerGained).toBeCloseTo(pps * 3600);
+  });
+
+  it('a second resume with no gap pays nothing (no farming the app switcher)', () => {
+    installStorage();
+    const s = producing(0);
+    saveToStorage(s, 5_000);
+    const first = creditOffline(s, 5_000 + HOUR_MS)!;
+    const banked = s.credits;
+    expect(creditOffline(s, 5_000 + HOUR_MS)).toBeNull();
+    expect(s.credits).toBe(banked);
+    expect(first.creditsGained).toBeGreaterThan(0);
+  });
+
+  it('short app-switches are credited but stay below the modal threshold', () => {
+    installStorage();
+    const s = producing(0);
+    saveToStorage(s, 0);
+    // 45s away: past OFFLINE_MIN_SECONDS so it pays, under
+    // RESUME_SUMMARY_SECONDS so the store shows a toast, not a full screen.
+    const summary = creditOffline(s, 45_000)!;
+    expect(summary.seconds).toBe(45);
+    expect(summary.creditsGained).toBeGreaterThan(0);
+    expect(summary.seconds).toBeLessThan(CONFIG.RESUME_SUMMARY_SECONDS);
+  });
+
+  it('a real absence clears the modal threshold, so the ad placement shows', () => {
+    installStorage();
+    const s = producing(0);
+    saveToStorage(s, 0);
+    const summary = creditOffline(s, HOUR_MS)!;
+    expect(summary.seconds).toBeGreaterThanOrEqual(CONFIG.RESUME_SUMMARY_SECONDS);
+    expect(summary.creditsGained).toBeGreaterThan(0);
   });
 });

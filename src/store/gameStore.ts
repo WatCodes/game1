@@ -98,7 +98,7 @@ import {
   loadFromStorage,
   saveToStorage,
 } from './save';
-import { formatPower, formatShort } from '../engine/format';
+import { formatPower, formatShort, formatTime } from '../engine/format';
 
 // ---------------------------------------------------------------------------
 // Authoritative state: a module-level mutable object the loop ticks at 20 Hz.
@@ -494,6 +494,23 @@ function buildPuzzleView(s: GameState): DisplaySnapshot['puzzle'] {
 
 // --- Store ---
 
+/**
+ * Two away windows collapsing into one tally. Needed because the player can
+ * background the app *while the summary is on screen*: the second window's
+ * gain has already been applied to state, so replacing the summary would show
+ * them less CR than they actually earned — and `claimOfflineDouble` pays out
+ * whatever the modal is displaying.
+ */
+function mergeOffline(a: OfflineSummary, b: OfflineSummary): OfflineSummary {
+  return {
+    seconds: a.seconds + b.seconds,
+    powerGained: a.powerGained + b.powerGained,
+    projectGained: a.projectGained + b.projectGained,
+    creditsGained: a.creditsGained + b.creditsGained,
+    puzzlesSolved: a.puzzlesSolved + b.puzzlesSolved,
+  };
+}
+
 export type DevCheat =
   | 'power'
   | 'rp'
@@ -541,6 +558,7 @@ interface GameStore {
     claimDailyReward: () => void;
     buyShopSolver: () => void;
     buyShopBoost: (kind: 'power' | 'rp' | 'dispatch') => void;
+    creditAwayTime: () => void;
     dismissOffline: () => void;
     claimOfflineDouble: () => Promise<void>;
     dismissCinematic: () => void;
@@ -746,6 +764,36 @@ export const useGame = create<GameStore>((set) => {
           saveToStorage(game);
           refresh();
         }
+      },
+      /**
+       * Credit time spent with the app backgrounded. **This is the phone case,
+       * and it is the common one:** iOS and Android suspend a WebView rather
+       * than unloading it, so the module-level `creditOffline` above runs only
+       * on a cold launch. Without this, a player who backgrounds the app for
+       * four hours and returns to a still-live page earns nothing for it — and
+       * never sees the away summary that carries the rewarded-ad placement.
+       *
+       * Safe to call on every resume: `creditOffline` advances `lastSaved`
+       * itself, so it cannot double-credit, and it returns null for gaps too
+       * short to matter.
+       */
+      creditAwayTime: () => {
+        const summary = creditOffline(game, Date.now());
+        if (!summary) return;
+        saveToStorage(game);
+        refresh();
+        if (summary.seconds < CONFIG.RESUME_SUMMARY_SECONDS) {
+          // Glancing at a notification shouldn't feel like coming home from a
+          // trip — credit it, but don't take over the screen to say so.
+          if (summary.creditsGained >= 1) {
+            pushToast(
+              'info',
+              `Away ${formatTime(summary.seconds)} — +${formatShort(Math.floor(summary.creditsGained))} CR`,
+            );
+          }
+          return;
+        }
+        set((st) => ({ offline: st.offline ? mergeOffline(st.offline, summary) : summary }));
       },
       dismissOffline: () => set({ offline: null }),
       // "Watch an ad for ×2": grant the away CR a second time. On native this

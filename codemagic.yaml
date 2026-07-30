@@ -1,12 +1,25 @@
 # Codemagic CI — builds the native apps without you owning a Mac.
 #
 # The trick: Codemagic's iOS machines ARE Macs, so CI runs `npx cap add ios`
-# itself. Nothing native is committed; the shell is generated fresh each build
-# from capacitor.config.ts. See docs/NATIVE.md.
+# itself. See docs/NATIVE.md.
 #
-# The Capacitor packages are installed here rather than being project
-# dependencies, so the web build stays free of native SDKs (src/platform
-# loads plugins at runtime — nothing imports them at build time).
+# STALE AS OF THE iOS SHELL COMMIT — this file used to assume nothing native
+# was committed. Three things changed:
+#   1. `ios/` IS now committed (App/App/Info.plist carries the AdMob
+#      GADApplicationIdentifier by hand). The `|| echo "already present"` below
+#      means `cap add ios` no-ops and the committed shell is used as-is, so
+#      this still works — but the shell is no longer generated per build.
+#   2. The shell uses Swift Package Manager, NOT CocoaPods. The `cocoapods:`
+#      setting below is therefore inert for iOS. Note `build-ipa` already
+#      points at `--project ios/App/App.xcodeproj`, which is correct for SPM
+#      (under CocoaPods it would have needed `--workspace App.xcworkspace`).
+#   3. `npm run native:install` uses plain `npm i`, so the Capacitor packages
+#      are now saved in package.json dependencies. The `--no-save` installs
+#      below are redundant but harmless. The web build is still free of native
+#      SDKs — src/platform loads plugins at runtime, and bundle size is
+#      unchanged (289.94 kB) with the packages installed.
+#
+# android/ is still gitignored and still generated fresh each build.
 
 definitions:
   scripts:

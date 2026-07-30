@@ -46,10 +46,47 @@ per build and never committed (they're in `.gitignore`).
 Both workflows run typecheck, lint and the test suite before building, so a
 broken build never reaches a device.
 
-> Once you need to hand-edit native config — the AdMob `GADApplicationIdentifier`
-> in `Info.plist`, app icons, capabilities — generating the shell each build stops
-> being enough. At that point run `npx cap add ios` once, drop `ios/` and
-> `android/` from `.gitignore`, and commit them.
+> **This has now happened for iOS.** `ios/` is committed, because
+> `App/App/Info.plist` carries the AdMob `GADApplicationIdentifier` by hand and a
+> fresh `cap add ios` would not recreate it. `android/` is still gitignored and
+> still generated per build.
+
+## 1c. Xcode Cloud — the third CI, and the one that actually matters
+
+There is also an **Xcode Cloud** workflow (`App | Default | Archive - iOS`),
+configured in App Store Connect rather than in this repo. It triggers on pushes
+and archives straight to TestFlight.
+
+**Why it's worth preferring over the local Mac:** Xcode Cloud runs on Apple's
+own machines with a current Xcode. The Mac this was set up on is a 2018 Intel
+MacBook Pro, which tops out at **Xcode 26.3** — Xcode 26.4+ requires macOS Tahoe
+26.2, which Intel cannot run. Since Apple has required the iOS 26 SDK for all
+App Store uploads since 2026-04-28, that machine is roughly one release cycle
+from being unable to ship at all. Xcode Cloud has no such ceiling.
+
+**The catch, and why `ci_scripts/` exists:** Xcode Cloud clones the repo and runs
+`xcodebuild` directly — it never runs npm. But the iOS shell uses Swift Package
+Manager, and `ios/App/CapApp-SPM/Package.swift` references the Capacitor plugins
+by relative path into `node_modules/`, which is gitignored. Without a hook the
+build fails before compiling anything:
+
+```
+Could not resolve package dependencies: the package at
+'/Volumes/workspace/repository/node_modules/@capacitor/status-bar'
+cannot be accessed (... doesn't exist in file system)
+```
+
+`ci_scripts/ci_post_clone.sh` fixes this: installs Node, `npm ci`, `npm run
+build`, `npx cap sync ios`. It is the Xcode Cloud equivalent of the dependency
+and web-build steps `codemagic.yaml` performs for Codemagic.
+
+> The script is duplicated at `ios/App/ci_scripts/ci_post_clone.sh`, which
+> forwards to the root copy. Xcode Cloud looks for `ci_scripts/` either at the
+> repository root or beside the Xcode project, and the documentation on which is
+> ambiguous. Once a build log shows which one fired, delete the other.
+
+**Three CI systems now exist** — Codemagic, Xcode Cloud, and Cloudflare Workers
+for the web build. Only the last is verified green. Worth consolidating.
 
 ## 2. One-time setup (only if building locally)
 

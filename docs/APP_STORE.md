@@ -3,6 +3,10 @@
 Ordered so that everything not needing a Mac happens first. Listing copy lives in
 [ASO.md](ASO.md); native build mechanics in [NATIVE.md](NATIVE.md).
 
+> **Sitting at the Mac now?** [MAC_DAY.md](MAC_DAY.md) is the executable version
+> of Phases 4–6 below — a self-contained, agent-followable runbook with the ids
+> inline, verification after each step, and the human-only steps marked.
+
 **Legend:** ⬜ doable on Windows now · 🍎 needs the Mac · ⛔ blocker
 
 ---

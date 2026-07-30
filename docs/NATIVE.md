@@ -55,10 +55,15 @@ broken build never reaches a device.
 
 ```bash
 npm run native:install     # capacitor core/cli/ios/android + admob plugin
-npx cap init               # accepts the values already in capacitor.config.ts
 npx cap add android        # on Windows or Mac
-npx cap add ios            # Mac only
+npx cap add ios            # Mac only (needs CocoaPods)
 ```
+
+> ⚠️ **Do not run `npx cap init`.** That command's job is to *create*
+> `capacitor.config.ts`, and this repo already has one carrying the parchment
+> `backgroundColor`, the `contentInset` and the StatusBar style. Re-initialising
+> can overwrite it (and emit a `.json` instead), silently undoing the fix for the
+> near-black launch flash. `cap add` reads the existing config and is all you need.
 
 `capacitor.config.ts` is deliberately untyped and imports nothing, so it can sit
 in the repo without `@capacitor/cli` being a dependency. Once the packages are
@@ -74,9 +79,9 @@ Everything to change lives in **`src/content/monetization.ts`**:
 
 | Constant | Currently | Change to |
 |---|---|---|
-| `APP_ID` | `com.watcodes.electriccats` | your real bundle id (must match `capacitor.config.ts`) |
-| `ADS.rewardedIos` / `rewardedAndroid` | Google's public **test** unit ids | your real AdMob unit ids |
-| `ADS.testing` | `true` | **`false`** before submitting |
+| `APP_ID` | `com.watcodes.electriccats` | keep, or your real bundle id (must match `capacitor.config.ts`) |
+| `ADS.rewardedIos` / `rewardedAndroid` | ✅ real AdMob units, both platforms | done |
+| `ADS.testing` | `true` | **`false`**, in the commit you archive from — not before |
 | `ADS.nonPersonalized` | `true` | **leave `true`** — personalized ads would require an ATT prompt (see APP_STORE.md) |
 | `PRODUCTS.*` | placeholder skus | **nothing for v1** — ship without IAP; a declared-but-unbuilt purchase path is a 2.1 rejection |
 

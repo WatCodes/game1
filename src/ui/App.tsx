@@ -23,6 +23,8 @@ import { Courtyard } from './components/Courtyard';
 import { Popup } from './components/Popup';
 import { RightRail, type RailId } from './components/RightRail';
 import { SoundToggle } from './components/SoundToggle';
+import { HelpButton } from './components/HelpButton';
+import { HelpPanel } from './components/HelpPanel';
 import { StrandedBanner } from './components/StrandedBanner';
 
 const TITLES: Record<RailId, string> = {
@@ -41,6 +43,10 @@ const TITLES: Record<RailId, string> = {
 export default function App() {
   useGameTick();
   const [popup, setPopup] = useState<RailId | null>(null);
+  // Help is its own flag rather than another RailId: it is not a game system,
+  // it has no rail button, and widening RailId would put it in the badge and
+  // title maps where it does not belong.
+  const [helpOpen, setHelpOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   const canAscend = useGame((s) => s.display.ascend.can);
   const dailyReady = useGame((s) => s.display.shop.canClaimDaily);
@@ -88,6 +94,12 @@ export default function App() {
         </header>
 
         <SoundToggle />
+        <HelpButton
+          onOpen={() => {
+            setPopup(null); // never stack two panels
+            setHelpOpen(true);
+          }}
+        />
 
         <RightRail
           active={popup}
@@ -96,7 +108,7 @@ export default function App() {
         />
 
         {/* Bottom sheet: peek shows the header, tap to expand the full list. */}
-        {!popup && (
+        {!popup && !helpOpen && (
           <div
             className="absolute inset-x-0 bottom-0 z-20 rounded-t-[20px] border-t border-line"
             style={{
@@ -124,6 +136,12 @@ export default function App() {
               </div>
             )}
           </div>
+        )}
+
+        {helpOpen && (
+          <Popup title="FIELD MANUAL" onClose={() => setHelpOpen(false)}>
+            <HelpPanel />
+          </Popup>
         )}
 
         {popup && (

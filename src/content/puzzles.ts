@@ -1,14 +1,19 @@
-// Per-tier skin for the Load Balancer — same lights-out mechanic, escalating
-// fiction. Tap a district to shed its load (and its neighbors'); balance them all.
+// Per-tier skin for Feeder Balance — same constraint mechanic, escalating
+// fiction. Every row and column carries each load level once; the ‹ › marks
+// between neighbours say which of the pair must draw more.
+//
+// Flavour deliberately never spells out "row" and "column": the panel's rule
+// line teaches that once, and restating it in eight voices reads as
+// instructions rather than as a world.
 const SKINS: [string, string][] = [
-  ['Athens Wards', 'The wards are drawing too much. Tap one to shed its load — it ripples to the neighbours. Settle them all.'],
-  ['Colony Dispatch', 'Even out the feeders — every colony must sit in the green band.'],
-  ['World Hearth Trim', 'Damp the hot blocks; each tap cools its cluster. Settle the whole hearth.'],
-  ['Orbital Load Board', 'Balance the truss buses so no docking ring browns out.'],
-  ['Swarm Regulator', 'Trim the statite array — no cell may run hot.'],
-  ['Ergosphere Governor', 'Tame the frame-drag taps; leave none over-drawn.'],
-  ['Galactic Load Web', 'Shed load across the arms until the whole web runs cool.'],
-  ['Lattice Damper', 'Quiet every over-resonant kernel node.'],
+  ['Athens Wards', 'No two wards on a line may draw the same. Mind the marks — they say who outdraws whom.'],
+  ['Colony Dispatch', 'Every feeder takes its own share. The marks fix the pecking order between neighbours.'],
+  ['World Hearth Trim', 'One draw of each along every run. The marks name the greater of each pair.'],
+  ['Orbital Load Board', 'Each truss bus carries its own tap. Respect the marks between adjacent rings.'],
+  ['Swarm Regulator', 'No statite doubles up along a line. The marks rank each neighbouring pair.'],
+  ['Ergosphere Governor', 'Each frame-drag tap sits at its own depth. The marks hold the order between them.'],
+  ['Galactic Load Web', 'One draw of each per arm. The marks decide which node runs hotter.'],
+  ['Lattice Damper', 'Every kernel node takes a distinct amplitude. The marks fix the gradient.'],
 ];
 
 export function puzzleSkin(tier: number): { name: string; flavor: string } {
@@ -16,6 +21,6 @@ export function puzzleSkin(tier: number): { name: string; flavor: string } {
   if (skin) return { name: skin[0], flavor: skin[1] };
   return {
     name: `Exotic Regulator Δ-${tier - 7}`,
-    flavor: 'Balance the impossible.',
+    flavor: 'One draw of each, and every mark obeyed.',
   };
 }

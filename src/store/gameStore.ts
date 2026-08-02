@@ -74,7 +74,7 @@ import {
 } from '../engine/megaproject';
 import { ascend, canAscend, projectedKp } from '../engine/ascension';
 import { creditOffline, type OfflineSummary } from '../engine/offline';
-import { newPuzzle, puzzleReward, tapCell } from '../engine/puzzle';
+import { conflictCells, newPuzzle, puzzleReward, tapCell } from '../engine/puzzle';
 import { tick } from '../engine/loop';
 import {
   buyDispatchRecharge,
@@ -223,7 +223,11 @@ export interface DisplaySnapshot {
     name: string;
     flavor: string;
     size: number;
-    cells: boolean[]; // true = over-loaded district
+    cells: number[]; // 0 = unset, 1..size = load level
+    givens: boolean[]; // fixed by the board; not tappable
+    across: number[]; // 0 none, 1 '<', 2 '>' — between (r,c) and (r,c+1)
+    down: number[]; // same, between (r,c) and (r+1,c)
+    conflicts: number[]; // cell indices currently breaking a rule
     moves: number;
     par: number;
     solved: boolean;
@@ -481,6 +485,13 @@ function buildPuzzleView(s: GameState): DisplaySnapshot['puzzle'] {
     flavor: skin.flavor,
     size: s.puzzle.size,
     cells: [...s.puzzle.cells],
+    givens: [...s.puzzle.givens],
+    across: [...s.puzzle.across],
+    down: [...s.puzzle.down],
+    // Recomputed per snapshot rather than stored: conflicts are a pure function
+    // of the board, and keeping them out of PuzzleState means a save can never
+    // carry a stale "you are wrong" marker.
+    conflicts: conflictCells(s.puzzle),
     moves: s.puzzle.moves,
     par: s.puzzle.par,
     solved: s.puzzle.solved,

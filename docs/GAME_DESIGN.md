@@ -142,24 +142,53 @@ One signature megaproject per Kardashev tier — the ascension gate.
 - Burst power goes to stored power/run-power; the megaproject's stage-authorization gate is
   what keeps dispatch from rushing ascensions.
 
-### 3.8 Circuit puzzles (`engine/puzzle.ts`, skins in `content/puzzles.ts`)
+### 3.8 Feeder Balance (`engine/puzzle.ts`, skins in `content/puzzles.ts`)
 
-The active "brain" beat — a logic mini-game, reskinned per tier ("Relay Yard" →
-"Planck Lattice"), never required for progression.
+The active "brain" beat — a constraint mini-game, reskinned per tier ("Athens
+Wards" → "Lattice Damper"), never required for progression.
 
-- **Mechanic:** rotate wire tiles on an N×N grid until the source powers every
-  district (sink). Generated as a recursive-backtracker spanning tree (every tile is
-  part of one circuit), then rotation-scrambled with a computed `par`. Powered tiles
-  light up live as you rotate. Grid grows with tier: 4×4 → 7×7 (cap).
+> **History.** This section described a wire-rotation circuit puzzle long after
+> the shipped mechanic had become Lights Out, and Lights Out was then replaced by
+> the Futoshiki-style board below. If you change the mechanic again, change this
+> paragraph in the same commit.
+
+- **Mechanic:** an N×N board where every row and column must carry each load level
+  `1..N` exactly once, and marked pairs of neighbours carry a `<` / `>` saying which
+  of the two draws more. Tapping a cell cycles it `0 → 1 → … → N → 0`. Some cells are
+  **givens** (fixed, untappable). Board grows with tier: 4×4 → 7×7 (cap).
+- **Why Futoshiki and not sudoku:** the inequalities make the deduction *relational*
+  ("this feeder outdraws that one") rather than positional, which is both a
+  genuinely different puzzle and a much better fit for a grid-management fiction
+  than digits-in-boxes.
+- **Generation** (`newPuzzle`): draw a random Latin square by permuting a cyclic
+  base — rows, columns and symbol labels shuffled independently — then read the
+  inequalities off that solution and reveal a subset of cells as givens. It cannot
+  fail and needs no backtracking, so dealing a board is O(N²).
+- **Winning:** `isSolved` accepts **any** complete assignment satisfying every row,
+  column and clue — not just the one the generator drew. That means generation never
+  has to prove uniqueness (far too slow at 7×7 on a phone) and the player is never
+  told they solved the wrong valid board.
+- **Difficulty** scales two ways at once: size (`puzzleSize`) and how much is
+  pre-filled (`PUZZLE_GIVEN_FRACTION`/`_DECAY`/`_FLOOR`, and the same trio for
+  `PUZZLE_CLUE_*`). Both have floors — a 7×7 with almost no clues stops being a
+  puzzle and becomes a search.
+- **`par`** is the sum of the blanks' target values. Because cycling makes a value
+  `v` cost exactly `v` taps, that is a true lower bound rather than an estimate,
+  which keeps the efficiency bonus fair on a board with several valid solutions.
 - **Payout per manual solve:** Credits (`PUZZLE_BASE_REWARD + PUZZLE_TIER_REWARD × tier`,
   ×`PUZZLE_BONUS_MULT` if solved within `par + slack` moves) **plus** a
   **Grid Surge** — ×`SURGE_MULT` global power for `SURGE_MANUAL_SECONDS` (stacking,
   capped). The surge is the "strong bonus, never a wall" hook to the main loop.
-- **Auto-Solvers (shop):** each unit solves one circuit per `SOLVER_SECONDS` in the
+- **Auto-Solvers (shop):** each unit solves one board per `SOLVER_SECONDS` in the
   background at `SOLVER_REWARD_FACTOR` of the manual base and a shorter surge. Enough
   of them (~6) keep the surge lit permanently — the layer plays itself.
-- Free re-deal at any time (no reward). Puzzle re-deals on ascension; Credits,
+- Free re-deal at any time (no reward). Board re-deals on ascension; Credits,
   solvers, and streak persist.
+- **Saves:** `PuzzleState` changed shape, so pre-Feeder-Balance boards fail
+  `isValidPuzzle` in `store/save.ts` and a fresh board is dealt. That is the
+  migration — deliberately no `SAVE_VERSION` bump, since nothing else in the save is
+  affected and a real migration would have to invent a valid clue layout from
+  nothing.
 
 ### 3.9 Shop & daily rewards (`engine/shop.ts`)
 

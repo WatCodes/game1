@@ -41,7 +41,9 @@ function playedState() {
   s.launchWindow = { active: true, timeLeft: 12, nextIn: 0 };
   s.accretion = { feedRate: 0.6, heat: 0.3 };
   s.relay = { researchAllocation: 0.25 };
-  s.puzzle.cells[0] = !s.puzzle.cells[0];
+  // Dirty a blank feeder so the round trip has a partly-filled board to carry.
+  const blank = s.puzzle.givens.findIndex((g) => !g);
+  s.puzzle.cells[blank] = 1;
   s.puzzle.moves = 5;
   s.lastSaved = 555_000;
   return s;
@@ -233,6 +235,36 @@ describe('migration', () => {
     // v3 additions get sane defaults, including a freshly dealt board
     expect(restored.credits).toBe(100 * CONFIG.BASE_PRICE); // v7 power→CR
     expect(restored.puzzle.cells.length).toBe(restored.puzzle.size ** 2);
+  });
+
+  it('discards a Lights Out board and deals a fresh one, keeping everything else', () => {
+    // A save written before Feeder Balance: same SAVE_VERSION, but the board
+    // carries the old shape (boolean cells, no givens or clue arrays). There is
+    // no migration for this by design — the validator rejects it and hydrate
+    // deals fresh, which is why a mechanic swap needs no version bump.
+    const s = playedState();
+    const save = JSON.parse(JSON.stringify(serialize(s))) as Record<string, unknown>;
+    save.puzzle = {
+      tier: 0,
+      size: 4,
+      cells: new Array(16).fill(false), // booleans, not load levels
+      moves: 9,
+      par: 4,
+      solved: false,
+    };
+
+    const restored = hydrate(validateSave(save));
+
+    // The board is replaced wholesale...
+    expect(restored.puzzle.cells.every((c) => typeof c === 'number')).toBe(true);
+    expect(restored.puzzle.givens).toHaveLength(restored.puzzle.size ** 2);
+    expect(restored.puzzle.across).toHaveLength(restored.puzzle.size * (restored.puzzle.size - 1));
+    expect(restored.puzzle.moves).toBe(0); // not the stale 9
+    // ...and nothing else in the save is collateral damage.
+    expect(restored.credits).toBe(s.credits);
+    expect(restored.solvers).toBe(s.solvers);
+    expect(restored.stats.puzzlesSolved).toBe(s.stats.puzzlesSolved);
+    expect(restored.daily).toEqual({ lastClaimDay: '2026-7-5', streak: 3 });
   });
 
   it('upgrades a v2 save: puzzle/shop economy seeded with defaults', () => {

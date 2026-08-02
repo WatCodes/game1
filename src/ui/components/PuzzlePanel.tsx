@@ -1,14 +1,20 @@
 import { useGame } from '../../store/gameStore';
 import { formatTime } from '../../engine/format';
 
+const LESS_THAN = 1;
+
 /**
- * The Works (design 6a). The mockup drew a circuit-rotation board; the shipped
- * mechanic is the lights-out Load Balancer, so this takes the *treatment* —
- * 10px tiles, gold-tinted and glowing when over-loaded, white and quiet when
- * settled — with the moves / reward / surge meta row underneath.
+ * The Works — Feeder Balance.
  *
- * Tiles are grid fractions rather than the mockup's fixed 58px, because the
- * board grows to 7×7 at higher tiers and would overflow the panel.
+ * The board is laid out on an interleaved grid: 2N-1 tracks each way, where the
+ * even tracks are cells and the odd ones are thin lanes holding the inequality
+ * marks. Drawing the marks *between* cells rather than inside them is the whole
+ * reason for the extra tracks — a mark crammed into the corner of the tile it
+ * constrains reads as decoration rather than as a rule about a pair.
+ *
+ * Tiles keep the previous treatment (10px radius, amber when carrying load) so
+ * the panel still belongs to the rest of the game after the mechanic change,
+ * and stay grid fractions rather than fixed px because the board reaches 7×7.
  */
 export function PuzzlePanel() {
   const puzzle = useGame((s) => s.display.puzzle);
@@ -16,45 +22,99 @@ export function PuzzlePanel() {
   const tapPuzzleCell = useGame((s) => s.actions.tapPuzzleCell);
   const dealNewPuzzle = useGame((s) => s.actions.dealNewPuzzle);
 
-  const overloaded = puzzle.cells.filter(Boolean).length;
+  const { size } = puzzle;
+  const conflicts = new Set(puzzle.conflicts);
+  const blanks = puzzle.cells.filter((v, i) => v === 0 && !puzzle.givens[i]).length;
+
+  // 1fr per cell, a narrow lane between each pair, both axes.
+  const tracks = Array.from({ length: size * 2 - 1 }, (_, i) => (i % 2 === 0 ? 'minmax(0,1fr)' : '13px')).join(' ');
 
   return (
     <div className="flex flex-col gap-3 px-4 py-3.5">
       <p className="text-center font-body text-[11.5px] italic text-ink-dim">{puzzle.flavor}</p>
 
       <div
-        className="mx-auto grid w-full max-w-[300px] gap-1.5"
-        style={{ gridTemplateColumns: `repeat(${puzzle.size}, minmax(0, 1fr))` }}
+        className="mx-auto grid w-full max-w-[320px]"
+        style={{ gridTemplateColumns: tracks, gridTemplateRows: tracks }}
         role="grid"
-        aria-label={`${puzzle.name}, ${overloaded} districts over-loaded`}
+        aria-label={`${puzzle.name}, ${size} by ${size}, ${blanks} feeders unset`}
       >
-        {puzzle.cells.map((hot, i) => (
-          <button
-            key={i}
-            className="flex aspect-square items-center justify-center rounded-[10px] transition-all active:scale-90"
-            style={
-              hot
-                ? {
-                    background: 'rgba(184,137,47,.16)',
-                    border: '1.5px solid var(--amber)',
-                    boxShadow: '0 0 10px rgba(184,137,47,.4)',
-                  }
-                : { background: 'var(--bg-raised)', border: '1.5px solid var(--grid-line)' }
-            }
-            onClick={() => tapPuzzleCell(i)}
-            disabled={puzzle.solved}
-            aria-label={`District ${i + 1}: ${hot ? 'over-loaded' : 'balanced'}`}
-          >
-            {/* Deep gold, not the light gradient — on a gold-tinted tile the
-                pale fill all but disappears. */}
-            {hot && (
-              <span
-                className="bolt-shape flick block h-5 w-3"
-                style={{ background: 'linear-gradient(var(--amber), var(--gold-deep))' }}
-              />
-            )}
-          </button>
-        ))}
+        {puzzle.cells.map((value, i) => {
+          const r = Math.floor(i / size);
+          const c = i % size;
+          const given = puzzle.givens[i];
+          const bad = conflicts.has(i);
+
+          return (
+            <button
+              key={`c${i}`}
+              className="flex aspect-square items-center justify-center rounded-[10px] font-mono text-[15px] font-semibold transition-all active:scale-90"
+              style={{
+                gridRow: r * 2 + 1,
+                gridColumn: c * 2 + 1,
+                // Three states, distinct at a glance: a given is furniture
+                // (solid, dim, unclickable), a conflict is loud, and a normal
+                // filled cell is the amber the rest of the game already uses.
+                background: bad
+                  ? 'rgba(191,90,62,.16)'
+                  : !given && value
+                    ? 'rgba(184,137,47,.16)'
+                    : 'var(--bg-raised)',
+                border: `1.5px solid ${
+                  bad ? 'var(--danger)' : !given && value ? 'var(--amber)' : 'var(--grid-line)'
+                }`,
+                color: bad ? 'var(--danger)' : given ? 'var(--text-dim)' : 'var(--amber)',
+                boxShadow: !bad && !given && value ? '0 0 10px rgba(184,137,47,.35)' : undefined,
+                opacity: given ? 0.85 : 1,
+              }}
+              onClick={() => tapPuzzleCell(i)}
+              disabled={puzzle.solved || given}
+              aria-label={
+                `Feeder row ${r + 1} column ${c + 1}: ` +
+                (value === 0 ? 'unset' : `load ${value}`) +
+                (given ? ', fixed' : '') +
+                (bad ? ', conflicting' : '')
+              }
+            >
+              {value === 0 ? '' : value}
+            </button>
+          );
+        })}
+
+        {/* Horizontal marks: the lane between (r,c) and (r,c+1). */}
+        {puzzle.across.map((clue, k) => {
+          if (!clue) return null;
+          const r = Math.floor(k / (size - 1));
+          const c = k % (size - 1);
+          return (
+            <span
+              key={`a${k}`}
+              className="flex select-none items-center justify-center font-mono text-[12px] leading-none text-ink-dim"
+              style={{ gridRow: r * 2 + 1, gridColumn: c * 2 + 2 }}
+              aria-hidden
+            >
+              {clue === LESS_THAN ? '<' : '>'}
+            </span>
+          );
+        })}
+
+        {/* Vertical marks: the opening faces the larger of the pair, exactly as
+            the horizontal ones do, so both read as one notation. */}
+        {puzzle.down.map((clue, k) => {
+          if (!clue) return null;
+          const r = Math.floor(k / size);
+          const c = k % size;
+          return (
+            <span
+              key={`d${k}`}
+              className="flex select-none items-center justify-center font-mono text-[12px] leading-none text-ink-dim"
+              style={{ gridRow: r * 2 + 2, gridColumn: c * 2 + 1 }}
+              aria-hidden
+            >
+              {clue === LESS_THAN ? '∧' : '∨'}
+            </span>
+          );
+        })}
       </div>
 
       {/* moves · reward · surge */}
@@ -84,7 +144,7 @@ export function PuzzlePanel() {
           }}
           onClick={dealNewPuzzle}
         >
-          BALANCED — DEAL A NEW GRID
+          BALANCED — DEAL A NEW BOARD
         </button>
       ) : (
         <button
@@ -107,9 +167,12 @@ export function PuzzlePanel() {
             <span style={{ width: `${(puzzle.solverProgress % 1) * 100}%` }} />
           </div>
         )}
+        {/* The one place the rule is stated plainly. Skin flavour only hints at
+            it; this is what a stuck player actually reads. */}
         <p className="mt-2 font-body text-[10.5px] leading-snug text-ink-dim">
-          Tap a district to shed its load — it ripples to the neighbours. Settle them all to earn Credits and light the
-          Grid Surge.
+          Tap a feeder to cycle its load. Every row and column carries each level 1–{size} exactly once, and a mark
+          between two feeders opens toward the one drawing more. Fill the board to earn Credits and light the Grid
+          Surge.
         </p>
       </div>
     </div>

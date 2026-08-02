@@ -60,12 +60,29 @@ export interface Megaproject {
   decommissionedStages: number; // stages whose source-dismantle cost already fired
 }
 
+/**
+ * Feeder Balance — a Futoshiki-style constraint board.
+ *
+ * Every row and column must carry each load level 1..size exactly once, and
+ * every marked pair of neighbours must respect its `<` / `>`. Cells the player
+ * fills cycle 0 → 1 → … → size → 0.
+ */
 export interface PuzzleState {
   tier: number;
   size: number;
-  cells: boolean[]; // size×size, row-major; true = over-loaded district
+  cells: number[]; // size×size, row-major; 0 = unset, 1..size = load level
+  givens: boolean[]; // same indexing; true = fixed by the board, not tappable
+  /**
+   * Inequalities between orthogonally adjacent cells. 0 = no clue, 1 = the
+   * lower-indexed cell must be LESS than its partner, 2 = greater.
+   *
+   * `across[r * (size - 1) + c]` relates (r,c) to (r,c+1).
+   * `down[r * size + c]` relates (r,c) to (r+1,c).
+   */
+  across: number[];
+  down: number[];
   moves: number;
-  par: number; // minimal taps from the dealt board
+  par: number; // minimum taps to fill every blank from the dealt board
   solved: boolean; // latched until a new board is dealt
 }
 

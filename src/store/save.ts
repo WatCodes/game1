@@ -100,7 +100,13 @@ export function serialize(s: GameState): SaveData {
     accretion: { ...s.accretion },
     relay: { ...s.relay },
     credits: s.credits,
-    puzzle: { ...s.puzzle, cells: [...s.puzzle.cells] },
+    puzzle: {
+      ...s.puzzle,
+      cells: [...s.puzzle.cells],
+      givens: [...s.puzzle.givens],
+      across: [...s.puzzle.across],
+      down: [...s.puzzle.down],
+    },
     solvers: s.solvers,
     solverProgress: s.solverProgress,
     boosts: { ...s.boosts },
@@ -111,11 +117,28 @@ export function serialize(s: GameState): SaveData {
   };
 }
 
-/** A saved board must be structurally sound or we deal a fresh one. */
+/**
+ * A saved board must be structurally sound or we deal a fresh one.
+ *
+ * This is also the migration path, and the reason no SAVE_VERSION bump is
+ * needed for a board-mechanic change: a save written by an older build carries
+ * the wrong shape — Lights Out stored `cells: boolean[]` and no clue arrays —
+ * so it fails here and `hydrate` deals a fresh Feeder Balance board. Everything
+ * else in the save (power, sources, research, Credits, solvers, streak) is
+ * untouched. Losing one in-progress board is the correct trade against a
+ * migration that would have to invent a valid constraint layout from nothing.
+ */
 function isValidPuzzle(p: PuzzleState | null | undefined, tier: number): p is PuzzleState {
   if (!p || typeof p.size !== 'number' || !Array.isArray(p.cells)) return false;
   if (p.size !== puzzleSize(tier) || p.cells.length !== p.size * p.size) return false;
-  return p.cells.every((c) => typeof c === 'boolean');
+  // Load levels, not booleans — this is what rejects a Lights Out save.
+  if (!p.cells.every((c) => Number.isInteger(c) && c >= 0 && c <= p.size)) return false;
+  if (!Array.isArray(p.givens) || p.givens.length !== p.cells.length) return false;
+  if (!p.givens.every((g) => typeof g === 'boolean')) return false;
+  if (!Array.isArray(p.across) || p.across.length !== p.size * (p.size - 1)) return false;
+  if (!Array.isArray(p.down) || p.down.length !== (p.size - 1) * p.size) return false;
+  const clue = (v: unknown) => Number.isInteger(v) && (v as number) >= 0 && (v as number) <= 2;
+  return p.across.every(clue) && p.down.every(clue);
 }
 
 /** Rebuild a full GameState from content + a validated save's runtime values. */
@@ -217,7 +240,10 @@ export function hydrate(save: SaveData): GameState {
     s.puzzle = {
       tier: save.tier,
       size: save.puzzle.size,
-      cells: save.puzzle.cells.map((c) => !!c),
+      cells: save.puzzle.cells.map((c) => Math.max(0, Math.min(save.puzzle!.size, Math.floor(c)))),
+      givens: save.puzzle.givens.map((g) => !!g),
+      across: save.puzzle.across.map((v) => Math.max(0, Math.min(2, Math.floor(v)))),
+      down: save.puzzle.down.map((v) => Math.max(0, Math.min(2, Math.floor(v)))),
       moves: Math.max(0, Math.floor(save.puzzle.moves ?? 0)),
       par: Math.max(1, Math.floor(save.puzzle.par ?? 1)),
       solved: !!save.puzzle.solved,

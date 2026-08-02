@@ -34,6 +34,15 @@ export const CONFIG = {
   PUZZLE_TIER_REWARD: 6, // + this × tier
   PUZZLE_BONUS_MULT: 1.5, // efficiency bonus for solving near par
   PUZZLE_BONUS_SLACK: 2, // moves over par still counted as efficient
+  // Feeder Balance difficulty. Both shrink with tier, so a board gets harder in
+  // two ways at once: bigger (puzzleSize) and less pre-filled. Floors matter —
+  // a 7×7 with almost no givens stops being a puzzle and starts being a search.
+  PUZZLE_GIVEN_FRACTION: 0.45, // share of cells pre-filled at tier 0
+  PUZZLE_GIVEN_DECAY: 0.03, // subtracted per tier
+  PUZZLE_GIVEN_FLOOR: 0.22,
+  PUZZLE_CLUE_DENSITY: 0.34, // share of adjacent pairs carrying a > or <
+  PUZZLE_CLUE_DECAY: 0.015, // subtracted per tier
+  PUZZLE_CLUE_FLOOR: 0.2,
   SURGE_MULT: 1.5, // power multiplier while the surge is lit
   SURGE_MANUAL_SECONDS: 60, // surge added per manual solve
   SURGE_AUTO_SECONDS: 15, // surge added per auto-solve

@@ -2,8 +2,12 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
+import pkg from './package.json' with { type: 'json' };
 
 export default defineConfig({
+  // Bug reports are useless without a version to pin them to, and hardcoding one
+  // in a component guarantees it goes stale. Single source of truth: package.json.
+  define: { __APP_VERSION__: JSON.stringify(pkg.version) },
   server: {
     port: Number(process.env.PORT) || 5173,
     strictPort: true,

@@ -12,6 +12,7 @@ import { ShopPanel } from './components/ShopPanel';
 import { AscendPanel } from './components/AscendPanel';
 import { DataControls } from './components/DataControls';
 import { AchievementsList } from './components/AchievementsList';
+import { BugReport } from './components/BugReport';
 import { CheatPanel } from './components/CheatPanel';
 import { Toasts } from './components/Toasts';
 import { OfflineModal } from './components/OfflineModal';
@@ -141,6 +142,7 @@ export default function App() {
                 <div className="flex flex-col gap-2 px-3 pb-3">
                   <AchievementsList />
                   <DataControls />
+                  <BugReport />
                   <CheatPanel />
                 </div>
               </>

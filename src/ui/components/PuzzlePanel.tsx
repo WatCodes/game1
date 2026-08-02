@@ -1,5 +1,6 @@
 import { useGame } from '../../store/gameStore';
 import { formatTime } from '../../engine/format';
+import { PuzzleCoach } from './PuzzleCoach';
 
 const LESS_THAN = 1;
 
@@ -32,6 +33,10 @@ export function PuzzlePanel() {
   return (
     <div className="flex flex-col gap-3 px-4 py-3.5">
       <p className="text-center font-body text-[11.5px] italic text-ink-dim">{puzzle.flavor}</p>
+
+      {/* Above the board, not below it: a player who needs this is looking at
+          the grid wondering what to do, and help underneath is help unread. */}
+      <PuzzleCoach size={size} />
 
       <div
         className="mx-auto grid w-full max-w-[320px]"

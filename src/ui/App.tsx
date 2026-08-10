@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useGameTick } from './hooks/useGameTick';
 import { useGame } from '../store/gameStore';
 import { prime, setHum } from './audio';
+import { initAds } from '../platform/ads';
 import { PowerMeter } from './components/PowerMeter';
 import { ResourceBar } from './components/ResourceBar';
 import { SourcesPanel } from './components/SourcesPanel';
@@ -59,6 +60,13 @@ export default function App() {
     const start = () => prime();
     window.addEventListener('pointerdown', start, { once: true });
     return () => window.removeEventListener('pointerdown', start);
+  }, []);
+
+  // Start the ad SDK at launch, not at the first ad. It reports ready before it
+  // actually is, so requesting a load moments after starting it fails on real
+  // hardware — see initAds(). No-ops off native.
+  useEffect(() => {
+    initAds();
   }, []);
   useEffect(() => setHum(pps), [pps]);
 

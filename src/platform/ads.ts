@@ -33,7 +33,54 @@ interface AdMobPlugin {
   showRewardVideoAd(): Promise<{ type?: string; amount?: number } | undefined>;
 }
 
-let initialized = false;
+let initPromise: Promise<void> | null = null;
+
+/**
+ * Start the ad SDK as early as possible, and exactly once.
+ *
+ * The native `initialize` calls `MobileAds.shared.start(completionHandler: nil)`
+ * and resolves immediately — it does not wait for the SDK to actually come up.
+ * Initialising lazily at the first ad therefore fired a load microseconds after
+ * start, which a simulator is fast enough to survive and a real device on a cold
+ * network is not: the load rejected with "Loading failed", our catch turned that
+ * into `unavailable`, and the player silently got their reward with no ad.
+ *
+ * Called at app launch, the SDK has the entire session to warm up before the
+ * away summary can even appear (it needs two minutes of absence).
+ */
+export function initAds(): void {
+  if (initPromise) return;
+  const adMob = nativePlugin<AdMobPlugin>('AdMob');
+  if (!adMob) return;
+  initPromise = adMob.initialize().catch(() => {
+    // Let the next ad attempt try again rather than latching a failure.
+    initPromise = null;
+  });
+}
+
+const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Load an ad, retrying a transient failure.
+ *
+ * "Loading failed" covers both "no fill" and "SDK not ready yet", and the two
+ * are indistinguishable from here. A couple of short retries costs nothing on
+ * the happy path and rescues the case where the player opened the summary
+ * before the SDK finished starting.
+ */
+async function prepareWithRetry(adMob: AdMobPlugin, opts: unknown): Promise<void> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      await adMob.prepareRewardVideoAd(opts);
+      return;
+    } catch (err) {
+      lastError = err;
+      if (attempt < 2) await delay(800 * (attempt + 1));
+    }
+  }
+  throw lastError;
+}
 
 /**
  * Refuse to serve a Google *sample* unit as live inventory.
@@ -59,13 +106,14 @@ export async function showRewardedAd(): Promise<RewardResult> {
   if (!adMob) return 'unavailable';
 
   try {
-    if (!initialized) {
-      await adMob.initialize();
-      initialized = true;
-    }
+    // Normally already resolved from launch; awaited here so a first ad still
+    // works if initAds() was never reached.
+    initAds();
+    await initPromise;
+
     const adId = platformName() === 'ios' ? ADS.rewardedIos : ADS.rewardedAndroid;
     if (misconfigured(adId)) return 'unavailable'; // fail safe, still rewards
-    await adMob.prepareRewardVideoAd({
+    await prepareWithRetry(adMob, {
       adId,
       isTesting: ADS.testing,
       // No advertising identifier, no ATT prompt — see ADS.nonPersonalized.

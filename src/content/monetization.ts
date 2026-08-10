@@ -36,7 +36,7 @@ export const ADS = {
    * ads on your own inventory, which is the classic way to get an AdMob account
    * suspended. So this flips last, not first.
    */
-  testing: true,
+  testing: false,
   /**
    * Request NON-personalized ads only. This is a deliberate product/compliance
    * trade, not a default: personalized ads count as tracking, which would oblige

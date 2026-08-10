@@ -11,6 +11,8 @@
  * playable in a browser.
  */
 
+import { registerPlugin } from '@capacitor/core';
+
 interface CapacitorGlobal {
   isNativePlatform?: () => boolean;
   getPlatform?: () => string;
@@ -31,15 +33,29 @@ export function platformName(): 'ios' | 'android' | 'web' {
 }
 
 /**
- * Load a Capacitor plugin by module name, or null if unavailable. The
- * specifier is a variable so the bundler leaves it alone — a literal would
- * make Vite try to resolve a package that isn't installed yet.
+ * Get a bridge to a natively-registered Capacitor plugin, or null off-native.
+ *
+ * This replaces a dynamic `import(name)` that could never have worked in a
+ * shipped build. With `@vite-ignore` and a variable specifier, Vite left
+ * `import("@capacitor-community/admob")` verbatim in the bundle — and a
+ * WebView cannot resolve a bare module specifier, so it threw
+ * `Failed to resolve module specifier`, the catch swallowed it, and every ad
+ * silently reported `unavailable`. Ads therefore never ran in any build,
+ * including TestFlight, while looking healthy because a failed ad still grants
+ * the reward.
+ *
+ * `registerPlugin` is a *name*-based proxy over the native bridge: it needs the
+ * plugin's registered identifier ("AdMob"), not its npm package. So the plugin
+ * JS and its web stub still stay out of the bundle — the property the old
+ * dynamic import was reaching for — but the call now actually reaches native.
+ *
+ * `@capacitor/core` is imported statically and deliberately. It is the bridge,
+ * not a native SDK: a few KB of proxy plumbing, no ad code, and it no-ops off
+ * native. That is the one build-time import this file allows, and the reason
+ * docs/NATIVE.md's "works with none of the native packages installed" claim now
+ * carries a caveat.
  */
-export async function loadPlugin<T>(name: string): Promise<T | null> {
+export function nativePlugin<T>(name: string): T | null {
   if (!isNative()) return null;
-  try {
-    return (await import(/* @vite-ignore */ name)) as T;
-  } catch {
-    return null; // plugin not installed in this build
-  }
+  return registerPlugin<T>(name);
 }

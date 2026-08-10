@@ -1,5 +1,5 @@
 import { ADS, TEST_AD_UNITS } from '../content/monetization';
-import { isNative, loadPlugin, platformName } from './native';
+import { isNative, nativePlugin, platformName } from './native';
 
 export type RewardResult = 'rewarded' | 'dismissed' | 'unavailable';
 
@@ -21,12 +21,16 @@ export function adsAvailable(): boolean {
   return isNative();
 }
 
+/**
+ * Method names here must match the native plugin's `@objc func`s exactly —
+ * `registerPlugin` proxies by name, so a typo fails at runtime, not at build.
+ * Verified against the plugin's iOS sources, which register `identifier =
+ * "AdMob"` and expose initialize / prepareRewardVideoAd / showRewardVideoAd.
+ */
 interface AdMobPlugin {
-  AdMob: {
-    initialize(opts?: unknown): Promise<void>;
-    prepareRewardVideoAd(opts: unknown): Promise<unknown>;
-    showRewardVideoAd(): Promise<{ type?: string; amount?: number } | undefined>;
-  };
+  initialize(opts?: unknown): Promise<void>;
+  prepareRewardVideoAd(opts: unknown): Promise<unknown>;
+  showRewardVideoAd(): Promise<{ type?: string; amount?: number } | undefined>;
 }
 
 let initialized = false;
@@ -49,23 +53,25 @@ function misconfigured(adId: string): boolean {
  * failure path resolves to `unavailable`, which still grants the bonus.
  */
 export async function showRewardedAd(): Promise<RewardResult> {
-  const plugin = await loadPlugin<AdMobPlugin>('@capacitor-community/admob');
-  if (!plugin?.AdMob) return 'unavailable';
+  // "AdMob" is the identifier the native plugin registers itself under, not an
+  // npm package name — see nativePlugin().
+  const adMob = nativePlugin<AdMobPlugin>('AdMob');
+  if (!adMob) return 'unavailable';
 
   try {
     if (!initialized) {
-      await plugin.AdMob.initialize();
+      await adMob.initialize();
       initialized = true;
     }
     const adId = platformName() === 'ios' ? ADS.rewardedIos : ADS.rewardedAndroid;
     if (misconfigured(adId)) return 'unavailable'; // fail safe, still rewards
-    await plugin.AdMob.prepareRewardVideoAd({
+    await adMob.prepareRewardVideoAd({
       adId,
       isTesting: ADS.testing,
       // No advertising identifier, no ATT prompt — see ADS.nonPersonalized.
       npa: ADS.nonPersonalized,
     });
-    const reward = await plugin.AdMob.showRewardVideoAd();
+    const reward = await adMob.showRewardVideoAd();
     // The plugin resolves with a reward item when it was actually earned.
     return reward ? 'rewarded' : 'dismissed';
   } catch {

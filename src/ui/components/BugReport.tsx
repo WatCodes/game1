@@ -1,4 +1,5 @@
 import { platformName } from '../../platform/native';
+import { adDiagnostic } from '../../platform/ads';
 
 declare const __APP_VERSION__: string;
 
@@ -65,6 +66,8 @@ function reportBody(): string {
     `platform: ${platformName()}`,
     `viewport: ${screen}`,
     `agent: ${ua}`,
+    // The one thing a log would have told us and this app has no way to log.
+    `last ad: ${adDiagnostic()}`,
   ].join('\n');
 }
 

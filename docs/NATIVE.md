@@ -8,12 +8,26 @@ Pages keeps working exactly as it does today.
 > ordered runbook (accounts, privacy answers, review notes, blockers). This file is
 > the native-build reference it points at.
 
-Nothing in `src/` imports a native SDK at build time. Plugins are loaded by name
-at runtime (`src/platform/native.ts`), so:
+Nothing in `src/` imports a native **SDK** at build time. Plugins are reached by
+their registered name through the Capacitor bridge (`src/platform/native.ts`),
+so:
 
-- `npm run build` works today with none of the native packages installed,
-- the web bundle never ships ad code,
-- installing the packages later requires **no code change**.
+- the web bundle never ships ad code — no plugin JS, no web stub,
+- the bridge no-ops off native, so the PWA is unaffected.
+
+> **Corrected.** This used to claim `npm run build` works with none of the native
+> packages installed, because plugins were reached via a dynamic
+> `import(/* @vite-ignore */ name)`. That could never work in a shipped build:
+> Vite left the bare specifier verbatim, and a WebView cannot resolve
+> `@capacitor-community/admob` as a URL. Every ad threw
+> `Failed to resolve module specifier`, was swallowed by a `catch`, and reported
+> `unavailable` — which still grants the reward, so the failure was invisible
+> right through TestFlight.
+>
+> `src/platform/native.ts` now imports `registerPlugin` from `@capacitor/core`
+> and proxies by name. `@capacitor/core` is therefore a real build-time
+> dependency. It is the bridge, not an SDK: a few KB of plumbing with no ad code
+> in it. The web bundle stays free of the plugin itself.
 
 ---
 

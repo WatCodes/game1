@@ -76,6 +76,7 @@ async function prepareWithRetry(adMob: AdMobPlugin, opts: unknown): Promise<void
       return;
     } catch (err) {
       lastError = err;
+      note(`load attempt ${attempt + 1}/3 failed`, err);
       if (attempt < 2) await delay(800 * (attempt + 1));
     }
   }
@@ -96,6 +97,31 @@ function misconfigured(adId: string): boolean {
 }
 
 /**
+ * Breadcrumb of the last ad attempt, for the bug report.
+ *
+ * Ads failed on device three times while working on every simulator, and each
+ * fix was reasoned from the plugin's Swift rather than from an actual error —
+ * because the design that makes this feature safe also makes it silent. Every
+ * failure resolves to `unavailable`, which still grants the reward, so nothing
+ * reaches the player and nothing reaches a log we can read.
+ *
+ * This records what actually happened, in memory only, and BugReport appends it
+ * so a stuck player (or Wyatt) can mail the real reason out. No PII, no network
+ * call, and nothing is transmitted unless someone hits send.
+ */
+let lastAdDiagnostic = 'no ad attempted yet';
+
+export function adDiagnostic(): string {
+  return lastAdDiagnostic;
+}
+
+function note(stage: string, detail?: unknown): void {
+  const at = new Date().toISOString().slice(11, 19);
+  const because = detail instanceof Error ? detail.message : detail ? String(detail) : '';
+  lastAdDiagnostic = `${at} ${stage}${because ? ` — ${because}` : ''}`;
+}
+
+/**
  * Show a rewarded ad. Never throws and never blocks progression — every
  * failure path resolves to `unavailable`, which still grants the bonus.
  */
@@ -103,26 +129,37 @@ export async function showRewardedAd(): Promise<RewardResult> {
   // "AdMob" is the identifier the native plugin registers itself under, not an
   // npm package name — see nativePlugin().
   const adMob = nativePlugin<AdMobPlugin>('AdMob');
-  if (!adMob) return 'unavailable';
+  if (!adMob) {
+    note(`no bridge (native=${isNative()}, platform=${platformName()})`);
+    return 'unavailable';
+  }
 
   try {
     // Normally already resolved from launch; awaited here so a first ad still
     // works if initAds() was never reached.
     initAds();
     await initPromise;
+    note('initialized');
 
     const adId = platformName() === 'ios' ? ADS.rewardedIos : ADS.rewardedAndroid;
-    if (misconfigured(adId)) return 'unavailable'; // fail safe, still rewards
+    if (misconfigured(adId)) {
+      note('refused: sample unit with testing=false');
+      return 'unavailable'; // fail safe, still rewards
+    }
     await prepareWithRetry(adMob, {
       adId,
       isTesting: ADS.testing,
       // No advertising identifier, no ATT prompt — see ADS.nonPersonalized.
       npa: ADS.nonPersonalized,
     });
+    note('loaded, showing');
+
     const reward = await adMob.showRewardVideoAd();
     // The plugin resolves with a reward item when it was actually earned.
+    note(reward ? 'rewarded' : 'dismissed');
     return reward ? 'rewarded' : 'dismissed';
-  } catch {
+  } catch (err) {
+    note('FAILED', err);
     return 'unavailable';
   }
 }

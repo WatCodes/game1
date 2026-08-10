@@ -39,8 +39,22 @@ describe('test-unit guard', () => {
     expect(pub(ADS.rewardedAndroid)).toBe(pub(ADS.rewardedIos));
   });
 
-  it('keeps testing mode on until the submission build', () => {
-    // Flipping this early means looking at live ads on your own inventory.
-    expect(ADS.testing).toBe(true);
+  it('ships with testing mode off — this is the submission build', () => {
+    /**
+     * This assertion used to be `true`, and failing on the flip was its whole
+     * job: it fired once, at the exact commit that archives for submission,
+     * after TestFlight had verified the flow. That has now happened.
+     *
+     * Inverted rather than deleted, because the guard is still worth having in
+     * the other direction. Going back to `true` on a shipped build sends *test*
+     * traffic to the live ad network, which is a policy violation that can
+     * suspend the AdMob account — and `TEST_AD_UNITS` above cannot catch it,
+     * since that list only guards the unit ids, not the flag.
+     *
+     * If you are here because this test failed, you probably set `testing` back
+     * to `true` to develop against test ads. That is correct locally and must
+     * not reach a release build.
+     */
+    expect(ADS.testing).toBe(false);
   });
 });

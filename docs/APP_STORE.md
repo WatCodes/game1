@@ -75,12 +75,19 @@ once the record exists.
 - ⬜ **Apple Developer Program**, $99/yr. Enrolment can take 24–48h and everything
   gates on it. Do this today.
 - ⬜ **AdMob account** → create one rewarded unit for iOS, one for Android.
-- ⬜ Host the privacy + support pages. They're already written and ship with the web
-  build as `public/privacy.html` and `public/support.html`, so they're live at:
-  - `https://<your-site>/privacy.html`
-  - `https://<your-site>/support.html`
+- ✅ Host the privacy + support pages — **done via GitHub Pages**
+  (`.github/workflows/pages.yml`, deploys on any push to `main` that touches them):
+  - `https://watcodes.github.io/game1/privacy.html`
+  - `https://watcodes.github.io/game1/support.html`
 
-  Both URLs are **mandatory** fields in App Store Connect.
+  Both URLs are **mandatory** fields in App Store Connect. The Privacy Policy URL
+  lives under **App Privacy**, not on the version page — easy to hunt for.
+
+  The workflow publishes only these two pages plus a landing hub; it does **not**
+  deploy `dist/`. Their cross-links were changed from root-relative (`/support.html`)
+  to relative (`support.html`) because Pages serves the site from `/game1/`, where
+  a root-relative href resolves to the wrong host path and 404s. Relative works
+  both there and in the app build.
 - ✅ Support email: **electriccatsofzeus@gmail.com**, used on both pages and to be
   entered as the App Store Connect support contact. Enable 2FA on it — the same
   address is the AdMob login, and that account holds the payment and tax details.

@@ -1,0 +1,65 @@
+# Publishes the privacy policy and support pages to GitHub Pages.
+#
+# Apple will not accept a submission without a reachable Privacy Policy URL, and
+# App Store Connect requires a Support URL alongside it. Both pages were already
+# written and ship inside the app via `public/`, but they had no public home --
+# APP_STORE.md tracked that as the last open blocker.
+#
+# Deliberately publishes ONLY those two pages plus a landing hub. The built game
+# is not deployed here: `dist/` is the app itself, and putting a playable copy on
+# a public URL is a distribution decision, not a paperwork one.
+#
+# Resulting URLs (paste these into App Store Connect):
+#   https://watcodes.github.io/game1/privacy.html
+#   https://watcodes.github.io/game1/support.html
+
+name: Deploy privacy & support pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'public/privacy.html'
+      - 'public/support.html'
+      - '.github/pages/index.html'
+      - '.github/workflows/pages.yml'
+  # Lets you redeploy by hand without pushing a commit.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Never let two deploys race; queue instead of cancelling, so a merge that lands
+# during a deploy still ends up published.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Assemble the site
+        run: |
+          set -euo pipefail
+          mkdir -p _site
+          cp public/privacy.html public/support.html _site/
+          cp .github/pages/index.html _site/
+          cp public/icon-192.png public/icon-512.png _site/
+          ls -la _site
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - id: deployment
+        uses: actions/deploy-pages@v4

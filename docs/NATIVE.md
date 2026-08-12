@@ -102,6 +102,38 @@ and web-build steps `codemagic.yaml` performs for Codemagic.
 **Three CI systems now exist** — Codemagic, Xcode Cloud, and Cloudflare Workers
 for the web build. Only the last is verified green. Worth consolidating.
 
+There is now a fourth, and it is the only one that has actually shipped anything:
+**GitHub Actions** (`.github/workflows/pages.yml`) publishes the privacy and
+support pages to GitHub Pages. It is unrelated to the app build and is not a
+candidate for consolidation.
+
+### Status as of the 1.0 submission (2026-08-12)
+
+**Every build that has reached App Store Connect was archived locally**, on the
+Intel Mac, in Xcode. Builds 1, 3, 5, 6 and 7 all came from there; build 7 is the
+one submitted for review. Xcode Cloud has never produced the shipped artifact.
+
+**Xcode Cloud still does not export a distributable archive.** It exports
+Development / Ad Hoc and warns. This was worked around rather than fixed, and the
+workaround has a consequence worth knowing before anyone revisits it: signing is
+committed as **manual** in `project.pbxproj` —
+`CODE_SIGN_STYLE = Manual`, `CODE_SIGN_IDENTITY = "Apple Development"`, and
+`PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*] = "Electric Cats App Store"`.
+
+That profile name has to resolve on whatever machine builds, so a fresh checkout
+on a different Mac — or an Xcode Cloud runner — will not sign until that profile
+exists there. Anyone switching to Xcode Cloud should expect to revisit the signing
+block, not just the `ci_scripts/` hook.
+
+> `CODE_SIGN_IDENTITY` reads oddly for a store build. "Apple Distribution" was
+> tried first and Xcode rejected it as conflicting; "Apple Development" is what it
+> asked for and what archives successfully. Don't 'correct' it without testing an
+> actual archive.
+
+**Do not re-archive while a version is Waiting for Review.** App Store Connect is
+explicit: submitting a new build requires removing the version from review first.
+Metadata edits are fine; builds are not.
+
 ## 2. One-time setup (only if building locally)
 
 ```bash

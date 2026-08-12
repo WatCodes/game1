@@ -11,6 +11,47 @@ Ordered so that everything not needing a Mac happens first. Listing copy lives i
 
 ---
 
+## ✅ 1.0 was submitted on 2026-08-12 — read this before re-running the runbook
+
+**Version 1.0, build 7, is Waiting for Review.** Apple ID `6795242247`. Everything
+below is done unless this box says otherwise; the checkboxes further down are left
+as originally written because they are still the right order for a *next* app, not
+because they are outstanding.
+
+What shipped, and the parts that differ from what this doc predicted:
+
+| Item | Shipped as |
+|---|---|
+| Availability | **148 countries — the 27 EU states are excluded** (see below) |
+| Price | Free, no IAP, as planned |
+| Age rating | 13+ |
+| Privacy label | Usage Data → Advertising Data, not linked, **not** used for tracking |
+| Category | Games / Simulation / Casual — see [ASO.md](ASO.md) §8, this doc's old guess was wrong |
+| Build | 7, archived locally; Xcode Cloud has never shipped an artifact — see [NATIVE.md](NATIVE.md) |
+
+**Why the EU is excluded.** The Digital Services Act requires a verified trader
+declaration to distribute in the EU, and a trader's name, address, phone and email
+are then **published on the EU product page**. The 27 EU states were dropped so v1
+could ship without resolving that. The declaration was completed afterwards, so
+re-adding them is now a metadata-only change: re-check the 27 boxes under Pricing
+and Availability. **No new build and no new review.** The codes are the ISO alpha-3
+set `AUT BEL BGR HRV CYP CZE DNK EST FIN FRA DEU GRC HUN IRL ITA LVA LTU LUX MLT
+NLD POL PRT ROU SVK SVN ESP SWE`.
+
+> Norway, Iceland and Switzerland were **kept** — they are EEA/EFTA, not EU, and
+> Apple's requirement as stated covers the EU. If Apple ever extends it to the EEA,
+> Norway, Iceland and Liechtenstein are the ones to revisit.
+
+**Two things this doc got wrong, recorded so the next pass doesn't repeat them:**
+
+- The Privacy Policy URL lives under **App Privacy**, not on the version page.
+  Phase 3 implies it sits with the other fields; it does not.
+- The real gate was never the paperwork order — it was that `public/privacy.html`
+  had no public host. Apple will not take a submission without a reachable policy
+  URL, and that single unchecked line in Phase 1 blocked everything else.
+
+---
+
 ## Phase 0 — Blockers
 
 One down, two live. Both remaining ones are decisions, not work.

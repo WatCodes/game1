@@ -79,10 +79,12 @@ Changeable **without shipping an update** — use it for news, not evergreen cop
 
 ```
 The cats have inherited the world and they want the lightning back. Start with one
-kneading paw; end up wiring the galaxy. New: a living courtyard for every era.
+kneading paw; end up wiring the galaxy. A living courtyard for every era.
 ```
 
-**162 chars.**
+**156 chars.** Was `New: a living courtyard…` — dropped on 2026-08-12, because "New:"
+on a first release announces nothing. Keep this field for actual news once there is
+a version to compare against.
 
 ## 5. Description
 
@@ -130,6 +132,12 @@ Power has to be carried, not just made. Transformers and conductors set what you
 grid can deliver; line losses eat the rest. Outgrow your transmission cap and your
 generators are just expensive scenery.
 
+BALANCE THE FEEDERS
+The Works hands you a board of feeders and a handful of constraints: every row and
+column carries each load exactly once, and the marks between them say who outdraws
+whom. Solve one for Credits and a Grid Surge. Or buy Auto-Solvers and let the cats
+work it out.
+
 WHILE YOU'RE AWAY
 The cats keep the grid running. Come back to a full tally of what they earned —
 and the option to double it.
@@ -143,7 +151,12 @@ bonus anyway.
 Steal the lightning. Light the world.
 ```
 
-**~1,900 chars** — comfortably inside 4,000, and short enough that people finish it.
+**2,589 chars** — comfortably inside 4,000, and short enough that people finish it.
+
+This said "~1,900" for a long time and was simply wrong: the text was 2,306 before
+BALANCE THE FEEDERS was added. Counted with the hard wraps included, because App
+Store Connect preserves the newlines you paste. If you edit the copy, recount rather
+than adjusting the number by eye.
 
 ## 6. What's New (for the first release)
 
@@ -174,9 +187,22 @@ Add a short text overlay to each — bare screenshots of a UI convert poorly.
 
 ## 8. Category and rating
 
-- **Primary category:** Games → Simulation. (Secondary: Games → Strategy.)
-  Simulation is the better home for grid/tycoon play; Casual is more crowded and a
-  worse thematic fit.
+- **Primary category:** Games → Simulation. Simulation is the better home for
+  grid/tycoon play.
+
+  **As actually shipped (verified in App Store Connect 2026-08-12):** primary
+  `Games`, subcategory one `Simulation`, subcategory two `Casual`, no secondary
+  category. This doc previously said "Secondary: Games → Strategy", which does not
+  match — and note the shape of the field differs from what that implied: iOS asks
+  for one primary category with *two subcategories*, not a separate secondary
+  category slot for games. `Casual` was picked over `Strategy` at submission time.
+  Worth revisiting after launch: this doc's own reasoning warns Casual is "more
+  crowded", so if discovery underperforms, swapping subcategory two to `Strategy`
+  is a metadata-only change needing no new build.
+
+  There is **no category key in `Info.plist`** — `LSApplicationCategoryType` is a
+  macOS concern. For iOS the App Store Connect selection is the only one that
+  counts, so don't go looking for it in the bundle.
 - **Do NOT opt into the Kids category.** The cat art invites it, but it imposes
   advertising restrictions that conflict with running AdMob at all.
 - Answer the age-rating questionnaire honestly. No violence, no gambling (the

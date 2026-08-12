@@ -36,18 +36,18 @@
 	<array>
 		<string>armv7</string>
 	</array>
+	<!--
+	  Portrait only, deliberately. The layout is a single `max-w-md` column, so
+	  rotating the phone produced a stretched, unusable board — and a reviewer who
+	  rotates is a rejection under Guideline 4.0 (Design). The Capacitor template
+	  ships landscape enabled plus a `~ipad` variant; both were removed, the ipad
+	  one because TARGETED_DEVICE_FAMILY is 1 (iPhone) and the key was dead weight.
+	  If proper landscape or iPad layouts ever land, re-add the orientations here
+	  and re-shoot the App Store screenshots to match.
+	-->
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
-	</array>
-	<key>UISupportedInterfaceOrientations~ipad</key>
-	<array>
-		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationPortraitUpsideDown</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>

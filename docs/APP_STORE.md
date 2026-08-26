@@ -11,9 +11,51 @@ Ordered so that everything not needing a Mac happens first. Listing copy lives i
 
 ---
 
-## ✅ 1.0 was submitted on 2026-08-12 — read this before re-running the runbook
+## ⛔ 1.0 was REJECTED on 2026-08-26 — simulated gambling. Read this first.
 
-**Version 1.0, build 7, is Waiting for Review.** Apple ID `6795242247`. Everything
+**Submission ID `1111638f-0f34-4505-9fcd-bbe784c21d3d`. Reviewed on an iPad Air
+11-inch (M3), version 1.0 (7).** The review took **14 days**, not the 48 hours
+Apple's confirmation email advertises. Plan resubmissions accordingly.
+
+Apple's finding, paraphrased: individual (non-organization) developer accounts may
+no longer submit simulated-gambling apps, and *either* this app contains such
+content *or* the Ratings section declares that it does.
+
+**It is the declaration, not the app.** Verified in the code on 2026-08-26:
+
+- No loot boxes, gacha, lottery, jackpot, wagering or casino mechanics anywhere in
+  `src/engine/**` or `src/content/**`.
+- Every `Math.random` is an injectable RNG for *simulation* — market drift,
+  ascension, puzzle generation — never a wagered payout.
+- `src/engine/arbitrage.ts` and `src/engine/types.ts` both document that a futures
+  **wager** was built and then deliberately removed for exactly this reason.
+- `tests/arbitrage.test.ts` asserts it mechanically: *"has no stake at risk and no
+  clock — ticking never touches the position."*
+
+So the answer this doc has always prescribed — **Simulated Gambling → None** — was
+right, and the questionnaire was filled in inconsistently with it. The Arbitrage
+Desk is the feature most likely to have prompted a "yes"; the rationale for why it
+is not a wager is in the Age rating section below, and is worth pasting into any
+reply to App Review.
+
+**The fix is metadata only — build 7 stands, no rebuild, no re-archive:**
+
+1. App Information → Age Ratings → Edit → set the gambling question to **None**.
+   The rating should fall from 13+ to 4+/9+.
+2. Reply to the App Review message explaining the correction *and* the Arbitrage
+   Desk. Do not resubmit silently — the same reviewer can reach the same conclusion.
+3. Resubmit.
+
+> **Do not "solve" this by adding a gambling disclosure.** Declaring content the app
+> does not have is the mistake that caused this, and misdescribing content can pull a
+> live app. If the desk ever gains a timer, a forced settlement, or a random payout,
+> the honest answer changes and this account can no longer ship it at all.
+
+---
+
+## 1.0 was submitted on 2026-08-12
+
+**Version 1.0, build 7.** Apple ID `6795242247`. Everything
 below is done unless this box says otherwise; the checkboxes further down are left
 as originally written because they are still the right order for a *next* app, not
 because they are outstanding.
@@ -24,7 +66,7 @@ What shipped, and the parts that differ from what this doc predicted:
 |---|---|
 | Availability | **148 countries — the 27 EU states are excluded** (see below) |
 | Price | Free, no IAP, as planned |
-| Age rating | 13+ |
+| Age rating | 13+ — **wrong, and the cause of the rejection above.** Must become None-for-gambling |
 | Privacy label | Usage Data → Advertising Data, not linked, **not** used for tracking |
 | Category | Games / Simulation / Casual — see [ASO.md](ASO.md) §8, this doc's old guess was wrong |
 | Build | 7, archived locally; Xcode Cloud has never shipped an artifact — see [NATIVE.md](NATIVE.md) |
@@ -227,6 +269,33 @@ non-personalized decision.
   > If the desk ever regains a timer, a forced settlement, or a random payout,
   > this answer has to change. Getting it wrong isn't just a rejection —
   > misdescribing content can pull a live app.
+
+  **This answer was got wrong on the 1.0 submission and cost a rejection** (see the
+  top of this file). Reply text for App Review, ready to paste:
+
+  ```
+  Thank you for the review. The gambling indication in the Ratings section was
+  entered in error, and has been corrected to "None". Electric Cats contains no
+  gambling or simulated gambling content.
+
+  For clarity on the feature that may have prompted this: the app includes an
+  "Arbitrage Desk", where the player buys in-game Watts into a battery at the
+  current in-game price and chooses when to sell them. There is no stake at risk,
+  no timer, and no forced settlement — the player can hold the stored Watts
+  indefinitely, and the result follows entirely from when they choose to act
+  rather than from any random draw or wagered outcome. It is mechanically the
+  same as choosing when to sell crops in a farming game.
+
+  The app has no loot boxes, no randomized rewards, no wagering of any in-game or
+  real currency, and no in-app purchases of any kind. It is a single-player
+  offline idle game.
+
+  The rating has been updated and the app resubmitted for review.
+  ```
+
+  Consider adding a condensed version of the middle paragraph to the **App Review
+  notes** permanently, so a future reviewer meets the explanation before forming a
+  view of the desk.
 - **Export compliance:** the app uses only standard HTTPS. Answer "uses encryption"
   → "only exempt encryption" (the standard OS-provided-HTTPS exemption). No ERN.
 - **Sign-in required?** No. No accounts anywhere, so account-deletion rules don't

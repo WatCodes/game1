@@ -23,7 +23,26 @@ interface Beat {
   copy: React.ReactNode;
 }
 
+/**
+ * Order matters here, and it used to be wrong.
+ *
+ * The altar beat came first and told the player to channel a bolt — but dispatch
+ * sells a slice of *generation*, and a new player has none, so the altar refuses
+ * and the opening instruction was impossible to follow. Sources come first now,
+ * which is also the order the game actually plays in.
+ *
+ * "two watts is where every empire starts" went with it: the first kneader
+ * produces 0.4 W/s, so the line was wrong as well as long.
+ */
 const BEATS: Beat[] = [
+  {
+    x: '50%',
+    y: '92%',
+    r: 150,
+    cat: 'left-[calc(50%-104px)] top-[78%]',
+    bubbleTop: '150px',
+    copy: <>Power comes from paws. Open the sources below and put a kneader to work.</>,
+  },
   {
     x: '50%',
     y: '52%',
@@ -32,17 +51,9 @@ const BEATS: Beat[] = [
     bubbleTop: '150px',
     copy: (
       <>
-        Zeus hoards the lightning. We&rsquo;re going to <i>borrow</i> it. Tap the altar and channel your first bolt.
+        Zeus hoards the lightning. We&rsquo;re going to <i>borrow</i> it — tap the altar to channel a bolt and sell it.
       </>
     ),
-  },
-  {
-    x: '50%',
-    y: '92%',
-    r: 150,
-    cat: 'left-[calc(50%-104px)] top-[78%]',
-    bubbleTop: '150px',
-    copy: <>Power comes from paws. Open the sources below and put a kneader to work — two watts is where every empire starts.</>,
   },
   {
     x: '88%',
@@ -50,7 +61,7 @@ const BEATS: Beat[] = [
     r: 130,
     cat: 'left-[calc(88%-104px)] top-[calc(58%+10px)]',
     bubbleTop: '150px',
-    copy: <>The Lab, the Wonder, the Works, the Agora. Everything else in Athens lives on that rail.</>,
+    copy: <>The Lab, the Wonder, the Works, the Agora. Everything else lives on that rail.</>,
   },
   {
     x: '50%',

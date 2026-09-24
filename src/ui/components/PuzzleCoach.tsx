@@ -57,7 +57,7 @@ export function PuzzleCoach({ size }: { size: number }) {
           two feeders opens toward the one drawing <b>more</b>. Same for{' '}
           <span className="font-mono text-ink">∧</span> and <span className="font-mono text-ink">∨</span> going down.
         </li>
-        <li>Tap a feeder to cycle its load. Anything that clashes turns red, so you can always back out.</li>
+        <li>Tap a feeder to cycle its load. Clashes turn red, so you can always back out.</li>
       </ol>
       <p className="mt-2 font-body text-[10.5px] italic leading-snug text-ink-dim">
         Start where a row is nearly full, or at a mark next to a 1 or a {size} — those have only one answer.

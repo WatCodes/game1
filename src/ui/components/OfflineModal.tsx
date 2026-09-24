@@ -103,6 +103,9 @@ export function OfflineModal() {
         <div className="mx-[18px] mt-1 overflow-hidden rounded-xl border border-line" style={{ background: 'var(--bg-raised)' }}>
           <TallyRow label="Power generated" value={formatPower(offline.powerGained)} />
           <TallyRow label="Credits earned" value={`+${formatShort(Math.floor(offline.creditsGained))} CR`} tone="gold" />
+          {offline.rpGained >= 1 && (
+            <TallyRow label="Research banked" value={`+${formatShort(Math.floor(offline.rpGained))} RP`} tone="blue" />
+          )}
           {offline.projectGained > 0 && (
             <TallyRow label="Into construction" value={`+${formatPower(offline.projectGained)}`} tone="blue" />
           )}

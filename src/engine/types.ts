@@ -1,6 +1,13 @@
 export type Num = number; // swap-point for break_infinity.js later
 export type Id = string;
 
+/**
+ * What a rewarded ad can be traded for. Each maps to a boost the player could
+ * otherwise buy with Credits, so an ad is a shortcut rather than an exclusive —
+ * nothing is locked behind watching one.
+ */
+export type AdOfferKind = 'power' | 'rp';
+
 export interface PowerSource {
   id: Id;
   name: string;
@@ -162,6 +169,19 @@ export interface GameState {
     surgeLeft: number; // seconds of ×SURGE_MULT power from puzzle solves
     powerLeft: number; // seconds of shop ×2 power boost
     rpLeft: number; // seconds of shop ×2 RP boost
+  };
+  /**
+   * Rewarded-ad pacing. Timers only — nothing here grants anything on its own.
+   *
+   * `offer` is the opt-in prompt the player may take or dismiss; it is never a
+   * modal and never blocks input, because the store listing promises no forced
+   * ads. A `null` offer simply means none is on screen.
+   */
+  ads: {
+    boostCooldown: number; // seconds until a free ad-funded boost is offered again
+    nextOfferIn: number; // seconds until the next offer surfaces
+    offer: AdOfferKind | null; // what is currently on the table, if anything
+    offerLeft: number; // seconds before an ignored offer withdraws itself
   };
   daily: { lastClaimDay: string; streak: number }; // local YYYY-MM-DD
   achievements: Id[]; // earned records — permanent, +bonus each

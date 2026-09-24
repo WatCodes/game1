@@ -13,6 +13,20 @@ export const CONFIG = {
   BASE_RESEARCH_RATE: 0.5, // RP/sec at start
   OFFLINE_CAP_SECONDS: 28800, // 8h base, raised by research — idle games punish absence at their peril
   OFFLINE_MIN_SECONDS: 30, // gaps shorter than this aren't worth a summary
+  /**
+   * Share of the live RP rate earned while away.
+   *
+   * Until 1.0.1 the answer was zero: `creditOffline` credited power, Credits and
+   * auto-solved puzzles but never touched `rp`, so the tech tree alone stopped
+   * dead when the app closed. Players noticed. That was an omission rather than a
+   * decision — nothing in the code defended it.
+   *
+   * Reduced rather than full, deliberately. RP gates the tech tree, which gates
+   * every other system, so paying it at full rate would make closing the app a
+   * strictly optimal way to advance the part of the game that matters most. Half
+   * keeps absence from being punishing without making it preferable.
+   */
+  OFFLINE_RP_RATE: 0.5,
   // Returning from a *backgrounded* app is a much more frequent event than a
   // cold launch — every glance at a text message triggers it. Below this, the
   // away time is still credited, but as a toast rather than a full-screen
@@ -62,6 +76,22 @@ export const CONFIG = {
   DAILY_REWARDS: [50, 75, 100, 150, 200, 300, 500],
   DAILY_STREAK_BONUS: 0.1,
   ACHIEVEMENT_BONUS: 0.01, // +1% global output per record earned
+  // Above this, line loss is worth acting on: the readout turns red and the
+  // lanes that cut loss are flagged as the fix.
+  GRID_LOSS_WARN_FRAC: 0.05,
+  /**
+   * Rewarded-ad placements. Both current ones are opt-in: an offer is a
+   * suggestion that sits in the UI until taken or dismissed.
+   *
+   * The listing no longer promises "no forced ads" (dropped for 1.0.1), so that
+   * is a design choice now rather than a commitment. What the description still
+   * says is "No timers blocking your progress" — so whatever gets added here,
+   * nothing may gate progress behind an ad.
+   */
+  AD_BOOST_COOLDOWN_SECONDS: 1800, // 30 min between free ad-funded boosts
+  AD_OFFER_GAP_MIN_SECONDS: 900, // earliest a fresh offer can surface
+  AD_OFFER_GAP_MAX_SECONDS: 1800, // latest — randomised so it never feels metronomic
+  AD_OFFER_LIFETIME_SECONDS: 120, // an ignored offer withdraws itself rather than nagging
   // Per-tier mechanical twists (GAME_DESIGN §8) — each inert outside its tier
   LAUNCH_WINDOW_DURATION_SECONDS: 20, // T3: orbital purchases avoid the surcharge
   LAUNCH_GAP_MIN_SECONDS: 60,

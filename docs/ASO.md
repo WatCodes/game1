@@ -96,7 +96,7 @@ Humans are gone. The cats remain — and they've decided the lightning Zeus hoar
 belongs to them.
 
 Electric Cats is an idle power-empire game. It starts with a single cat making
-biscuits for about two watts a second. It ends with your paws on the energy budget
+biscuits for less than a watt a second. It ends with your paws on the energy budget
 of a galaxy.
 
 BUILD THE GRID
@@ -143,15 +143,14 @@ The cats keep the grid running. Come back to a full tally of what they earned �
 and the option to double it.
 
 NO NONSENSE
-No forced ads, ever. No timers blocking your progress. No account, no sign-up, no
-data collection — your save lives on your device, and you can export it whenever
-you like. Rewarded videos are strictly optional, and if one won't load, you get the
-bonus anyway.
+No timers blocking your progress. No account, no sign-up, no data collection —
+your save lives on your device, and you can export it whenever you like. Rewarded
+videos are optional, and if one won't load, you get the bonus anyway.
 
 Steal the lightning. Light the world.
 ```
 
-**2,589 chars** — comfortably inside 4,000, and short enough that people finish it.
+**2,560 chars** — comfortably inside 4,000, and short enough that people finish it.
 
 This said "~1,900" for a long time and was simply wrong: the text was 2,306 before
 BALANCE THE FEEDERS was added. Counted with the hard wraps included, because App

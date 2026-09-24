@@ -25,6 +25,10 @@ export interface CatSkin {
   ear: string;
   tail: string;
   eye: string;
+  /** Chest and paws, for a bicolour cat. Omitted on a solid one. */
+  bib?: string;
+  /** Shown when the cat is poked. Only Walter has one. */
+  name?: string;
 }
 
 export interface AgeFrame {
@@ -40,6 +44,26 @@ export const DEFAULT_CATS: [CatSkin, CatSkin] = [
   { body: '#54493d', bodyDeep: '#2b241d', ear: '#443a30', tail: '#3a3229', eye: '#e9c25a' },
   { body: '#8a7458', bodyDeep: '#5c4a36', ear: '#6f5a42', tail: '#5a4a3a', eye: '#7fd0c0' },
 ];
+
+/**
+ * Walter.
+ *
+ * A real tuxedo cat, and the reason this game exists. He sits in the courtyard
+ * in every age and says his name when you poke him. That is the whole feature —
+ * he grants nothing, gates nothing, and is not referenced by any content id.
+ *
+ * Kept next to the other skins rather than hidden somewhere clever: an Easter
+ * egg nobody can find is just dead code.
+ */
+export const WALTER: CatSkin = {
+  body: '#2f2c29',
+  bodyDeep: '#17150f',
+  ear: '#3a3631',
+  tail: '#221f1b',
+  eye: '#8fd44f',
+  bib: '#f4efe2',
+  name: 'Walter',
+};
 
 /** The same two cats, lit from a cold source, for the ages after the sun. */
 const NIGHT_CATS: [CatSkin, CatSkin] = [

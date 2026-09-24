@@ -297,6 +297,25 @@ describe('dispatch', () => {
     expect(fireDispatch(s, () => 0.5)).toBeNull();
   });
 
+  it('fires nothing, and keeps the charge, with no generation to dispatch', () => {
+    /**
+     * The shape of a first-run bug reported after launch. A new player owns no
+     * sources, so the burst is `0 × DISPATCH_SECONDS × charge` and fireDispatch
+     * bails on `gained <= 0`. That is correct — there is genuinely nothing to
+     * sell — but the charge is *not* consumed, so the altar sits lit at full
+     * charge forever while tapping does nothing.
+     *
+     * The engine behaviour is fine and stays. What was wrong was the UI calling
+     * this state fireable; `display.dispatch.canFire` now requires pps > 0. This
+     * test pins the engine half so the two cannot drift apart again.
+     */
+    const s = createInitialState(0);
+    s.dispatch.charge = 1;
+    expect(powerPerSec(s)).toBe(0);
+    expect(fireDispatch(s, () => 0.5)).toBeNull();
+    expect(s.dispatch.charge).toBe(1); // untouched — nothing was spent
+  });
+
   it('burst scales with charge and demand, then resets charge', () => {
     const s = generating();
     s.dispatch.charge = 0.5;

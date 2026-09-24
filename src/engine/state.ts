@@ -24,6 +24,14 @@ export function createInitialState(now: number = Date.now(), rand: () => number 
     market: { saturation: 0, index: CONFIG.INDEX_MEAN, indexHistory: [], sampleIn: 0 },
     reserve: { stored: 0, avgPrice: 0 },
     dispatch: { charge: 0, peakLeft: 0, nextPeakIn: 240 },
+    // No offer waiting at the door. The first one is a full gap away, so a new
+    // player meets the game before they meet an ad prompt.
+    ads: {
+      boostCooldown: 0,
+      nextOfferIn: CONFIG.AD_OFFER_GAP_MAX_SECONDS,
+      offer: null,
+      offerLeft: 0,
+    },
     grid: { vLevel: 0, aLevel: 0, rLevel: 0 },
     ...defaultTierTwistState(),
     // Enough to afford the first generator. Without this a new game is

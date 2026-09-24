@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from 'react';
 import { useGame } from '../../store/gameStore';
 import { formatShort } from '../../engine/format';
 import { transmissionFor } from '../../content/transmissions';
-import { DEFAULT_CATS, devAgeOverride, frameForTier } from './AgeFrame';
+import { DEFAULT_CATS, WALTER, devAgeOverride, frameForTier } from './AgeFrame';
 
 /**
  * The living courtyard (design 2a) — the home screen IS the game world.
@@ -33,6 +33,8 @@ export function Cat({
   ear,
   tail,
   eye,
+  bib,
+  name,
   flip = false,
   delay = 0,
 }: {
@@ -42,11 +44,38 @@ export function Cat({
   ear: string;
   tail: string;
   eye: string;
+  bib?: string;
+  name?: string;
   flip?: boolean;
   delay?: number;
 }) {
+  /**
+   * Poking a cat makes it hop and purr. Purely decorative — no state, no
+   * rewards, nothing saved. A counter rather than a boolean so repeated pokes
+   * restart the animation instead of being swallowed while one is running.
+   */
+  const [poke, setPoke] = useState(0);
+  const named = Boolean(name);
+
   return (
-    <div className={`absolute ${className}`}>
+    <div
+      className={`absolute ${className}`}
+      onPointerDown={() => setPoke((n) => n + 1)}
+      style={{ pointerEvents: 'auto', cursor: 'pointer' }}
+      role={named ? 'button' : undefined}
+      aria-label={named ? `${name} the cat` : undefined}
+    >
+      {poke > 0 && (
+        <span
+          key={poke}
+          className="purr-up pointer-events-none absolute -top-5 left-1/2 -translate-x-1/2 whitespace-nowrap font-mono text-[9px] font-semibold"
+          style={{ color: 'var(--scene-ink, #2c2318)' }}
+          aria-hidden
+        >
+          {name ?? 'prrp'}
+        </span>
+      )}
+      <div key={`shake-${poke}`} className={poke > 0 ? 'cat-poke' : ''}>
       {/* soft contact shadow */}
       <div
         className="absolute -bottom-1 left-0 h-2 w-[34px] rounded-[50%] blur-[2px]"
@@ -80,6 +109,25 @@ export function Cat({
         className="absolute left-[9px] top-[-5px] h-[3px] w-[3px] rounded-full"
         style={{ background: eye, boxShadow: `6px 0 0 ${eye}` }}
       />
+      {/* tuxedo bib: chest blaze and two front paws. Drawn over the body, under
+          the head, so the head gradient still reads as the top of the cat. */}
+      {bib && (
+        <>
+          <div
+            className="absolute left-[9px] top-[-2px] h-[19px] w-[11px]"
+            style={{ background: bib, borderRadius: '46% 46% 40% 40%' }}
+          />
+          <div
+            className="absolute left-[7px] top-[24px] h-[5px] w-[6px] rounded-[3px]"
+            style={{ background: bib }}
+          />
+          <div
+            className="absolute left-[16px] top-[24px] h-[5px] w-[6px] rounded-[3px]"
+            style={{ background: bib }}
+          />
+        </>
+      )}
+      </div>
     </div>
   );
 }
@@ -222,6 +270,10 @@ export function Courtyard() {
       {/* the cats — fur follows the age so they never sink into the floor */}
       <Cat className="floaty bottom-[28%] left-24 scale-105" {...cats[0]} />
       <Cat className="bottom-[24%] right-24 scale-[.82]" {...cats[1]} flip delay={0.8} />
+      {/* Walter sits in every age, front and centre-left, closer to the camera
+          than the other two. He is the same size in every era and never reskins
+          — that is the point of him. */}
+      <Cat className="bottom-[12%] left-10 scale-[.92]" {...WALTER} delay={1.6} />
 
       {/* Grid chatter. This line came across with the old world viewport — it's
           the only place the game talks about how big you've actually got. */}

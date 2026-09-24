@@ -518,6 +518,7 @@ function mergeOffline(a: OfflineSummary, b: OfflineSummary): OfflineSummary {
     powerGained: a.powerGained + b.powerGained,
     projectGained: a.projectGained + b.projectGained,
     creditsGained: a.creditsGained + b.creditsGained,
+    rpGained: a.rpGained + b.rpGained,
     puzzlesSolved: a.puzzlesSolved + b.puzzlesSolved,
   };
 }

@@ -13,6 +13,20 @@ export const CONFIG = {
   BASE_RESEARCH_RATE: 0.5, // RP/sec at start
   OFFLINE_CAP_SECONDS: 28800, // 8h base, raised by research — idle games punish absence at their peril
   OFFLINE_MIN_SECONDS: 30, // gaps shorter than this aren't worth a summary
+  /**
+   * Share of the live RP rate earned while away.
+   *
+   * Until 1.0.1 the answer was zero: `creditOffline` credited power, Credits and
+   * auto-solved puzzles but never touched `rp`, so the tech tree alone stopped
+   * dead when the app closed. Players noticed. That was an omission rather than a
+   * decision — nothing in the code defended it.
+   *
+   * Reduced rather than full, deliberately. RP gates the tech tree, which gates
+   * every other system, so paying it at full rate would make closing the app a
+   * strictly optimal way to advance the part of the game that matters most. Half
+   * keeps absence from being punishing without making it preferable.
+   */
+  OFFLINE_RP_RATE: 0.5,
   // Returning from a *backgrounded* app is a much more frequent event than a
   // cold launch — every glance at a text message triggers it. Below this, the
   // away time is still credited, but as a toast rather than a full-screen

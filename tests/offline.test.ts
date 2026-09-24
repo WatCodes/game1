@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { createInitialState } from '../src/engine/state';
 import { creditOffline, offlineCap } from '../src/engine/offline';
-import { buyResearch } from '../src/engine/research';
+import { buyResearch, researchRate } from '../src/engine/research';
 import { powerPerSec } from '../src/engine/economy';
 import { saveToStorage } from '../src/store/save';
 import { CONFIG } from '../src/content/config';
@@ -27,6 +27,46 @@ describe('creditOffline', () => {
     expect(s.runPower).toBeCloseTo(pps * 3600);
     // default sellPct 0.6 at an unsaturated market → 60% sells at BASE_PRICE
     expect(summary!.creditsGained).toBeCloseTo(pps * 3600 * 0.6 * CONFIG.BASE_PRICE);
+  });
+
+  it('accrues RP while away, at the reduced offline share', () => {
+    // Until 1.0.1 this was zero — power, Credits and auto-solved puzzles all
+    // accrued offline and research alone did not, which read as the tech tree
+    // being broken rather than as a design choice.
+    const s = producing(0);
+    const rate = researchRate(s);
+    const rpBefore = s.rp;
+    const summary = creditOffline(s, HOUR_MS);
+    expect(summary!.rpGained).toBeCloseTo(rate * CONFIG.OFFLINE_RP_RATE * 3600);
+    expect(s.rp - rpBefore).toBeCloseTo(summary!.rpGained);
+  });
+
+  it('pays offline RP strictly below the live rate', () => {
+    // The guard that matters: if this ever reaches parity, closing the app
+    // becomes a neutral-or-better way to advance the tech tree.
+    const s = producing(0);
+    const live = researchRate(s) * 3600;
+    const summary = creditOffline(s, HOUR_MS);
+    expect(summary!.rpGained).toBeLessThan(live);
+    expect(summary!.rpGained).toBeGreaterThan(0);
+  });
+
+  it('still reports a summary for a parked save that only banked RP', () => {
+    // No generators, so no power and no CR — but research still ticks, and
+    // swallowing it silently is the bug this replaced.
+    const s = createInitialState(0);
+    s.credits = 0;
+    const summary = creditOffline(s, HOUR_MS);
+    expect(summary).not.toBeNull();
+    expect(summary!.powerGained).toBe(0);
+    expect(summary!.rpGained).toBeGreaterThan(0);
+  });
+
+  it('clamps offline RP to the same cap as generation', () => {
+    const s = producing(0);
+    const rate = researchRate(s);
+    const summary = creditOffline(s, 100 * HOUR_MS);
+    expect(summary!.rpGained).toBeCloseTo(rate * CONFIG.OFFLINE_RP_RATE * offlineCap(s));
   });
 
   it('clamps generation to the offline cap', () => {

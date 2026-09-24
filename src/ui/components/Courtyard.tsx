@@ -131,7 +131,13 @@ export function Courtyard() {
         className="pointer-events-auto absolute left-1/2 top-[52%] -translate-x-1/2 -translate-y-[92px] text-center disabled:opacity-70"
         onClick={channel}
         disabled={!dispatch.canFire}
-        aria-label={dispatch.canFire ? 'Channel the lightning' : 'Charging'}
+        aria-label={
+          !dispatch.hasGeneration
+            ? 'Channel the lightning — needs a power source first'
+            : dispatch.canFire
+              ? 'Channel the lightning'
+              : 'Charging'
+        }
       >
         <span
           className={`bolt-shape mx-auto block h-16 w-10 ${dispatch.canFire ? 'flick floaty' : ''}`}
@@ -156,7 +162,17 @@ export function Courtyard() {
         className="absolute left-1/2 top-[calc(52%+46px)] -translate-x-1/2 whitespace-nowrap font-mono text-[8px] font-semibold"
         style={{ letterSpacing: '.16em', color: 'var(--scene-ink)' }}
       >
-        {dispatch.canFire ? 'TAP TO CHANNEL ⚡' : `CHARGING ${Math.floor(dispatch.charge * 100)}%`}
+        {/*
+          Three states, not two. Without generation the altar has nothing to
+          dispatch, and saying CHARGING there is a lie that resolves into another
+          lie — the bar fills to 100%, the bolt lights up, and tapping still does
+          nothing. Name the actual blocker instead.
+        */}
+        {!dispatch.hasGeneration
+          ? 'NEEDS A POWER SOURCE'
+          : dispatch.canFire
+            ? 'TAP TO CHANNEL ⚡'
+            : `CHARGING ${Math.floor(dispatch.charge * 100)}%`}
       </div>
 
       {/* rising +CR from a channel */}

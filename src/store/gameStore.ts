@@ -216,7 +216,7 @@ export interface DisplaySnapshot {
     unrealised: Num;
   };
   ascend: { can: boolean; projected: number; nextEra: string; nextScale: string };
-  dispatch: { charge: number; canFire: boolean; peakActive: boolean; peakLeft: number };
+  dispatch: { charge: number; canFire: boolean; hasGeneration: boolean; peakActive: boolean; peakLeft: number };
   credits: number;
   boosts: { surgeLeft: number; powerLeft: number; rpLeft: number };
   puzzle: {
@@ -377,7 +377,18 @@ function buildDisplay(s: GameState): DisplaySnapshot {
     },
     dispatch: {
       charge: s.dispatch.charge,
-      canFire: s.dispatch.charge >= CONFIG.DISPATCH_MIN_CHARGE,
+      /**
+       * Generation matters as much as charge. `fireDispatch` sells a burst of
+       * `pps × DISPATCH_SECONDS × charge`, so with no generators the burst is
+       * zero and it bails on `gained <= 0` — silently, leaving the charge intact.
+       *
+       * That is precisely the state a new player is in, and the intro tells them
+       * to tap the altar first. The button glowed, said TAP TO CHANNEL, and did
+       * nothing until they happened to buy a kneader. Reported as "Channel
+       * doesn't work", and they were right.
+       */
+      canFire: s.dispatch.charge >= CONFIG.DISPATCH_MIN_CHARGE && pps > 0,
+      hasGeneration: pps > 0,
       peakActive: s.dispatch.peakLeft > 0,
       peakLeft: s.dispatch.peakLeft,
     },

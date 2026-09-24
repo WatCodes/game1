@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useGame } from '../../store/gameStore';
 import { formatPower, formatShort, formatUnit } from '../../engine/format';
+import { CONFIG } from '../../content/config';
 
 // Plain-language effect per lane — shown on the button (no hover on mobile).
 const LANE_EFFECT: Record<string, string> = {
@@ -22,7 +23,27 @@ export function GridPanel() {
   const [showHelp, setShowHelp] = useState(false);
 
   const congested = grid.binding === 'transmission';
+  const lossy = grid.lossFrac > CONFIG.GRID_LOSS_WARN_FRAC;
   const capPct = Math.min(100, (grid.generation / grid.cap) * 100);
+
+  /**
+   * Which lane actually fixes the problem you have *right now*.
+   *
+   * The panel used to flag v and a whenever the grid was congested and never
+   * flagged anything for loss — `r` was explicitly excluded — so a player
+   * staring at a red loss figure got no signal about which button addressed it.
+   * That is the gap this closes: playtesters could see loss was bad and could
+   * not tell what to buy.
+   *
+   *   v — raises the cap *and* cuts loss, so it is the answer to either problem
+   *   a — raises the cap only
+   *   r — cuts loss only
+   *
+   * Nothing is flagged when the grid is healthy. A panel that always recommends
+   * something is a panel nobody reads.
+   */
+  const fixes = (lane: 'v' | 'a' | 'r'): boolean =>
+    (congested && (lane === 'v' || lane === 'a')) || (lossy && (lane === 'v' || lane === 'r'));
 
   return (
     <div className={`rounded border bg-panel px-3 py-2 ${congested ? 'border-volt-dim' : 'border-line'}`}>
@@ -42,7 +63,7 @@ export function GridPanel() {
           <span className="text-ink-dim"> · </span>
           <span className="text-current">{formatUnit(grid.amps, 'A')}</span>
           <span className="text-ink-dim"> · loss </span>
-          <span className={grid.lossFrac > 0.05 ? 'text-danger' : 'text-ok'}>{(grid.lossFrac * 100).toFixed(1)}%</span>
+          <span className={lossy ? 'text-danger' : 'text-ok'}>{(grid.lossFrac * 100).toFixed(1)}%</span>
         </span>
       </div>
 
@@ -64,34 +85,56 @@ export function GridPanel() {
           gen <span className="text-ink">{formatPower(grid.generation)}</span>/s → delivered{' '}
           <span className="text-volt">{formatPower(pps)}</span>/s
         </span>
-        <span className={congested ? 'text-volt' : 'text-ink-dim'}>
-          {congested ? '⚠ GRID CONGESTED' : `cap ${formatPower(grid.cap)}/s`}
+        {/* Loss had no status line at all, so a player losing 20% of their
+            output saw a healthy-looking cap reading and no reason to act. */}
+        <span className={congested || lossy ? 'text-volt' : 'text-ink-dim'}>
+          {congested
+            ? '⚠ GRID CONGESTED'
+            : lossy
+              ? '⚠ LOSING POWER IN THE LINES'
+              : `cap ${formatPower(grid.cap)}/s`}
         </span>
       </div>
 
       <div className="mt-2 grid grid-cols-3 gap-1.5">
-        {grid.lanes.map((l) => (
-          <button
-            key={l.lane}
-            className={`rounded border px-1.5 py-1 text-left font-mono text-[10px] leading-tight transition-colors ${
-              l.affordable
-                ? congested && l.lane !== 'r'
-                  ? 'border-volt text-volt hover:bg-raised'
-                  : 'border-current-dim text-current hover:bg-raised'
-                : 'border-line text-ink-dim cursor-not-allowed'
-            }`}
-            disabled={!l.affordable}
-            onClick={() => buyGridLane(l.lane)}
-          >
-            {l.name} <span className="text-ink-dim">L{l.level}</span>
-            <br />
-            <span className="text-[9px] text-ink-dim">{LANE_EFFECT[l.lane]}</span>
-            <br />
-            <span className="text-ink-dim">
-              {LANE_UNIT[l.lane]}↑ {formatShort(l.cost)} CR
-            </span>
-          </button>
-        ))}
+        {grid.lanes.map((l) => {
+          const urgent = fixes(l.lane);
+          return (
+            <button
+              key={l.lane}
+              className={`relative rounded border px-1.5 py-1 text-left font-mono text-[10px] leading-tight transition-colors ${
+                l.affordable
+                  ? urgent
+                    ? 'border-volt text-volt hover:bg-raised'
+                    : 'border-current-dim text-current hover:bg-raised'
+                  : urgent
+                    ? 'border-volt-dim text-ink-dim cursor-not-allowed'
+                    : 'border-line text-ink-dim cursor-not-allowed'
+              }`}
+              disabled={!l.affordable}
+              onClick={() => buyGridLane(l.lane)}
+            >
+              {/* Flagged even when unaffordable: "this is the one, save for it"
+                  is more useful than silence, and matches how the lab shows a
+                  project-critical node you cannot yet buy. */}
+              {urgent && (
+                <span
+                  className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full"
+                  style={{ background: 'var(--amber)' }}
+                  aria-hidden
+                />
+              )}
+              {l.name} <span className="text-ink-dim">L{l.level}</span>
+              <br />
+              <span className="text-[9px] text-ink-dim">{LANE_EFFECT[l.lane]}</span>
+              <br />
+              <span className="text-ink-dim">
+                {LANE_UNIT[l.lane]}↑ {formatShort(l.cost)} CR
+              </span>
+              {urgent && <span className="sr-only"> — recommended fix</span>}
+            </button>
+          );
+        })}
       </div>
     </div>
   );

@@ -6,8 +6,9 @@ import { CONFIG } from '../../content/config';
 /**
  * The occasional "fancy a boost?" prompt.
  *
- * Everything about this component is shaped by one promise on the App Store
- * listing: "No forced ads, ever. No timers blocking your progress."
+ * Non-intrusive by design. The listing no longer promises "no forced ads", so
+ * this shape is a choice rather than an obligation — but it is still the right
+ * one for an offer the player gains nothing by resenting:
  *
  *   - It is **not** a modal. No backdrop, no focus trap, no pointer-events over
  *     the rest of the screen. The game keeps running and stays playable behind
@@ -17,9 +18,6 @@ import { CONFIG } from '../../content/config';
  *     become permanent furniture the player learns to see through.
  *   - It never appears while the boost is on cooldown, so it is always
  *     actionable when shown.
- *
- * If any of those stop being true, the store description has to change in the
- * same release.
  */
 export function AdOfferCard() {
   const offer = useGame((s) => s.display.ads.offer);

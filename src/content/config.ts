@@ -77,13 +77,13 @@ export const CONFIG = {
   DAILY_STREAK_BONUS: 0.1,
   ACHIEVEMENT_BONUS: 0.01, // +1% global output per record earned
   /**
-   * Rewarded-ad placements. Every one of these is opt-in, and that is a product
-   * constraint rather than a preference: the App Store description promises "No
-   * forced ads, ever. No timers blocking your progress." Nothing here may
-   * interrupt play, gate progress, or appear without a dismiss control. Adding a
-   * forced interstitial means editing that description in the same release.
+   * Rewarded-ad placements. Both current ones are opt-in: an offer is a
+   * suggestion that sits in the UI until taken or dismissed.
    *
-   * The offer is a *suggestion* that sits in the UI until dismissed or taken.
+   * The listing no longer promises "no forced ads" (dropped for 1.0.1), so that
+   * is a design choice now rather than a commitment. What the description still
+   * says is "No timers blocking your progress" — so whatever gets added here,
+   * nothing may gate progress behind an ad.
    */
   AD_BOOST_COOLDOWN_SECONDS: 1800, // 30 min between free ad-funded boosts
   AD_OFFER_GAP_MIN_SECONDS: 900, // earliest a fresh offer can surface

@@ -143,10 +143,9 @@ The cats keep the grid running. Come back to a full tally of what they earned �
 and the option to double it.
 
 NO NONSENSE
-No forced ads, ever. No timers blocking your progress. No account, no sign-up, no
-data collection — your save lives on your device, and you can export it whenever
-you like. Rewarded videos are strictly optional, and if one won't load, you get the
-bonus anyway.
+No timers blocking your progress. No account, no sign-up, no data collection —
+your save lives on your device, and you can export it whenever you like. Rewarded
+videos are optional, and if one won't load, you get the bonus anyway.
 
 Steal the lightning. Light the world.
 ```

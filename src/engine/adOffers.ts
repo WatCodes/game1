@@ -4,10 +4,14 @@ import type { AdOfferKind, GameState } from './types';
 /**
  * Pacing and payout for rewarded-ad placements.
  *
- * The hard constraint this module exists to respect: the App Store description
- * promises "No forced ads, ever. No timers blocking your progress." So nothing
- * here shows an ad, blocks play, or gates progress. It only decides *when an
- * opt-in offer is allowed to exist*, and what taking one is worth.
+ * Nothing here shows an ad, blocks play, or gates progress. It only decides
+ * *when an opt-in offer is allowed to exist*, and what taking one is worth —
+ * showing the ad itself belongs to the platform layer, and the engine stays
+ * pure.
+ *
+ * The listing used to promise "no forced ads"; that was dropped for 1.0.1, so
+ * the opt-in shape below is a design choice rather than a commitment. "No timers
+ * blocking your progress" is still in the description and still binding.
  *
  * Two placements, both voluntary:
  *

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import type { GameState, Id, MegaprojectStage, Num } from '../engine/types';
+import type { AdOfferKind, GameState, Id, MegaprojectStage, Num } from '../engine/types';
+import { acceptOffer, canWatchForBoost, clearOffer, grantAdBoost } from '../engine/adOffers';
 import { CONFIG } from '../content/config';
 import { getTier } from '../content/tiers';
 import { createInitialState } from '../engine/state';
@@ -217,6 +218,7 @@ export interface DisplaySnapshot {
   };
   ascend: { can: boolean; projected: number; nextEra: string; nextScale: string };
   dispatch: { charge: number; canFire: boolean; hasGeneration: boolean; peakActive: boolean; peakLeft: number };
+  ads: { canWatch: boolean; cooldownLeft: number; offer: AdOfferKind | null };
   credits: number;
   boosts: { surgeLeft: number; powerLeft: number; rpLeft: number };
   puzzle: {
@@ -391,6 +393,11 @@ function buildDisplay(s: GameState): DisplaySnapshot {
       hasGeneration: pps > 0,
       peakActive: s.dispatch.peakLeft > 0,
       peakLeft: s.dispatch.peakLeft,
+    },
+    ads: {
+      canWatch: s.ads.boostCooldown <= 0,
+      cooldownLeft: s.ads.boostCooldown,
+      offer: s.ads.offer,
     },
     credits: s.credits,
     boosts: { ...s.boosts },
@@ -581,6 +588,9 @@ interface GameStore {
     claimDailyReward: () => void;
     buyShopSolver: () => void;
     buyShopBoost: (kind: 'power' | 'rp' | 'dispatch') => void;
+    watchAdForBoost: (kind: AdOfferKind) => Promise<void>;
+    acceptAdOffer: () => Promise<void>;
+    dismissAdOffer: () => void;
     creditAwayTime: () => void;
     reportSaveFailure: () => void;
     dismissOffline: () => void;
@@ -840,6 +850,43 @@ export const useGame = create<GameStore>((set) => {
           refresh();
         }
         set({ offline: null });
+      },
+      /**
+       * Trade a rewarded ad for a boost the shop otherwise sells for Credits.
+       *
+       * Same contract as claimOfflineDouble: a failed or unavailable ad still
+       * grants, so a browser player is never worse off than a native one. The
+       * cooldown is claimed by `grantAdBoost` itself, so a second tap while the
+       * ad is on screen cannot stack a second boost.
+       */
+      watchAdForBoost: async (kind) => {
+        if (!canWatchForBoost(game)) return;
+        const result = await showRewardedAd();
+        if (!shouldGrantReward(result)) return;
+        if (!grantAdBoost(game, kind)) return;
+        pushToast('info', `${kind === 'power' ? 'Power' : 'Research'} ×${CONFIG.BOOST_MULT} for ${Math.round(CONFIG.BOOST_SECONDS / 60)} min`);
+        saveToStorage(game);
+        refresh();
+      },
+      acceptAdOffer: async () => {
+        const kind = game.ads.offer;
+        if (!kind) return;
+        const result = await showRewardedAd();
+        if (!shouldGrantReward(result)) {
+          // Dismissed the ad early: withdraw the offer rather than re-showing
+          // it, so declining is never punished with another prompt.
+          clearOffer(game);
+          refresh();
+          return;
+        }
+        acceptOffer(game);
+        pushToast('info', `${kind === 'power' ? 'Power' : 'Research'} ×${CONFIG.BOOST_MULT} for ${Math.round(CONFIG.BOOST_SECONDS / 60)} min`);
+        saveToStorage(game);
+        refresh();
+      },
+      dismissAdOffer: () => {
+        clearOffer(game);
+        refresh();
       },
       dismissCinematic: () => set({ cinematic: null }),
       dismissToast: (id) => set((st) => ({ toasts: st.toasts.filter((t) => t.id !== id) })),

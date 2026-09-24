@@ -26,6 +26,7 @@ import { RightRail, type RailId } from './components/RightRail';
 import { SoundToggle } from './components/SoundToggle';
 import { HelpButton } from './components/HelpButton';
 import { HelpPanel } from './components/HelpPanel';
+import { AdOfferCard } from './components/AdOfferCard';
 import { StrandedBanner } from './components/StrandedBanner';
 
 const TITLES: Record<RailId, string> = {
@@ -178,6 +179,9 @@ export default function App() {
       </div>
 
       <Toasts />
+      {/* Below the modals in the stack on purpose — an optional offer must never
+          sit on top of the away summary, an ascension, or the intro. */}
+      <AdOfferCard />
       <OfflineModal />
       <AscensionOverlay />
       <IntroOverlay />

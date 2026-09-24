@@ -6,6 +6,7 @@ import { settleOvercapacity } from './arbitrage';
 import { researchModifiers, researchRate } from './research';
 import { runSolvers } from './puzzle';
 import { tickBoosts } from './shop';
+import { tickAdOffers } from './adOffers';
 import { checkAchievements } from './achievements';
 import { tickAccretion, tickLaunchWindow } from './tierTwists';
 
@@ -35,6 +36,7 @@ export function tick(s: GameState, dt: number, rand: () => number = Math.random)
   tickDispatch(s, dt, rand);
   runSolvers(s, dt);
   tickBoosts(s, dt);
+  tickAdOffers(s, dt, rand);
   checkAchievements(s);
   tickLaunchWindow(s, dt, rand);
   tickAccretion(s, dt, pps);

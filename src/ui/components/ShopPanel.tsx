@@ -3,6 +3,7 @@ import { useGame } from '../../store/gameStore';
 import { formatTime } from '../../engine/format';
 import { CONFIG } from '../../content/config';
 import { ArbitrageDesk } from './ArbitrageDesk';
+import { AdBoostRow } from './AdBoostRow';
 
 /**
  * The Agora (design 5a). Item rows are white cards on parchment with a tinted
@@ -151,6 +152,9 @@ export function ShopPanel() {
         affordable={credits >= shop.solverCost}
         onBuy={buyShopSolver}
       />
+      {/* Above the paid boosts on purpose: the free option should not be the
+          thing you find only after deciding to spend. */}
+      <AdBoostRow />
       <Item
         icon={
           <Tile tint="rgba(52,211,153,.12)" border="rgba(52,150,110,.4)" color="#2e9c73">

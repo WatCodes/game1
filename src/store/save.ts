@@ -1,4 +1,4 @@
-import type { GameState, Id, Num, PuzzleState, ReserveState } from '../engine/types';
+import type { AdOfferKind, GameState, Id, Num, PuzzleState, ReserveState } from '../engine/types';
 import { CONFIG } from '../content/config';
 import { SAVE_VERSION, createInitialState } from '../engine/state';
 import { reapplyPurchasedEffects } from '../engine/research';
@@ -48,6 +48,10 @@ export interface SaveData {
   solvers: number;
   solverProgress: number;
   boosts: { surgeLeft: number; powerLeft: number; rpLeft: number };
+  // Optional on purpose: saves written before 1.0.1 have no `ads` field, and
+  // they must keep loading. `hydrate` supplies defaults; `validateSave`
+  // deliberately does not require it.
+  ads?: { boostCooldown: number; nextOfferIn: number; offer: AdOfferKind | null; offerLeft: number };
   daily: { lastClaimDay: string; streak: number };
   achievements: Id[];
   lastSaved: number;
@@ -110,6 +114,7 @@ export function serialize(s: GameState): SaveData {
     solvers: s.solvers,
     solverProgress: s.solverProgress,
     boosts: { ...s.boosts },
+    ads: { ...s.ads },
     daily: { ...s.daily },
     achievements: [...s.achievements],
     lastSaved: s.lastSaved,
@@ -229,6 +234,22 @@ export function hydrate(save: SaveData): GameState {
     surgeLeft: Math.max(0, save.boosts?.surgeLeft ?? 0),
     powerLeft: Math.max(0, save.boosts?.powerLeft ?? 0),
     rpLeft: Math.max(0, save.boosts?.rpLeft ?? 0),
+  };
+  /**
+   * Saves written before 1.0.1 carry no `ads` field at all, and a live app makes
+   * that the common case rather than an edge one — so every value falls back
+   * rather than being required.
+   *
+   * A restored save never resumes mid-offer: `offer` is dropped on load. An
+   * offer is a momentary prompt, and reviving one from a save written hours ago
+   * would put a stale card on screen the instant the player returns, which is
+   * exactly the interruption the listing promises not to do.
+   */
+  s.ads = {
+    boostCooldown: Math.max(0, save.ads?.boostCooldown ?? 0),
+    nextOfferIn: Math.max(0, save.ads?.nextOfferIn ?? CONFIG.AD_OFFER_GAP_MAX_SECONDS),
+    offer: null,
+    offerLeft: 0,
   };
   s.daily = {
     lastClaimDay: typeof save.daily?.lastClaimDay === 'string' ? save.daily.lastClaimDay : '',

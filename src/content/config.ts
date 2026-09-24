@@ -76,6 +76,19 @@ export const CONFIG = {
   DAILY_REWARDS: [50, 75, 100, 150, 200, 300, 500],
   DAILY_STREAK_BONUS: 0.1,
   ACHIEVEMENT_BONUS: 0.01, // +1% global output per record earned
+  /**
+   * Rewarded-ad placements. Every one of these is opt-in, and that is a product
+   * constraint rather than a preference: the App Store description promises "No
+   * forced ads, ever. No timers blocking your progress." Nothing here may
+   * interrupt play, gate progress, or appear without a dismiss control. Adding a
+   * forced interstitial means editing that description in the same release.
+   *
+   * The offer is a *suggestion* that sits in the UI until dismissed or taken.
+   */
+  AD_BOOST_COOLDOWN_SECONDS: 1800, // 30 min between free ad-funded boosts
+  AD_OFFER_GAP_MIN_SECONDS: 900, // earliest a fresh offer can surface
+  AD_OFFER_GAP_MAX_SECONDS: 1800, // latest — randomised so it never feels metronomic
+  AD_OFFER_LIFETIME_SECONDS: 120, // an ignored offer withdraws itself rather than nagging
   // Per-tier mechanical twists (GAME_DESIGN §8) — each inert outside its tier
   LAUNCH_WINDOW_DURATION_SECONDS: 20, // T3: orbital purchases avoid the surcharge
   LAUNCH_GAP_MIN_SECONDS: 60,

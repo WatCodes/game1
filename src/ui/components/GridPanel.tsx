@@ -69,10 +69,8 @@ export function GridPanel() {
 
       {showHelp && (
         <p className="mt-1.5 rounded bg-raised/60 px-2 py-1.5 text-[10px] leading-relaxed text-ink-dim">
-          Your grid can only carry <span className="text-current">Volts × Amps</span> of power. Anything you generate
-          above that cap is stranded, and line losses waste a slice of the rest. Buy <span className="text-ink">transformers</span> (more
-          volts — also cuts loss) and <span className="text-ink">conductors</span> (more amps) to raise the cap, and{' '}
-          <span className="text-ink">superconductors</span> to cut loss.
+          Your grid carries <span className="text-current">Volts × Amps</span>. Anything above that cap is stranded, and
+          the lines waste a slice of the rest. A flagged lane below is the fix for whichever is hurting you now.
         </p>
       )}
 

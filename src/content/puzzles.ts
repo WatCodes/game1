@@ -5,15 +5,20 @@
 // Flavour deliberately never spells out "row" and "column": the panel's rule
 // line teaches that once, and restating it in eight voices reads as
 // instructions rather than as a world.
+//
+// One line each, not two. Every skin used to state the no-repeats rule *and*
+// the marks rule, which meant the player read the same instruction nine times
+// over a run — once in the Field Manual, once in the coach, and again in every
+// era's voice. These name the place; the rules are taught elsewhere.
 const SKINS: [string, string][] = [
-  ['Athens Wards', 'No two wards on a line may draw the same. Mind the marks — they say who outdraws whom.'],
-  ['Colony Dispatch', 'Every feeder takes its own share. The marks fix the pecking order between neighbours.'],
-  ['World Hearth Trim', 'One draw of each along every run. The marks name the greater of each pair.'],
-  ['Orbital Load Board', 'Each truss bus carries its own tap. Respect the marks between adjacent rings.'],
-  ['Swarm Regulator', 'No statite doubles up along a line. The marks rank each neighbouring pair.'],
-  ['Ergosphere Governor', 'Each frame-drag tap sits at its own depth. The marks hold the order between them.'],
-  ['Galactic Load Web', 'One draw of each per arm. The marks decide which node runs hotter.'],
-  ['Lattice Damper', 'Every kernel node takes a distinct amplitude. The marks fix the gradient.'],
+  ['Athens Wards', 'No two wards on a line may draw alike.'],
+  ['Colony Dispatch', 'Every feeder takes its own share.'],
+  ['World Hearth Trim', 'One draw of each along every run.'],
+  ['Orbital Load Board', 'Each truss bus carries its own tap.'],
+  ['Swarm Regulator', 'No statite doubles up along a line.'],
+  ['Ergosphere Governor', 'Each frame-drag tap sits at its own depth.'],
+  ['Galactic Load Web', 'One draw of each per arm.'],
+  ['Lattice Damper', 'Every kernel node takes a distinct amplitude.'],
 ];
 
 export function puzzleSkin(tier: number): { name: string; flavor: string } {

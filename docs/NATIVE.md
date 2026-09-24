@@ -142,6 +142,32 @@ npx cap add android        # on Windows or Mac
 npx cap add ios            # Mac only (needs CocoaPods)
 ```
 
+### Installed plugins, and why each one is here
+
+Three, and the count is deliberately small — every one is a native dependency that
+has to survive `cap sync`, Xcode signing and review.
+
+| Plugin | Why |
+|---|---|
+| `@capacitor-community/admob` | Rewarded video. The only monetisation in the app. |
+| `@capacitor/status-bar` | Dark glyphs on the parchment theme (see `capacitor.config.ts`). |
+| `@capacitor/app` | **Added 1.0.1.** Native app lifecycle, for away-time crediting. |
+
+`@capacitor/app` exists because **iOS does not reliably deliver `visibilitychange`
+to a WKWebView when the app is backgrounded** — only when the page itself is
+hidden. Away time was therefore credited on a full swipe-kill but usually not when
+the player simply switched apps, which is the far more common action. Players
+reported the game "not going offline unless you fully close it". `appStateChange`
+reports the native lifecycle directly.
+
+Both listeners stay wired — web `visibilitychange` *and* native `appStateChange`.
+They cannot double-credit: `creditOffline` advances `lastSaved` before paying out,
+so a second call inside `OFFLINE_MIN_SECONDS` returns null. `tests/offline.test.ts`
+pins that.
+
+All three are reached through `nativePlugin()` in `src/platform/native.ts`, by
+registered *name* rather than package import, so none of them enter the web bundle.
+
 > ⚠️ **Do not run `npx cap init`.** That command's job is to *create*
 > `capacitor.config.ts`, and this repo already has one carrying the parchment
 > `backgroundColor`, the `contentInset` and the StatusBar style. Re-initialising

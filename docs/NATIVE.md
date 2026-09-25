@@ -165,6 +165,30 @@ They cannot double-credit: `creditOffline` advances `lastSaved` before paying ou
 so a second call inside `OFFLINE_MIN_SECONDS` returns null. `tests/offline.test.ts`
 pins that.
 
+> **The plugin was necessary but not sufficient — build 8 still failed on device.**
+> The event *arrived*; the away window was already gone. `lastSaved` was restamped
+> by every save, including the 8-second autosave, and on resume WebKit fires the
+> overdue autosave in a race with the lifecycle event. When the autosave won, the
+> handler found ~0s elapsed and credited nothing. Separately, when the app was
+> inactive but not frozen, the autosave kept stamping "now" over a paused
+> simulation and the time was simply lost.
+>
+> The real fix (1.0.1 build 9) is in `src/ui/hooks/useGameTick.ts`: **only the frame
+> loop advances `lastSaved`**, meaning "state is accurate as of this moment", and
+> the saves that can run while the loop is paused persist that stamp instead of
+> minting a new one. The first frame after any pause also credits the gap itself,
+> so crediting no longer depends on any event arriving, or on the order they do.
+>
+> Verified on the iOS Simulator with stdout bridge tracing (`simctl launch
+> --console-pty` — Capacitor's `⚡️` lines go to stdout, not the system log): the
+> old build credited one resume and missed the next with identical steps; the fixed
+> build credited five of five, across Home-button suspension (frozen JS), app
+> switching (unfrozen JS), and an unplanned nine-minute absence.
+>
+> Lesson worth keeping: a fix to *event delivery* was tested by checking that the
+> event was delivered. It should have been tested by checking the away summary on
+> a real resume, which is what the player sees.
+
 All three are reached through `nativePlugin()` in `src/platform/native.ts`, by
 registered *name* rather than package import, so none of them enter the web bundle.
 

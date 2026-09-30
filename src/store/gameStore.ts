@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { AdOfferKind, GameState, Id, MegaprojectStage, Num } from '../engine/types';
 import { acceptOffer, canWatchForBoost, clearOffer, grantAdBoost } from '../engine/adOffers';
+import { tutorialSnapshot } from '../engine/tutorial';
 import { CONFIG } from '../content/config';
 import { getTier } from '../content/tiers';
 import { createInitialState } from '../engine/state';
@@ -107,6 +108,13 @@ import { formatPower, formatShort, formatTime } from '../engine/format';
 // ---------------------------------------------------------------------------
 
 export const game: GameState = loadFromStorage() ?? createInitialState();
+/**
+ * How many times the altar has fired this session. Session-only on purpose: its
+ * one reader is the tutorial's altar beat, which needs "did they channel since I
+ * appeared?", not a lifetime statistic — so it stays out of the save format.
+ */
+let dispatchCount = 0;
+
 const initialOffline: OfflineSummary | null = creditOffline(game, Date.now());
 
 // --- Display snapshot types ---
@@ -219,6 +227,9 @@ export interface DisplaySnapshot {
   ascend: { can: boolean; projected: number; nextEra: string; nextScale: string };
   dispatch: { charge: number; canFire: boolean; hasGeneration: boolean; peakActive: boolean; peakLeft: number };
   ads: { canWatch: boolean; cooldownLeft: number; offer: AdOfferKind | null };
+  tutorial: ReturnType<typeof tutorialSnapshot>;
+  /** Channels fired this session. The altar beat watches it; nothing is saved. */
+  dispatchCount: number;
   credits: number;
   boosts: { surgeLeft: number; powerLeft: number; rpLeft: number };
   puzzle: {
@@ -394,6 +405,8 @@ function buildDisplay(s: GameState): DisplaySnapshot {
       peakActive: s.dispatch.peakLeft > 0,
       peakLeft: s.dispatch.peakLeft,
     },
+    tutorial: tutorialSnapshot(s),
+    dispatchCount,
     ads: {
       canWatch: s.ads.boostCooldown <= 0,
       cooldownLeft: s.ads.boostCooldown,
@@ -743,6 +756,7 @@ export const useGame = create<GameStore>((set) => {
       doDispatch: () => {
         const result = fireDispatch(game);
         if (result) {
+          dispatchCount += 1;
           const label = result.peak ? `PEAK ×${CONFIG.PEAK_MULT}! ` : '';
           pushToast('info', `${label}Dispatch: ${formatPower(result.gained)} sold → +${formatShort(Math.round(result.creditsGained))} CR`);
           refresh();

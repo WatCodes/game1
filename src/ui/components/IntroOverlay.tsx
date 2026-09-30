@@ -24,25 +24,16 @@ interface Beat {
 }
 
 /**
- * Order matters here, and it used to be wrong.
+ * Premise, the rail, the send-off — and no instructions.
  *
- * The altar beat came first and told the player to channel a bolt — but dispatch
- * sells a slice of *generation*, and a new player has none, so the altar refuses
- * and the opening instruction was impossible to follow. Sources come first now,
- * which is also the order the game actually plays in.
- *
- * "two watts is where every empire starts" went with it: the first kneader
- * produces 0.4 W/s, so the line was wrong as well as long.
+ * The intro used to teach the kneader and the altar too. The altar beat could not
+ * be followed (dispatch needs generation, and a new player has none), and neither
+ * instruction could be *done* while this overlay covered the screen. Both are now
+ * tutorial moments (docs/TUTORIAL.md) that appear beside the real control, at the
+ * point it will work, and wait for the player to do it. This keeps only what is
+ * worth reading before playing.
  */
 const BEATS: Beat[] = [
-  {
-    x: '50%',
-    y: '92%',
-    r: 150,
-    cat: 'left-[calc(50%-104px)] top-[78%]',
-    bubbleTop: '150px',
-    copy: <>Power comes from paws. Open the sources below and put a kneader to work.</>,
-  },
   {
     x: '50%',
     y: '52%',
@@ -51,7 +42,7 @@ const BEATS: Beat[] = [
     bubbleTop: '150px',
     copy: (
       <>
-        Zeus hoards the lightning. We&rsquo;re going to <i>borrow</i> it — tap the altar to channel a bolt and sell it.
+        Zeus hoards the lightning. We&rsquo;re going to <i>borrow</i> it.
       </>
     ),
   },
@@ -73,7 +64,17 @@ const BEATS: Beat[] = [
   },
 ];
 
-export function IntroOverlay() {
+/** Whether the intro has already run on this device. */
+export function introSeen(): boolean {
+  try {
+    return typeof localStorage !== 'undefined' && localStorage.getItem(SEEN_KEY) === 'seen';
+  } catch {
+    return false;
+  }
+}
+
+/** `onFinish` lets the tutorial layer start only once the intro is out of the way. */
+export function IntroOverlay({ onFinish }: { onFinish?: () => void }) {
   const [open, setOpen] = useState(() => {
     if (typeof localStorage === 'undefined') return false;
     return localStorage.getItem(SEEN_KEY) !== 'seen';
@@ -94,6 +95,7 @@ export function IntroOverlay() {
       /* private mode — it'll show again next launch */
     }
     setOpen(false);
+    onFinish?.();
   };
 
   const beat = BEATS[step];
@@ -116,14 +118,6 @@ export function IntroOverlay() {
         }}
       />
 
-      {/* Pulsing tap-ring on the altar, first beat only. */}
-      {step === 0 && (
-        <div
-          className="glowpulse absolute left-1/2 top-[52%] h-[74px] w-[74px] -translate-x-1/2 -translate-y-[92px] rounded-full"
-          style={{ border: '2px solid rgba(255,255,255,.8)' }}
-          aria-hidden
-        />
-      )}
 
       {/* Pyrrha, at the light's edge — the courtyard's own tabby. */}
       <Cat

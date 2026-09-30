@@ -150,6 +150,28 @@ export function Courtyard() {
   // of the grid, not decoration.
   const built = sources.filter((s) => s.unlocked && s.owned > 0).slice(0, 2);
 
+  /**
+   * The altar fires on the finger lifting, not on `click` — because on iPhone it
+   * never got a click at all.
+   *
+   * iOS delivers pointerdown, pointerup and touchend to the altar, then declines
+   * to synthesize the click: WebKit suppresses a tap's click when content is
+   * changing under it, reading the tap as a hover, and the altar sits in a scene
+   * that animates constantly (the bolt flickers and floats, the display refreshes
+   * at 12 Hz). Traced on the iOS Simulator with the three events logged and no
+   * click, tutorial on screen or not. Every other button worked; this one never
+   * did. So "Channel doesn't work" was two bugs: 1.0.1 fixed the altar having
+   * nothing to sell on a fresh save, and this is the other one — it could not be
+   * tapped. The 1.0.1 fix was verified with scripted `.click()`, which skips
+   * exactly the step iOS drops; that is how this survived.
+   *
+   * `pressed` requires the press to start on the altar, so dragging a finger
+   * across it does not fire. `onClick` still handles keyboard activation, which
+   * arrives with `detail === 0`; pointer-originated clicks (detail ≥ 1) are
+   * ignored there, so desktop browsers — which do fire the click — cannot
+   * double-channel.
+   */
+  const pressed = useRef(false);
   const channel = useCallback(() => {
     const prev = before.current;
     doDispatch();
@@ -177,7 +199,24 @@ export function Courtyard() {
       />
       <button
         className="pointer-events-auto absolute left-1/2 top-[52%] -translate-x-1/2 -translate-y-[92px] text-center disabled:opacity-70"
-        onClick={channel}
+        onPointerDown={() => {
+          pressed.current = true;
+        }}
+        onPointerUp={() => {
+          if (!pressed.current) return;
+          pressed.current = false;
+          channel();
+        }}
+        onPointerLeave={() => {
+          pressed.current = false;
+        }}
+        onPointerCancel={() => {
+          pressed.current = false;
+        }}
+        onClick={(e) => {
+          if (e.detail === 0) channel(); // keyboard only; pointers fire on pointerup
+        }}
+        data-tutorial="altar"
         disabled={!dispatch.canFire}
         aria-label={
           !dispatch.hasGeneration

@@ -18,7 +18,7 @@ import { CheatPanel } from './components/CheatPanel';
 import { Toasts } from './components/Toasts';
 import { OfflineModal } from './components/OfflineModal';
 import { AscensionOverlay } from './components/AscensionOverlay';
-import { IntroOverlay } from './components/IntroOverlay';
+import { IntroOverlay, introSeen } from './components/IntroOverlay';
 import { ObjectiveStrip } from './components/ObjectiveStrip';
 import { Courtyard } from './components/Courtyard';
 import { Popup } from './components/Popup';
@@ -27,6 +27,7 @@ import { SoundToggle } from './components/SoundToggle';
 import { HelpButton } from './components/HelpButton';
 import { HelpPanel } from './components/HelpPanel';
 import { AdOfferCard } from './components/AdOfferCard';
+import { TutorialLayer } from './components/TutorialLayer';
 import { StrandedBanner } from './components/StrandedBanner';
 
 const TITLES: Record<RailId, string> = {
@@ -56,6 +57,9 @@ export default function App() {
   const offline = useGame((s) => s.offline);
   const cinematic = useGame((s) => s.cinematic);
   const modalOpen = !!offline || !!cinematic;
+  const [introDone, setIntroDone] = useState(introSeen);
+  // Tutorial beats never start behind anything else — docs/TUTORIAL.md.
+  const tutorialBlocked = !introDone || modalOpen || !!popup || helpOpen;
 
   useEffect(() => {
     const start = () => prime();
@@ -130,6 +134,7 @@ export default function App() {
               className="safe-bottom flex w-full flex-col items-center gap-1.5 px-4 pb-1 pt-2"
               onClick={() => setSheetOpen((v) => !v)}
               aria-expanded={sheetOpen}
+              data-tutorial="sources"
             >
               <span className="h-1 w-[38px] rounded-full" style={{ background: 'var(--grid-line)' }} />
               <span className="flex w-full items-center justify-between">
@@ -178,13 +183,14 @@ export default function App() {
         )}
       </div>
 
+      <TutorialLayer blocked={tutorialBlocked} />
       <Toasts />
       {/* Below the modals in the stack on purpose — an optional offer must never
           sit on top of the away summary, an ascension, or the intro. */}
       <AdOfferCard />
       <OfflineModal />
       <AscensionOverlay />
-      <IntroOverlay />
+      <IntroOverlay onFinish={() => setIntroDone(true)} />
     </div>
   );
 }

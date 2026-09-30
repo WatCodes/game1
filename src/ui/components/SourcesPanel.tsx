@@ -16,8 +16,11 @@ export function SourcesPanel() {
       {unlocks.board && <DispatchBoard />}
       {unlocks.transmission && <GridPanel />}
       <TierTwistPanel />
-      {sources.map((src) => (
-        <SourceRow key={src.id} src={src} credits={credits} />
+      {sources.map((src, i) => (
+        // The first row is the credits beat's anchor once the sheet is open.
+        <div key={src.id} {...(i === 0 ? { 'data-tutorial': 'first-source' } : {})}>
+          <SourceRow src={src} credits={credits} />
+        </div>
       ))}
     </div>
   );

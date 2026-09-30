@@ -52,6 +52,7 @@ export function RightRail({
         return (
           <button
             key={id}
+            data-tutorial={`rail-${id}`}
             className="relative flex h-[50px] w-[50px] flex-col items-center justify-center gap-[3px] rounded-full transition-all active:scale-95"
             style={{
               background: isActive ? 'var(--amber)' : 'var(--bg-panel)',

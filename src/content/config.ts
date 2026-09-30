@@ -76,6 +76,13 @@ export const CONFIG = {
   DAILY_REWARDS: [50, 75, 100, 150, 200, 300, 500],
   DAILY_STREAK_BONUS: 0.1,
   ACHIEVEMENT_BONUS: 0.01, // +1% global output per record earned
+  // Tutorial gating (docs/TUTORIAL.md). The altar beat is for new players only,
+  // and the game keeps no "ever channelled" record, so lifetime power stands in
+  // for "early save": past this, the player has plainly found the altar already.
+  TUTORIAL_ALTAR_MAX_LIFETIME: 2_000,
+  // Wonder progress at which Kardashev Points get explained — close enough to
+  // ascension that the explanation is about to matter, early enough to read first.
+  TUTORIAL_KP_PROGRESS: 0.8,
   // Above this, line loss is worth acting on: the readout turns red and the
   // lanes that cut loss are flagged as the fix.
   GRID_LOSS_WARN_FRAC: 0.05,

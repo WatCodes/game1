@@ -119,6 +119,9 @@ function hydrateDesk(raw: unknown): DeskState {
   d.ordersFilled = level(raw.ordersFilled, Number.MAX_SAFE_INTEGER);
   d.lifetimeProfit = finiteOr(raw.lifetimeProfit, 0);
   d.bestTrade = Math.max(0, finiteOr(raw.bestTrade, 0));
+  // Capped at what the market can physically pay, so a hand-edited save can't
+  // post an impossible Game Center score.
+  d.bestReturn = Math.max(0, Math.min(CONFIG.LEADERBOARD_MAX_RETURN, finiteOr(raw.bestReturn, 0)));
   return d;
 }
 

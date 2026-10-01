@@ -110,6 +110,7 @@ export interface DeskState {
   ordersFilled: number;
   lifetimeProfit: Num; // net, losses included
   bestTrade: Num;
+  bestReturn: number; // best profit ÷ cost basis on one release — the Game Center score
 }
 
 export interface KardashevTier {

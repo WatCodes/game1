@@ -4,6 +4,8 @@ import { game, publishDisplay, useGame } from '../../store/gameStore';
 import { saveToStorage } from '../../store/save';
 import { CONFIG } from '../../content/config';
 import { nativePlugin } from '../../platform/native';
+import { submitScores } from '../../platform/gameCenter';
+import { leaderboardScores } from '../../engine/leaderboards';
 
 const STEP = 1 / 20; // 20 Hz fixed-timestep simulation
 const DISPLAY_HZ = 12;
@@ -61,7 +63,11 @@ export function useGameTick(): void {
      * accurate.
      */
     const persist = () => saveToStorage(game, game.lastSaved);
-    const onHide = persist;
+    // Backgrounding is when a session's best is final, so it posts unthrottled.
+    const onHide = () => {
+      persist();
+      submitScores(leaderboardScores(game), true);
+    };
     const onShow = () => {
       // performance.now() kept advancing while rAF was parked, so rebase the
       // clock before crediting — otherwise the first frame back also bills a
@@ -115,6 +121,7 @@ export function useGameTick(): void {
     // when they close the app. Tell them the moment it happens.
     const autosave = window.setInterval(() => {
       if (!persist()) useGame.getState().actions.reportSaveFailure();
+      submitScores(leaderboardScores(game)); // throttled inside
     }, CONFIG.AUTOSAVE_INTERVAL_MS);
 
     const onVisibility = () => {

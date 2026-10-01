@@ -132,6 +132,13 @@ export const CONFIG = {
   DESK_CHEM_BASE_COST: 400,
   DESK_CHEM_COST_GROWTH: 2.5,
   DESK_LOG_SIZE: 8, // trades kept in the Market's log
+  // Game Center (docs/GAME_CENTER.md). IDs must match App Store Connect exactly.
+  LEADERBOARD_KP_ID: 'electriccats.kp',
+  LEADERBOARD_BEST_TRADE_ID: 'electriccats.besttrade',
+  // Best Trade is submitted as tenths of a percent (fixed point, 1 decimal).
+  // A return above this is not reachable in play — reject it rather than post it.
+  LEADERBOARD_MAX_RETURN: 20,
+  GAME_CENTER_SUBMIT_INTERVAL_MS: 5 * 60_000, // scores go up at most this often, plus on backgrounding
   // Grid rail: keep at least DEMAND_FRACTION of output on the grid or brown out.
   DEMAND_FRACTION: 0.25, // grid demand as a share of your own generation
   BROWNOUT_SEVERITY: 0.5, // output multiplier bottoms at 1−this when the grid is starved

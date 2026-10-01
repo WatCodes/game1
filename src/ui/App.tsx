@@ -8,7 +8,7 @@ import { ResourceBar } from './components/ResourceBar';
 import { SourcesPanel } from './components/SourcesPanel';
 import { ResearchGraph } from './components/ResearchGraph';
 import { MegaprojectPanel } from './components/MegaprojectPanel';
-import { PuzzlePanel } from './components/PuzzlePanel';
+import { MarketPanel } from './components/MarketPanel';
 import { ShopPanel } from './components/ShopPanel';
 import { AscendPanel } from './components/AscendPanel';
 import { DataControls } from './components/DataControls';
@@ -33,7 +33,7 @@ import { StrandedBanner } from './components/StrandedBanner';
 const TITLES: Record<RailId, string> = {
   lab: 'THE LAB',
   wonder: 'THE WONDER',
-  works: 'THE WORKS',
+  market: 'THE MARKET',
   agora: 'THE AGORA',
   ascend: 'ASCEND',
 };
@@ -166,7 +166,7 @@ export default function App() {
               </div>
             )}
             {popup === 'wonder' && <MegaprojectPanel />}
-            {popup === 'works' && <PuzzlePanel />}
+            {popup === 'market' && <MarketPanel />}
             {popup === 'agora' && <ShopPanel />}
             {popup === 'ascend' && (
               <>

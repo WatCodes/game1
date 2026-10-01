@@ -68,32 +68,6 @@ export interface Megaproject {
 }
 
 /**
- * Feeder Balance — a Futoshiki-style constraint board.
- *
- * Every row and column must carry each load level 1..size exactly once, and
- * every marked pair of neighbours must respect its `<` / `>`. Cells the player
- * fills cycle 0 → 1 → … → size → 0.
- */
-export interface PuzzleState {
-  tier: number;
-  size: number;
-  cells: number[]; // size×size, row-major; 0 = unset, 1..size = load level
-  givens: boolean[]; // same indexing; true = fixed by the board, not tappable
-  /**
-   * Inequalities between orthogonally adjacent cells. 0 = no clue, 1 = the
-   * lower-indexed cell must be LESS than its partner, 2 = greater.
-   *
-   * `across[r * (size - 1) + c]` relates (r,c) to (r,c+1).
-   * `down[r * size + c]` relates (r,c) to (r+1,c).
-   */
-  across: number[];
-  down: number[];
-  moves: number;
-  par: number; // minimum taps to fill every blank from the dealt board
-  solved: boolean; // latched until a new board is dealt
-}
-
-/**
  * Stored Watts held back from the market, with the average price paid for them.
  *
  * This replaced a futures *wager* deliberately. A stake on a random outcome is
@@ -105,6 +79,37 @@ export interface PuzzleState {
 export interface ReserveState {
   stored: Num; // Watts in the battery
   avgPrice: number; // CR/W cost basis, for honest profit/loss reporting
+}
+
+/** One line of the Market's trade log. */
+export interface TradeRecord {
+  kind: 'store' | 'release';
+  watts: Num;
+  price: number; // CR/W at the moment of the trade
+  profit: Num; // releases only (0 for a store); negative is reported, not hidden
+  byOrder: boolean; // filled by a standing order rather than a tap
+}
+
+/**
+ * The Market's permanent side: upgrades, standing orders and the record.
+ * Survives ascension, like Credits — it is the player's trading desk, not the
+ * era's grid. Design: docs/MARKET.md.
+ */
+export interface DeskState {
+  cellLevel: number; // battery capacity upgrades
+  chemLevel: number; // round-trip efficiency upgrades
+  buyBelow: number | null; // standing order: store when the price is at or below this
+  sellAbove: number | null; // standing order: release when it is at or above this
+  // An order fires once as the price enters its zone, then re-arms only after
+  // the price leaves it — see tickOrders.
+  buyArmed: boolean;
+  sellArmed: boolean;
+  log: TradeRecord[]; // newest last, capped at DESK_LOG_SIZE
+  trades: number; // releases closed
+  wins: number; // releases closed at a profit
+  ordersFilled: number;
+  lifetimeProfit: Num; // net, losses included
+  bestTrade: Num;
 }
 
 export interface KardashevTier {
@@ -148,6 +153,7 @@ export interface GameState {
   };
   /** The battery: Watts bought off your own grid, awaiting a better price. */
   reserve: ReserveState;
+  desk: DeskState;
   dispatch: {
     charge: number; // 0..1, builds over time; firing spends it
     peakLeft: number; // seconds remaining of an active peak-demand window
@@ -156,17 +162,14 @@ export interface GameState {
   // Delivery infrastructure — rebuilt each run, like sources
   grid: { vLevel: number; aLevel: number; rLevel: number };
   // Per-tier mechanical twists (GAME_DESIGN §8) — inert outside their tier,
-  // reset on ascend like grid/puzzle
+  // reset on ascend like grid
   launchWindow: { active: boolean; timeLeft: number; nextIn: number }; // T3
   accretion: { feedRate: number; heat: number }; // T5
   relay: { researchAllocation: number }; // T6
-  // Puzzle & shop meta-economy — persists through ascension, like KP
+  // Shop meta-economy — persists through ascension, like KP
   credits: number;
-  puzzle: PuzzleState; // current tier's circuit, regenerated on ascend
-  solvers: number; // auto-solver units owned
-  solverProgress: number; // fractional solves banked by auto-solvers
   boosts: {
-    surgeLeft: number; // seconds of ×SURGE_MULT power from puzzle solves
+    surgeLeft: number; // seconds of ×SURGE_MULT power, lit by profitable Market releases
     powerLeft: number; // seconds of shop ×2 power boost
     rpLeft: number; // seconds of shop ×2 RP boost
   };
@@ -186,5 +189,5 @@ export interface GameState {
   daily: { lastClaimDay: string; streak: number }; // local YYYY-MM-DD
   achievements: Id[]; // earned records — permanent, +bonus each
   lastSaved: number; // epoch ms
-  stats: { lifetimePower: Num; ascensions: number; startedAt: number; puzzlesSolved: number };
+  stats: { lifetimePower: Num; ascensions: number; startedAt: number };
 }

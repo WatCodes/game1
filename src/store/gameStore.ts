@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { AdOfferKind, GameState, Id, MegaprojectStage, Num } from '../engine/types';
+import type { AdOfferKind, GameState, Id, MegaprojectStage, Num, TradeRecord } from '../engine/types';
 import { acceptOffer, canWatchForBoost, clearOffer, grantAdBoost } from '../engine/adOffers';
 import { tutorialSnapshot } from '../engine/tutorial';
 import { CONFIG } from '../content/config';
@@ -29,10 +29,16 @@ import {
 } from '../engine/market';
 import {
   arbitrageUnlocked,
+  buyDeskUpgrade,
   chargeReserve,
+  deskUpgradeCost,
+  deskUpgradeMaxed,
   maxChargeWatts,
   releaseReserve,
   reserveCapacity,
+  reserveEfficiency,
+  setOrder,
+  type DeskUpgrade,
 } from '../engine/arbitrage';
 import { effectiveRoutePct, effectiveSellPct, isUnlocked } from '../engine/unlocks';
 import { nextObjective, type Objective } from '../engine/objectives';
@@ -76,20 +82,16 @@ import {
 } from '../engine/megaproject';
 import { ascend, canAscend, projectedKp } from '../engine/ascension';
 import { creditOffline, type OfflineSummary } from '../engine/offline';
-import { conflictCells, newPuzzle, puzzleReward, tapCell } from '../engine/puzzle';
 import { tick } from '../engine/loop';
 import {
   buyDispatchRecharge,
   buyPowerBoost,
   buyRpBoost,
-  buySolver,
   canClaimDaily,
   claimDaily,
   dailyReward,
   dayKey,
-  solverCost,
 } from '../engine/shop';
-import { puzzleSkin } from '../content/puzzles';
 import { ACHIEVEMENTS } from '../content/achievements';
 import { achievementMult } from '../engine/achievements';
 import {
@@ -210,9 +212,11 @@ export interface DisplaySnapshot {
     browned: boolean; // grid rail below demand → brownout
     brownoutPct: number; // % output lost to brownout
   };
-  /** The Arbitrage Desk (Agora): store Watts cheap, release them dear. */
-  arbitrage: {
+  /** The Market (rail): store Watts cheap, release them dear. docs/MARKET.md. */
+  market: {
     unlocked: boolean;
+    unlockAt: Num; // lifetime W·s at which it opens
+    lifetimePower: Num;
     index: number; // current demand index
     history: number[]; // recent samples for the chart, newest last
     price: number; // CR/W right now — what a charge costs and a release pays
@@ -223,6 +227,15 @@ export interface DisplaySnapshot {
     efficiency: number;
     /** Realised now if released: proceeds − cost basis. Negative = hold longer. */
     unrealised: Num;
+    buyBelow: number | null;
+    sellAbove: number | null;
+    upgrades: Record<DeskUpgrade, { level: number; max: number; cost: Num; maxed: boolean; affordable: boolean }>;
+    log: TradeRecord[]; // newest last
+    trades: number;
+    wins: number;
+    ordersFilled: number;
+    lifetimeProfit: Num;
+    bestTrade: Num;
   };
   ascend: { can: boolean; projected: number; nextEra: string; nextScale: string };
   dispatch: { charge: number; canFire: boolean; hasGeneration: boolean; peakActive: boolean; peakLeft: number };
@@ -232,30 +245,10 @@ export interface DisplaySnapshot {
   dispatchCount: number;
   credits: number;
   boosts: { surgeLeft: number; powerLeft: number; rpLeft: number };
-  puzzle: {
-    name: string;
-    flavor: string;
-    size: number;
-    cells: number[]; // 0 = unset, 1..size = load level
-    givens: boolean[]; // fixed by the board; not tappable
-    across: number[]; // 0 none, 1 '<', 2 '>' — between (r,c) and (r,c+1)
-    down: number[]; // same, between (r,c) and (r+1,c)
-    conflicts: number[]; // cell indices currently breaking a rule
-    moves: number;
-    par: number;
-    solved: boolean;
-    reward: number; // payout if solved on the current move count
-    bonusEligible: boolean;
-    solvers: number;
-    solverProgress: number;
-    solveEverySeconds: number;
-  };
   shop: {
     canClaimDaily: boolean;
     streak: number;
     nextReward: number; // today's claim (or tomorrow's if already claimed)
-    solverCost: number;
-    solvers: number;
   };
   achievements: { id: Id; name: string; desc: string; earned: boolean }[];
   achievementMult: number;
@@ -381,7 +374,7 @@ function buildDisplay(s: GameState): DisplaySnapshot {
       browned: brownoutShortfall(s, mods.demandMult) > 0,
       brownoutPct: Math.round((1 - brownoutMult(s, mods.demandMult)) * 100),
     },
-    arbitrage: buildArbitrageView(s),
+    market: buildMarketView(s),
     ascend: {
       can: canAscend(s),
       projected: projectedKp(s),
@@ -414,7 +407,6 @@ function buildDisplay(s: GameState): DisplaySnapshot {
     },
     credits: s.credits,
     boosts: { ...s.boosts },
-    puzzle: buildPuzzleView(s),
     shop: buildShopView(s),
     achievements: ACHIEVEMENTS.map((a) => ({ id: a.id, name: a.name, desc: a.desc, earned: s.achievements.includes(a.id) })),
     achievementMult: achievementMult(s),
@@ -454,11 +446,19 @@ function buildTierTwistView(s: GameState): DisplaySnapshot['tierTwist'] {
   return { kind: 'none' };
 }
 
-function buildArbitrageView(s: GameState): DisplaySnapshot['arbitrage'] {
+function buildMarketView(s: GameState): DisplaySnapshot['market'] {
   const price = gridPrice(s);
+  const efficiency = reserveEfficiency(s);
   const { stored, avgPrice } = s.reserve;
+  const upgrade = (kind: DeskUpgrade, level: number, max: number) => {
+    const cost = deskUpgradeCost(s, kind);
+    const maxed = deskUpgradeMaxed(s, kind);
+    return { level, max, cost, maxed, affordable: !maxed && s.credits >= cost };
+  };
   return {
     unlocked: arbitrageUnlocked(s),
+    unlockAt: CONFIG.UNLOCK_BOARD_POWER,
+    lifetimePower: s.stats.lifetimePower,
     index: marketIndex(s),
     history: s.market.indexHistory,
     price,
@@ -466,10 +466,22 @@ function buildArbitrageView(s: GameState): DisplaySnapshot['arbitrage'] {
     capacity: reserveCapacity(s),
     avgPrice,
     maxCharge: maxChargeWatts(s),
-    efficiency: CONFIG.RESERVE_EFFICIENCY,
+    efficiency,
     // What releasing everything would actually net, efficiency included — the
     // number the player needs to decide "hold or sell", shown even when negative.
-    unrealised: stored > 0 ? stored * price * CONFIG.RESERVE_EFFICIENCY - stored * avgPrice : 0,
+    unrealised: stored > 0 ? stored * price * efficiency - stored * avgPrice : 0,
+    buyBelow: s.desk.buyBelow,
+    sellAbove: s.desk.sellAbove,
+    upgrades: {
+      cells: upgrade('cells', s.desk.cellLevel, CONFIG.DESK_CELL_MAX_LEVEL),
+      chemistry: upgrade('chemistry', s.desk.chemLevel, CONFIG.DESK_CHEM_MAX_LEVEL),
+    },
+    log: s.desk.log.map((r) => ({ ...r })),
+    trades: s.desk.trades,
+    wins: s.desk.wins,
+    ordersFilled: s.desk.ordersFilled,
+    lifetimeProfit: s.desk.lifetimeProfit,
+    bestTrade: s.desk.bestTrade,
   };
 }
 
@@ -504,33 +516,6 @@ function buildShopView(s: GameState): DisplaySnapshot['shop'] {
     canClaimDaily: claimable,
     streak: s.daily.streak,
     nextReward: dailyReward(continues ? s.daily.streak + 1 : 1),
-    solverCost: solverCost(s.solvers),
-    solvers: s.solvers,
-  };
-}
-
-function buildPuzzleView(s: GameState): DisplaySnapshot['puzzle'] {
-  const skin = puzzleSkin(s.tier);
-  return {
-    name: skin.name,
-    flavor: skin.flavor,
-    size: s.puzzle.size,
-    cells: [...s.puzzle.cells],
-    givens: [...s.puzzle.givens],
-    across: [...s.puzzle.across],
-    down: [...s.puzzle.down],
-    // Recomputed per snapshot rather than stored: conflicts are a pure function
-    // of the board, and keeping them out of PuzzleState means a save can never
-    // carry a stale "you are wrong" marker.
-    conflicts: conflictCells(s.puzzle),
-    moves: s.puzzle.moves,
-    par: s.puzzle.par,
-    solved: s.puzzle.solved,
-    reward: puzzleReward(s.puzzle.tier, s.puzzle.moves, s.puzzle.par),
-    bonusEligible: s.puzzle.moves <= s.puzzle.par + CONFIG.PUZZLE_BONUS_SLACK,
-    solvers: s.solvers,
-    solverProgress: s.solverProgress,
-    solveEverySeconds: s.solvers > 0 ? CONFIG.SOLVER_SECONDS / s.solvers : 0,
   };
 }
 
@@ -550,7 +535,6 @@ function mergeOffline(a: OfflineSummary, b: OfflineSummary): OfflineSummary {
     projectGained: a.projectGained + b.projectGained,
     creditsGained: a.creditsGained + b.creditsGained,
     rpGained: a.rpGained + b.rpGained,
-    puzzlesSolved: a.puzzlesSolved + b.puzzlesSolved,
   };
 }
 
@@ -562,8 +546,8 @@ export type DevCheat =
   | 'mega'
   | 'dispatch'
   | 'peak'
-  | 'solve'
-  | 'solver'
+  | 'spike'
+  | 'slump'
   | 'warp'
   | 'window'
   | 'flare'
@@ -590,16 +574,18 @@ interface GameStore {
     authorizeNextStage: () => void;
     setRoutePct: (pct: number) => void;
     setSellPct: (pct: number) => void;
-    chargeBattery: (watts: number) => void;
-    releaseBattery: () => void;
+    /** Store this share (0..1] of what fits and is affordable right now. */
+    chargeBattery: (fraction: number) => void;
+    /** Release this share (0..1] of what's held. */
+    releaseBattery: (fraction: number) => void;
+    /** Set or clear (null) a standing order. False if it would cross the other side. */
+    setStandingOrder: (side: 'buy' | 'sell', price: number | null) => boolean;
+    buyMarketUpgrade: (kind: DeskUpgrade) => void;
     setAccretionFeedRate: (rate: number) => void;
     setRelayAllocation: (pct: number) => void;
     doDispatch: () => void;
     doAscend: () => void;
-    tapPuzzleCell: (idx: number) => void;
-    dealNewPuzzle: () => void;
     claimDailyReward: () => void;
-    buyShopSolver: () => void;
     buyShopBoost: (kind: 'power' | 'rp' | 'dispatch') => void;
     watchAdForBoost: (kind: AdOfferKind) => Promise<void>;
     acceptAdOffer: () => Promise<void>;
@@ -623,6 +609,18 @@ let warnedSaveFailure = false;
 
 const pushToast = (kind: Toast['kind'], text: string) =>
   useGame.setState((st) => ({ toasts: [...st.toasts.slice(-4), { id: ++toastSeq, kind, text }] }));
+
+/**
+ * One wording for every release, tapped or filled by an order. The loss is
+ * reported as plainly as the gain — selling low is a real outcome of a real
+ * decision, and hiding it would make the Market feel rigged.
+ */
+function releaseToast(watts: Num, price: number, profit: Num, surge: number, byOrder = false): string {
+  const sign = profit >= 0 ? '+' : '';
+  const who = byOrder ? 'Sell order filled: ' : 'Released ';
+  const lit = surge >= 1 ? ` · Surge +${formatTime(surge)}` : '';
+  return `${who}${formatPower(watts)} at ${price.toFixed(2)} CR/W — ${sign}${formatShort(Math.round(profit))} CR${lit}`;
+}
 
 /** Ambient toasts fire on state transitions, whether from a buy or a tick. */
 function detectTransitions(prev: DisplaySnapshot, next: DisplaySnapshot): void {
@@ -656,6 +654,18 @@ function detectTransitions(prev: DisplaySnapshot, next: DisplaySnapshot): void {
   }
   if (next.dispatch.peakActive && !prev.dispatch.peakActive) {
     pushToast('info', `⚡ PEAK DEMAND — dispatch pays ×${CONFIG.PEAK_MULT} for ${CONFIG.PEAK_DURATION_SECONDS}s`);
+  }
+  // Standing orders fill inside the tick, so the toast comes from here. Read
+  // from the log: the newest entries since the count moved are the fills.
+  const fills = next.market.ordersFilled - prev.market.ordersFilled;
+  if (fills > 0) {
+    for (const r of next.market.log.filter((x) => x.byOrder).slice(-fills)) {
+      if (r.kind === 'store') {
+        pushToast('info', `Buy order filled: stored ${formatPower(r.watts)} at ${r.price.toFixed(2)} CR/W`);
+      } else {
+        pushToast(r.profit >= 0 ? 'milestone' : 'info', releaseToast(r.watts, r.price, r.profit, 0, true));
+      }
+    }
   }
   for (const a of next.achievements) {
     if (a.earned && !prev.achievements.find((p) => p.id === a.id)?.earned) {
@@ -713,24 +723,35 @@ export const useGame = create<GameStore>((set) => {
           refresh();
         }
       },
-      chargeBattery: (watts) => {
-        if (chargeReserve(game, watts)) {
+      chargeBattery: (fraction) => {
+        const f = Math.max(0, Math.min(1, fraction));
+        if (chargeReserve(game, maxChargeWatts(game) * f)) {
           saveToStorage(game); // stored Watts are paid for — never lose them to a crash
           refresh();
         }
       },
-      releaseBattery: () => {
-        const r = releaseReserve(game);
+      releaseBattery: (fraction) => {
+        const f = Math.max(0, Math.min(1, fraction));
+        const r = releaseReserve(game, game.reserve.stored * f);
         if (!r) return;
-        const sign = r.profit >= 0 ? '+' : '';
-        // Report the loss as plainly as the gain — selling low is a real outcome
-        // of a real decision, and hiding it would make the desk feel rigged.
-        pushToast(
-          r.profit >= 0 ? 'milestone' : 'info',
-          `Released ${formatPower(r.watts)} at ${r.price.toFixed(2)} CR/W — ${sign}${formatShort(Math.round(r.profit))} CR`,
-        );
+        pushToast(r.profit >= 0 ? 'milestone' : 'info', releaseToast(r.watts, r.price, r.profit, r.surge));
         saveToStorage(game);
         refresh();
+      },
+      setStandingOrder: (side, price) => {
+        const ok = setOrder(game, side, price);
+        if (ok) {
+          saveToStorage(game);
+          refresh();
+        }
+        return ok;
+      },
+      buyMarketUpgrade: (kind) => {
+        if (buyDeskUpgrade(game, kind)) {
+          pushToast('info', kind === 'cells' ? 'Battery enlarged' : 'Battery chemistry improved — less lost per round trip');
+          saveToStorage(game);
+          refresh();
+        }
       },
       // The two Dispatch Board sliders share a budget: sell + project ≤ 1, and
       // the grid takes whatever's left. Raising one first eats into the grid
@@ -775,30 +796,10 @@ export const useGame = create<GameStore>((set) => {
           refresh();
         }
       },
-      tapPuzzleCell: (idx) => {
-        const result = tapCell(game, idx);
-        if (result) {
-          const bonus = result.bonus ? ' (efficiency bonus!)' : '';
-          pushToast('milestone', `⚡ Grid balanced — +${result.reward} CR${bonus} · surge extended`);
-          saveToStorage(game);
-        }
-        refresh();
-      },
-      dealNewPuzzle: () => {
-        game.puzzle = newPuzzle(game.tier);
-        refresh();
-      },
       claimDailyReward: () => {
         const reward = claimDaily(game, Date.now());
         if (reward > 0) {
           pushToast('info', `Daily reward: +${reward} CR — streak ${game.daily.streak}`);
-          saveToStorage(game);
-          refresh();
-        }
-      },
-      buyShopSolver: () => {
-        if (buySolver(game)) {
-          pushToast('info', `Auto-Solver online — ${game.solvers} running`);
           saveToStorage(game);
           refresh();
         }
@@ -966,16 +967,11 @@ export const useGame = create<GameStore>((set) => {
           case 'peak':
             game.dispatch.peakLeft = CONFIG.PEAK_DURATION_SECONDS;
             break;
-          case 'solve':
-            if (!game.puzzle.solved) {
-              game.puzzle.solved = true;
-              game.credits += puzzleReward(game.puzzle.tier, game.puzzle.par, game.puzzle.par);
-              game.boosts.surgeLeft = Math.min(CONFIG.SURGE_CAP_SECONDS, game.boosts.surgeLeft + CONFIG.SURGE_MANUAL_SECONDS);
-              game.stats.puzzlesSolved += 1;
-            }
+          case 'spike':
+            game.market.index = CONFIG.INDEX_MAX;
             break;
-          case 'solver':
-            game.solvers += 1;
+          case 'slump':
+            game.market.index = CONFIG.INDEX_MIN;
             break;
           case 'warp':
             for (let i = 0; i < 3600; i++) tick(game, 1);

@@ -1,8 +1,7 @@
-import type { AdOfferKind, GameState, Id, Num, PuzzleState, ReserveState } from '../engine/types';
+import type { AdOfferKind, DeskState, GameState, Id, Num, ReserveState, TradeRecord } from '../engine/types';
 import { CONFIG } from '../content/config';
-import { SAVE_VERSION, createInitialState } from '../engine/state';
+import { SAVE_VERSION, createInitialState, defaultDesk } from '../engine/state';
 import { reapplyPurchasedEffects } from '../engine/research';
-import { isSolved, newPuzzle, puzzleSize } from '../engine/puzzle';
 import { generationPerSec } from '../engine/economy';
 import { stagesCompleted } from '../engine/megaproject';
 import { transmissionCap } from '../engine/grid';
@@ -38,15 +37,15 @@ export interface SaveData {
   // optional so a v7 save hydrates with a neutral market and an empty battery.
   market: { saturation: number; index?: number; indexHistory?: number[]; sampleIn?: number };
   reserve?: { stored: number; avgPrice: number };
+  // v10 — the Market's desk. Optional like `ads`: hydrate defaults it, and
+  // validateSave does not require it.
+  desk?: DeskState;
   dispatch: { charge: number; peakLeft: number; nextPeakIn: number };
   grid: { vLevel: number; aLevel: number; rLevel: number };
   launchWindow: { active: boolean; timeLeft: number; nextIn: number };
   accretion: { feedRate: number; heat: number };
   relay: { researchAllocation: number };
   credits: number;
-  puzzle: PuzzleState | null; // null → deal a fresh circuit on load
-  solvers: number;
-  solverProgress: number;
   boosts: { surgeLeft: number; powerLeft: number; rpLeft: number };
   // Optional on purpose: saves written before 1.0.1 have no `ads` field, and
   // they must keep loading. `hydrate` supplies defaults; `validateSave`
@@ -55,7 +54,7 @@ export interface SaveData {
   daily: { lastClaimDay: string; streak: number };
   achievements: Id[];
   lastSaved: number;
-  stats: { lifetimePower: Num; ascensions: number; startedAt: number; puzzlesSolved: number };
+  stats: { lifetimePower: Num; ascensions: number; startedAt: number };
 }
 
 const clampIndex = (n: number): number =>
@@ -75,6 +74,62 @@ function hydrateReserve(raw: unknown): ReserveState {
   // Capacity depends on live generation, so it can't be checked here; the loop's
   // settleOvercapacity refunds any spill on the first tick after load.
   return { stored, avgPrice: basis };
+}
+
+const finiteOr = (v: unknown, fallback: number): number =>
+  typeof v === 'number' && Number.isFinite(v) ? v : fallback;
+
+const level = (v: unknown, max: number): number => Math.max(0, Math.min(max, Math.floor(finiteOr(v, 0))));
+
+const orderPrice = (v: unknown): number | null =>
+  typeof v === 'number' && Number.isFinite(v) && v > 0 ? v : null;
+
+/**
+ * The desk carries paid-for upgrades and the player's own rules, so every field
+ * is checked: levels clamp to their caps, a malformed order is dropped rather
+ * than guessed at, and a crossed pair (buy ≥ sell) loses its buy side — the
+ * engine refuses to set one, so a save must not be able to smuggle one in.
+ */
+function hydrateDesk(raw: unknown): DeskState {
+  const d = defaultDesk();
+  if (!isRecord(raw)) return d;
+  d.cellLevel = level(raw.cellLevel, CONFIG.DESK_CELL_MAX_LEVEL);
+  d.chemLevel = level(raw.chemLevel, CONFIG.DESK_CHEM_MAX_LEVEL);
+  d.buyBelow = orderPrice(raw.buyBelow);
+  d.sellAbove = orderPrice(raw.sellAbove);
+  if (d.buyBelow !== null && d.sellAbove !== null && d.buyBelow >= d.sellAbove) d.buyBelow = null;
+  d.buyArmed = raw.buyArmed !== false;
+  d.sellArmed = raw.sellArmed !== false;
+  d.log = Array.isArray(raw.log)
+    ? raw.log
+        .filter(isRecord)
+        .map(
+          (r): TradeRecord => ({
+            kind: r.kind === 'store' ? 'store' : 'release',
+            watts: Math.max(0, finiteOr(r.watts, 0)),
+            price: Math.max(0, finiteOr(r.price, 0)),
+            profit: finiteOr(r.profit, 0),
+            byOrder: r.byOrder === true,
+          }),
+        )
+        .slice(-CONFIG.DESK_LOG_SIZE)
+    : [];
+  d.trades = level(raw.trades, Number.MAX_SAFE_INTEGER);
+  d.wins = Math.min(d.trades, level(raw.wins, Number.MAX_SAFE_INTEGER));
+  d.ordersFilled = level(raw.ordersFilled, Number.MAX_SAFE_INTEGER);
+  d.lifetimeProfit = finiteOr(raw.lifetimeProfit, 0);
+  d.bestTrade = Math.max(0, finiteOr(raw.bestTrade, 0));
+  return d;
+}
+
+/** What a player paid for `owned` Auto-Solvers, unit by unit as the shop priced them. */
+export function legacySolverRefund(owned: number): number {
+  const n = Math.max(0, Math.min(1000, Math.floor(owned)));
+  let total = 0;
+  for (let k = 0; k < n; k++) {
+    total += Math.round(CONFIG.LEGACY_SOLVER_BASE_COST * Math.pow(CONFIG.LEGACY_SOLVER_COST_GROWTH, k));
+  }
+  return total;
 }
 
 export function serialize(s: GameState): SaveData {
@@ -98,21 +153,13 @@ export function serialize(s: GameState): SaveData {
     sellPct: s.sellPct,
     market: { ...s.market, indexHistory: [...s.market.indexHistory] },
     reserve: { ...s.reserve },
+    desk: { ...s.desk, log: s.desk.log.map((r) => ({ ...r })) },
     dispatch: { ...s.dispatch },
     grid: { ...s.grid },
     launchWindow: { ...s.launchWindow },
     accretion: { ...s.accretion },
     relay: { ...s.relay },
     credits: s.credits,
-    puzzle: {
-      ...s.puzzle,
-      cells: [...s.puzzle.cells],
-      givens: [...s.puzzle.givens],
-      across: [...s.puzzle.across],
-      down: [...s.puzzle.down],
-    },
-    solvers: s.solvers,
-    solverProgress: s.solverProgress,
     boosts: { ...s.boosts },
     ads: { ...s.ads },
     daily: { ...s.daily },
@@ -120,30 +167,6 @@ export function serialize(s: GameState): SaveData {
     lastSaved: s.lastSaved,
     stats: { ...s.stats },
   };
-}
-
-/**
- * A saved board must be structurally sound or we deal a fresh one.
- *
- * This is also the migration path, and the reason no SAVE_VERSION bump is
- * needed for a board-mechanic change: a save written by an older build carries
- * the wrong shape — Lights Out stored `cells: boolean[]` and no clue arrays —
- * so it fails here and `hydrate` deals a fresh Feeder Balance board. Everything
- * else in the save (power, sources, research, Credits, solvers, streak) is
- * untouched. Losing one in-progress board is the correct trade against a
- * migration that would have to invent a valid constraint layout from nothing.
- */
-function isValidPuzzle(p: PuzzleState | null | undefined, tier: number): p is PuzzleState {
-  if (!p || typeof p.size !== 'number' || !Array.isArray(p.cells)) return false;
-  if (p.size !== puzzleSize(tier) || p.cells.length !== p.size * p.size) return false;
-  // Load levels, not booleans — this is what rejects a Lights Out save.
-  if (!p.cells.every((c) => Number.isInteger(c) && c >= 0 && c <= p.size)) return false;
-  if (!Array.isArray(p.givens) || p.givens.length !== p.cells.length) return false;
-  if (!p.givens.every((g) => typeof g === 'boolean')) return false;
-  if (!Array.isArray(p.across) || p.across.length !== p.size * (p.size - 1)) return false;
-  if (!Array.isArray(p.down) || p.down.length !== (p.size - 1) * p.size) return false;
-  const clue = (v: unknown) => Number.isInteger(v) && (v as number) >= 0 && (v as number) <= 2;
-  return p.across.every(clue) && p.down.every(clue);
 }
 
 /** Rebuild a full GameState from content + a validated save's runtime values. */
@@ -177,7 +200,12 @@ export function hydrate(save: SaveData): GameState {
     researchAllocation: Math.max(0, Math.min(1, save.relay?.researchAllocation ?? 0)),
   };
   s.lastSaved = save.lastSaved;
-  s.stats = { ...save.stats };
+  // Named fields, not a spread: old saves carry a retired `puzzlesSolved`.
+  s.stats = {
+    lifetimePower: save.stats.lifetimePower,
+    ascensions: save.stats.ascensions,
+    startedAt: save.stats.startedAt,
+  };
   if (save.tier !== 0) {
     s.sources = {};
     for (const src of buildSources(save.tier)) s.sources[src.id] = src;
@@ -227,9 +255,8 @@ export function hydrate(save: SaveData): GameState {
     sampleIn: Math.max(0, save.market?.sampleIn ?? 0),
   };
   s.reserve = hydrateReserve(save.reserve);
+  s.desk = hydrateDesk(save.desk);
   s.credits = Math.max(0, save.credits);
-  s.solvers = Math.max(0, Math.floor(save.solvers));
-  s.solverProgress = Math.max(0, save.solverProgress);
   s.boosts = {
     surgeLeft: Math.max(0, save.boosts?.surgeLeft ?? 0),
     powerLeft: Math.max(0, save.boosts?.powerLeft ?? 0),
@@ -257,24 +284,6 @@ export function hydrate(save: SaveData): GameState {
   };
   const knownAchievements = new Set(ACHIEVEMENTS.map((a) => a.id));
   s.achievements = save.achievements.filter((id) => knownAchievements.has(id));
-  if (isValidPuzzle(save.puzzle, save.tier)) {
-    s.puzzle = {
-      tier: save.tier,
-      size: save.puzzle.size,
-      cells: save.puzzle.cells.map((c) => Math.max(0, Math.min(save.puzzle!.size, Math.floor(c)))),
-      givens: save.puzzle.givens.map((g) => !!g),
-      across: save.puzzle.across.map((v) => Math.max(0, Math.min(2, Math.floor(v)))),
-      down: save.puzzle.down.map((v) => Math.max(0, Math.min(2, Math.floor(v)))),
-      moves: Math.max(0, Math.floor(save.puzzle.moves ?? 0)),
-      par: Math.max(1, Math.floor(save.puzzle.par ?? 1)),
-      solved: !!save.puzzle.solved,
-    };
-    // never trust the latch blindly — recompute so a stale flag can't farm
-    s.puzzle.solved = s.puzzle.solved && isSolved(s.puzzle);
-  } else {
-    // Includes old circuit-puzzle saves (tiles, no cells) — deal a fresh board.
-    s.puzzle = newPuzzle(save.tier);
-  }
   reapplyPurchasedEffects(s); // restore automation managers
   if (Array.isArray(save.autoPaused)) {
     for (const id of save.autoPaused) {
@@ -395,6 +404,23 @@ export function migrate(raw: Record<string, unknown>): Record<string, unknown> {
     save = { ...save, version: 9, credits: credits + stake, reserve: { stored: 0, avgPrice: 0 } };
     delete (save as { futures?: unknown }).futures;
   }
+  // v10 — the Works closed and the Market took its place. Auto-Solvers are
+  // REFUNDED at what they cost, the same principle as v9: nobody loses Credits
+  // to a feature being cut. The board, the solvers and the solve count go.
+  if ((save.version as number) < 10) {
+    const credits = typeof save.credits === 'number' ? save.credits : 0;
+    const solvers = typeof save.solvers === 'number' && Number.isFinite(save.solvers) ? save.solvers : 0;
+    const rest = { ...save };
+    delete rest.puzzle;
+    delete rest.solvers;
+    delete rest.solverProgress;
+    if (isRecord(rest.stats)) {
+      const stats = { ...rest.stats };
+      delete stats.puzzlesSolved;
+      rest.stats = stats;
+    }
+    save = { ...rest, version: 10, credits: credits + legacySolverRefund(solvers) };
+  }
   return save;
 }
 
@@ -404,7 +430,7 @@ export function validateSave(raw: unknown): SaveData {
   const m = migrate(raw);
   const numFields = [
     'tier', 'power', 'runPower', 'rp', 'kp', 'committed', 'stagesAuthorized',
-    'routePct', 'sellPct', 'lastSaved', 'credits', 'solvers', 'solverProgress',
+    'routePct', 'sellPct', 'lastSaved', 'credits',
   ] as const;
   for (const f of numFields) {
     if (typeof m[f] !== 'number' || !isFinite(m[f] as number)) throw new Error(`Save field "${f}" is invalid`);

@@ -5,7 +5,6 @@ import { dispatchGeneration, powerPerSec } from './economy';
 import { applyStageDecommission } from './megaproject';
 import { tickMarket } from './market';
 import { researchModifiers, researchRate } from './research';
-import { runSolvers } from './puzzle';
 import { tickBoosts } from './shop';
 
 export interface OfflineSummary {
@@ -14,7 +13,6 @@ export interface OfflineSummary {
   projectGained: Num;
   creditsGained: Num;
   rpGained: Num;
-  puzzlesSolved: number;
 }
 
 export function offlineCap(s: GameState): number {
@@ -27,8 +25,8 @@ export function offlineCap(s: GameState): number {
  *
  * Order matters: boost timers expire first so a 15-min boost can't multiply a
  * 4-hour window, then generation is split across the Dispatch Board rails
- * (Sell → CR, Project → committed), then auto-solvers grind their capped share
- * of boards (their fresh surge applies to future play, not this window).
+ * (Sell → CR, Project → committed). Market standing orders do not run here:
+ * the market settles to its mean while you're away (docs/MARKET.md).
  */
 export function creditOffline(s: GameState, nowMs: number): OfflineSummary | null {
   const elapsed = offlineSeconds(nowMs - s.lastSaved, offlineCap(s));
@@ -37,7 +35,6 @@ export function creditOffline(s: GameState, nowMs: number): OfflineSummary | nul
   tickBoosts(s, elapsed);
   const mods = researchModifiers(s);
   const creditsBefore = s.credits;
-  const solvedBefore = s.stats.puzzlesSolved;
   const gain = powerPerSec(s, mods) * elapsed;
   // Research accrues while away, at a reduced share of the live rate. The rate is
   // read *before* the rails run so a window cannot pay RP on research bought
@@ -51,14 +48,12 @@ export function creditOffline(s: GameState, nowMs: number): OfflineSummary | nul
   s.runPower += gain;
   s.stats.lifetimePower += gain;
   tickMarket(s, elapsed);
-  runSolvers(s, elapsed);
   const summary: OfflineSummary = {
     seconds: elapsed,
     powerGained: gain, // total generated while away (informational)
     projectGained: routed,
-    creditsGained: s.credits - creditsBefore, // Sell rail + auto-solver income
+    creditsGained: s.credits - creditsBefore, // Sell rail income
     rpGained,
-    puzzlesSolved: s.stats.puzzlesSolved - solvedBefore,
   };
   // RP counts as a reason to show the summary: a parked save with no generation
   // still banks research, and silently swallowing it is the bug this replaced.

@@ -42,7 +42,7 @@ world it powers grow by ~40 orders of magnitude.
 | **Power** | W | Main currency + the score. Spent on sources, research feeds off it, megaprojects consume it. | Power sources (W/s) |
 | **Research Points** | RP | Spent in the tech tree + megaproject stage authorizations. | Trickle: `researchRate` per second (from labs/upgrades) |
 | **Kardashev Points** | KP | Permanent global multiplier. | Ascension |
-| **Credits** | CR | Meta-economy for the shop (§3.9). Persists through ascension, like KP. Never gates progression. | Circuit puzzles (§3.8) + daily streak bonus |
+| **Credits** | CR | Meta-economy for the shop (§3.9). Persists through ascension, like KP. Never gates progression. | The Sell rail, the altar, Market trades + daily streak bonus |
 
 Megaprojects consume **Power** (no separate construction resource) to stay lean.
 Do not add resources without updating this doc.
@@ -142,53 +142,13 @@ One signature megaproject per Kardashev tier — the ascension gate.
 - Burst power goes to stored power/run-power; the megaproject's stage-authorization gate is
   what keeps dispatch from rushing ascensions.
 
-### 3.8 Feeder Balance (`engine/puzzle.ts`, skins in `content/puzzles.ts`)
+### 3.8 Retired: Feeder Balance (the Works)
 
-The active "brain" beat — a constraint mini-game, reskinned per tier ("Athens
-Wards" → "Lattice Damper"), never required for progression.
-
-> **History.** This section described a wire-rotation circuit puzzle long after
-> the shipped mechanic had become Lights Out, and Lights Out was then replaced by
-> the Futoshiki-style board below. If you change the mechanic again, change this
-> paragraph in the same commit.
-
-- **Mechanic:** an N×N board where every row and column must carry each load level
-  `1..N` exactly once, and marked pairs of neighbours carry a `<` / `>` saying which
-  of the two draws more. Tapping a cell cycles it `0 → 1 → … → N → 0`. Some cells are
-  **givens** (fixed, untappable). Board grows with tier: 4×4 → 7×7 (cap).
-- **Why Futoshiki and not sudoku:** the inequalities make the deduction *relational*
-  ("this feeder outdraws that one") rather than positional, which is both a
-  genuinely different puzzle and a much better fit for a grid-management fiction
-  than digits-in-boxes.
-- **Generation** (`newPuzzle`): draw a random Latin square by permuting a cyclic
-  base — rows, columns and symbol labels shuffled independently — then read the
-  inequalities off that solution and reveal a subset of cells as givens. It cannot
-  fail and needs no backtracking, so dealing a board is O(N²).
-- **Winning:** `isSolved` accepts **any** complete assignment satisfying every row,
-  column and clue — not just the one the generator drew. That means generation never
-  has to prove uniqueness (far too slow at 7×7 on a phone) and the player is never
-  told they solved the wrong valid board.
-- **Difficulty** scales two ways at once: size (`puzzleSize`) and how much is
-  pre-filled (`PUZZLE_GIVEN_FRACTION`/`_DECAY`/`_FLOOR`, and the same trio for
-  `PUZZLE_CLUE_*`). Both have floors — a 7×7 with almost no clues stops being a
-  puzzle and becomes a search.
-- **`par`** is the sum of the blanks' target values. Because cycling makes a value
-  `v` cost exactly `v` taps, that is a true lower bound rather than an estimate,
-  which keeps the efficiency bonus fair on a board with several valid solutions.
-- **Payout per manual solve:** Credits (`PUZZLE_BASE_REWARD + PUZZLE_TIER_REWARD × tier`,
-  ×`PUZZLE_BONUS_MULT` if solved within `par + slack` moves) **plus** a
-  **Grid Surge** — ×`SURGE_MULT` global power for `SURGE_MANUAL_SECONDS` (stacking,
-  capped). The surge is the "strong bonus, never a wall" hook to the main loop.
-- **Auto-Solvers (shop):** each unit solves one board per `SOLVER_SECONDS` in the
-  background at `SOLVER_REWARD_FACTOR` of the manual base and a shorter surge. Enough
-  of them (~6) keep the surge lit permanently — the layer plays itself.
-- Free re-deal at any time (no reward). Board re-deals on ascension; Credits,
-  solvers, and streak persist.
-- **Saves:** `PuzzleState` changed shape, so pre-Feeder-Balance boards fail
-  `isValidPuzzle` in `store/save.ts` and a fresh board is dealt. That is the
-  migration — deliberately no `SAVE_VERSION` bump, since nothing else in the save is
-  affected and a real migration would have to invent a valid clue layout from
-  nothing.
+Replaced by **the Market** in 1.0.3 (save v10). Design, the Grid Surge's new source,
+and the migration are in `docs/MARKET.md`. The Works was a Futoshiki-style board
+(earlier Lights Out, earlier still a wire-rotation puzzle) that paid Credits and lit
+the Grid Surge, with Auto-Solvers to grind it in the background. The code is in git
+history if it's ever wanted back. Auto-Solvers were refunded at cost on migration.
 
 ### 3.9 Shop & daily rewards (`engine/shop.ts`)
 
@@ -198,14 +158,14 @@ The **Grid Exchange** — Credits only, acceleration only, no progression gates.
   streak through a 7-day reward table (`DAILY_REWARDS`); each completed week adds
   +`DAILY_STREAK_BONUS`. **One missed day is forgiven (grace day); two resets** — hard
   FOMO windows are the genre's most-hated pattern (AdVenture Communist post-mortems).
-- **Auto-Solver:** cost `SOLVER_BASE_COST × SOLVER_COST_GROWTH^owned`.
 - **Boosts:** ×2 power 15 min, ×2 RP 15 min, instant dispatch recharge. Boost timers
   tick down in game time and stack additively in duration, not multiplier.
 
 ### 3.10 Records (achievements, `engine/achievements.ts`)
 
-17 achievements spanning ownership counts, lifetime power, research, tiers, puzzles,
-streaks, and solvers. Each grants a permanent global ×(1+`ACHIEVEMENT_BONUS`). Earned
+17 achievements spanning ownership counts, lifetime power, research, tiers, Market
+trades, standing orders, and streaks. (The three trading records reuse the Works'
+ids, so nobody who earned those lost the bonus — `docs/MARKET.md`.) Each grants a permanent global ×(1+`ACHIEVEMENT_BONUS`). Earned
 list persists through ascension; shown as a grid in the Ascend tab, toast on earn.
 
 ### 3.11 Age frames & transmissions (`ui/components/AgeFrame.tsx`, `content/transmissions.ts`)
@@ -250,7 +210,7 @@ grandfathered with enough transformer levels to carry their current generation.
 ### 3.14 Per-tier mechanical twists (`engine/tierTwists.ts`)
 
 Answers the "skin replication" risk below directly: T3, T5, and T6 each get one small
-distinct mechanic, inert outside their own tier and reset on ascension like grid/puzzle.
+distinct mechanic, inert outside their own tier and reset on ascension like the grid.
 All three fold into the existing `ResearchModifiers` bag (economy/megaproject/offline/
 loop already thread it everywhere) rather than adding new call-site parameters.
 
@@ -373,7 +333,11 @@ a rebalance never re-prices a build already underway; a save without it keeps th
 `ascend` also seeds **CR**, not Watts — the Watt bank has been retired since §3.15, and seeding
 it would strand a player with no money at a new tier.
 
-### 3.18 The demand index & the Arbitrage Desk (`engine/market.ts`, `engine/arbitrage.ts`)
+### 3.18 The demand index & the Market (`engine/market.ts`, `engine/arbitrage.ts`)
+
+> The Arbitrage Desk below became **the Market** rail panel in 1.0.3 — standing
+> orders, upgrades, and a profit-lit Grid Surge. See `docs/MARKET.md`. Everything
+> in this section still holds.
 
 **The market used to only echo the player.** `gridPrice` was `BASE / (1 + saturation)`, and
 saturation is driven entirely by the Sell slider — so the "live economy" moved only when you

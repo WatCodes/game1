@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-export type RailId = 'lab' | 'wonder' | 'works' | 'agora' | 'ascend';
+export type RailId = 'lab' | 'wonder' | 'market' | 'agora' | 'ascend';
 
 /** Icon glyphs are CSS shapes, as in the mockup — no icon font, no SVG deps. */
 const ICONS: Record<RailId, ReactNode> = {
@@ -11,7 +11,20 @@ const ICONS: Record<RailId, ReactNode> = {
       style={{ borderLeft: '8px solid transparent', borderRight: '8px solid transparent', borderBottom: '13px solid currentColor' }}
     />
   ),
-  works: <span className="h-3.5 w-3.5 rounded-full border-[2.5px] border-current" />,
+  // The demand chart in miniature. Inline SVG, still no icon dependency: a
+  // zigzag is the one glyph here CSS boxes can't draw cleanly.
+  market: (
+    <svg viewBox="0 0 16 12" className="h-3 w-4" aria-hidden>
+      <polyline
+        points="1,10.5 5.5,5 9,7.5 15,1.5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  ),
   agora: <span className="h-[11px] w-[13px] rounded-sm border-2 border-current" />,
   ascend: (
     <span
@@ -24,7 +37,7 @@ const ICONS: Record<RailId, ReactNode> = {
 const LABELS: Record<RailId, string> = {
   lab: 'LAB',
   wonder: 'WONDER',
-  works: 'WORKS',
+  market: 'MARKET',
   agora: 'AGORA',
   ascend: 'ASCEND',
 };
@@ -43,7 +56,7 @@ export function RightRail({
   onSelect: (id: RailId) => void;
   badges?: Partial<Record<RailId, boolean>>;
 }) {
-  const order: RailId[] = ['lab', 'wonder', 'works', 'agora', 'ascend'];
+  const order: RailId[] = ['lab', 'wonder', 'market', 'agora', 'ascend'];
   return (
     <div className="pointer-events-auto absolute right-3 top-[46%] z-20 flex flex-col gap-[11px]">
       {order.map((id) => {

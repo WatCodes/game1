@@ -100,15 +100,14 @@ describe('creditOffline', () => {
     expect(s.runPower).toBe(0);
   });
 
-  it('auto-solvers grind boards offline, capped like generation', () => {
+  it('never fills standing orders while away — the Market is online only', () => {
     const s = producing(0);
-    s.sellPct = 0; // isolate solver income (no Sell-rail CR)
-    s.solvers = 2;
-    const summary = creditOffline(s, 100 * HOUR_MS)!; // way past the 4h cap
-    const expectedSolves = Math.floor((2 * CONFIG.OFFLINE_CAP_SECONDS) / CONFIG.SOLVER_SECONDS);
-    expect(summary.puzzlesSolved).toBe(expectedSolves);
-    expect(summary.creditsGained).toBe(expectedSolves * Math.round(CONFIG.PUZZLE_BASE_REWARD * CONFIG.SOLVER_REWARD_FACTOR));
-    expect(s.credits).toBe(summary.creditsGained);
+    s.stats.lifetimePower = CONFIG.UNLOCK_BOARD_POWER;
+    s.credits = 1e9;
+    s.desk.buyBelow = 100; // would fill at any price, if it ran
+    creditOffline(s, HOUR_MS);
+    expect(s.reserve.stored).toBe(0);
+    expect(s.desk.ordersFilled).toBe(0);
   });
 
   it('boosts expire before the window is credited (no 15-min boost × 4h exploit)', () => {
@@ -119,15 +118,6 @@ describe('creditOffline', () => {
     creditOffline(control, HOUR_MS);
     expect(boosted.runPower).toBeCloseTo(control.runPower);
     expect(boosted.boosts.powerLeft).toBe(0);
-  });
-
-  it('reports solver income even with zero power production', () => {
-    const s = createInitialState(0); // owns nothing
-    s.solvers = 1;
-    const summary = creditOffline(s, HOUR_MS);
-    expect(summary).not.toBeNull();
-    expect(summary!.powerGained).toBe(0);
-    expect(summary!.creditsGained).toBeGreaterThan(0);
   });
 
   it('routes the configured share to the megaproject', () => {

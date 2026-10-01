@@ -124,7 +124,7 @@ Spectral 500 italic and JetBrains Mono 700.
 > log), so they're inert weight in `dist/` and deliberately excluded from precache.
 > Not worth hand-rolling `@font-face` rules to strip ~200 KB from the IPA.
 
-### ⛔ Never sell Credits while the Arbitrage Desk exists
+### ⛔ Never sell Credits while the Market (formerly the Arbitrage Desk) exists
 
 `PRODUCTS` reserves `creditsSmall` / `creditsLarge`. Selling Credits for real money
 **and** letting players trade Credits against a randomly-moving market would make
@@ -267,7 +267,12 @@ non-personalized decision.
   > good price in a farming game.
   >
   > If the desk ever regains a timer, a forced settlement, or a random payout,
-  > this answer has to change. Getting it wrong isn't just a rejection —
+  > this answer has to change.
+  >
+  > **1.0.3 — the desk became the Market** (`docs/MARKET.md`) and gained standing
+  > orders. The answer stays **None**: an order is the player's own price rule, set
+  > and cleared at will, never expires, and only spends what fits in the battery.
+  > With no orders set the engine never touches a position (tested). Getting it wrong isn't just a rejection —
   > misdescribing content can pull a live app.
 
   **This answer was got wrong on the 1.0 submission and cost a rejection** (see the

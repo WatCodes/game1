@@ -2,9 +2,8 @@ import type { GameState } from './types';
 import { dispatchGeneration, powerPerSec, runAutomation, tickDispatch } from './economy';
 import { applyStageDecommission } from './megaproject';
 import { tickMarket, tickMarketIndex } from './market';
-import { settleOvercapacity } from './arbitrage';
+import { settleOvercapacity, tickOrders } from './arbitrage';
 import { researchModifiers, researchRate } from './research';
-import { runSolvers } from './puzzle';
 import { tickBoosts } from './shop';
 import { tickAdOffers } from './adOffers';
 import { checkAchievements } from './achievements';
@@ -31,10 +30,11 @@ export function tick(s: GameState, dt: number, rand: () => number = Math.random)
   // If generation fell (decommission, brownout, ascension) the battery may now
   // exceed capacity; refund the spill at cost rather than deleting paid-for Watts.
   settleOvercapacity(s);
+  // Standing orders run here and only here — never in creditOffline.
+  tickOrders(s);
   s.rp += researchRate(s) * dt;
   runAutomation(s, mods);
   tickDispatch(s, dt, rand);
-  runSolvers(s, dt);
   tickBoosts(s, dt);
   tickAdOffers(s, dt, rand);
   checkAchievements(s);

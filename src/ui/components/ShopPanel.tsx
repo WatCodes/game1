@@ -2,7 +2,6 @@ import type { ReactNode } from 'react';
 import { useGame } from '../../store/gameStore';
 import { formatTime } from '../../engine/format';
 import { CONFIG } from '../../content/config';
-import { ArbitrageDesk } from './ArbitrageDesk';
 import { AdBoostRow } from './AdBoostRow';
 
 /**
@@ -79,7 +78,6 @@ export function ShopPanel() {
   const boosts = useGame((s) => s.display.boosts);
   const dispatch = useGame((s) => s.display.dispatch);
   const claimDailyReward = useGame((s) => s.actions.claimDailyReward);
-  const buyShopSolver = useGame((s) => s.actions.buyShopSolver);
   const buyShopBoost = useGame((s) => s.actions.buyShopBoost);
 
   const dayIdx = shop.canClaimDaily ? shop.streak % 7 : (shop.streak - 1 + 7) % 7;
@@ -140,18 +138,6 @@ export function ShopPanel() {
         </p>
       </div>
 
-      <Item
-        icon={
-          <Tile tint="rgba(47,111,134,.12)" border="rgba(47,111,134,.4)" color="var(--cyan)">
-            <span className="h-3.5 w-3.5 rounded-full border-[2.5px] border-current" />
-          </Tile>
-        }
-        title={`Auto-Solver${shop.solvers > 0 ? ` ×${shop.solvers}` : ''}`}
-        desc={`Balances a grid every ${CONFIG.SOLVER_SECONDS}s. Stack about six and the Surge never goes out.`}
-        cost={shop.solverCost}
-        affordable={credits >= shop.solverCost}
-        onBuy={buyShopSolver}
-      />
       {/* Above the paid boosts on purpose: the free option should not be the
           thing you find only after deciding to spend. */}
       <AdBoostRow />
@@ -197,13 +183,9 @@ export function ShopPanel() {
         onBuy={() => buyShopBoost('dispatch')}
       />
 
-      {/* Speculation lives in the marketplace, below the goods — it's a place to
-          put a surplus, not the first thing the Agora offers you. */}
-      <ArbitrageDesk />
-
       <div className="mt-1 flex items-center gap-2 font-body text-[10.5px] italic text-ink-dim">
         <span className="h-1.5 w-1.5 rotate-45" style={{ background: 'var(--amber)' }} />
-        Credits come from balancing grids and daily visits. They buy speed, never progress.
+        Credits come from selling power, trading at the Market and daily visits. They buy speed, never progress.
       </div>
     </div>
   );

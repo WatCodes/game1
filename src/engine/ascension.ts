@@ -3,7 +3,6 @@ import { CONFIG } from '../content/config';
 import { kpGain, prestigeMult, sourceCost } from './formulas';
 import { isMegaprojectComplete } from './megaproject';
 import { reapplyPurchasedEffects } from './research';
-import { newPuzzle } from './puzzle';
 import { defaultTierTwistState } from './tierTwists';
 import { getTier } from '../content/tiers';
 import { buildSources } from '../content/sources';
@@ -25,11 +24,11 @@ function seedCredits(tier: number): number {
 }
 
 /**
- * Reset: sources, power, runPower, megaproject, current puzzle (per-run
- * milestones are derived, so they reset with runPower/owned). Keep: KP,
- * purchased research, RP, Credits, solvers, daily streak, stats.
+ * Reset: sources, power, runPower, megaproject (per-run milestones are
+ * derived, so they reset with runPower/owned). Keep: KP, purchased research,
+ * RP, Credits, the Market desk, daily streak, stats.
  */
-export function ascend(s: GameState, rand: () => number = Math.random): number {
+export function ascend(s: GameState): number {
   if (!canAscend(s)) return 0;
   const gained = projectedKp(s);
   s.kp += gained;
@@ -41,7 +40,6 @@ export function ascend(s: GameState, rand: () => number = Math.random): number {
   for (const src of buildSources(s.tier)) s.sources[src.id] = src;
   // Scale the new build with the prestige you just banked, so it stays a gate.
   s.megaproject = buildMegaproject(s.tier, prestigeMult(s.kp));
-  s.puzzle = newPuzzle(s.tier, rand);
   s.grid = { vLevel: 0, aLevel: 0, rLevel: 0 }; // infrastructure is rebuilt each era
   Object.assign(s, defaultTierTwistState()); // tier twists are era-scoped too
   s.stats.ascensions += 1;

@@ -5,8 +5,8 @@ import { tick } from '../src/engine/loop';
 import { buy } from '../src/engine/economy';
 import { ascend } from '../src/engine/ascension';
 import { buyGridUpgrade } from '../src/engine/grid';
-import { buyDispatchRecharge, buyPowerBoost, buyRpBoost, buySolver } from '../src/engine/shop';
-import { arbitrageUnlocked, chargeReserve } from '../src/engine/arbitrage';
+import { buyDispatchRecharge, buyPowerBoost, buyRpBoost } from '../src/engine/shop';
+import { arbitrageUnlocked, buyDeskUpgrade, chargeReserve } from '../src/engine/arbitrage';
 import { hydrate, serialize, validateSave } from '../src/store/save';
 
 /**
@@ -111,7 +111,7 @@ describe('numeric integrity at depth', () => {
       return s;
     };
     expect(buyGridUpgrade(broke(), 'v')).toBe(false);
-    expect(buySolver(broke())).toBe(false);
+    expect(buyDeskUpgrade(broke(), 'cells')).toBe(false);
     expect(buyPowerBoost(broke())).toBe(false);
     expect(buyRpBoost(broke())).toBe(false);
     expect(buyDispatchRecharge(broke())).toBe(false);

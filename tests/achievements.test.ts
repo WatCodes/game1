@@ -27,9 +27,9 @@ describe('achievements', () => {
     const s = createInitialState(0);
     s.tier = 4;
     s.stats.ascensions = 1;
-    s.stats.puzzlesSolved = 10;
+    s.desk.wins = 10;
     s.daily.streak = 7;
-    s.solvers = 6;
+    s.desk.ordersFilled = 25;
     const earned = checkAchievements(s);
     for (const id of ['first-light', 'type-one', 'star-cager', 'switchyard-cadet', 'always-on', 'self-playing']) {
       expect(earned).toContain(id);

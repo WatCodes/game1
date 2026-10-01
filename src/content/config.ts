@@ -43,29 +43,16 @@ export const CONFIG = {
   PEAK_GAP_MIN_SECONDS: 180, // window cadence (rolled randomly in this range)
   PEAK_GAP_MAX_SECONDS: 360,
   UPKEEP_FACTOR: 0.05, // baseUpkeep = baseOutput × this; unit k drags baseUpkeep×(k−1)
-  // Circuit puzzles: pay Credits + a Grid Surge; never required for progression.
-  PUZZLE_BASE_REWARD: 10, // Credits per solve at tier 0
-  PUZZLE_TIER_REWARD: 6, // + this × tier
-  PUZZLE_BONUS_MULT: 1.5, // efficiency bonus for solving near par
-  PUZZLE_BONUS_SLACK: 2, // moves over par still counted as efficient
-  // Feeder Balance difficulty. Both shrink with tier, so a board gets harder in
-  // two ways at once: bigger (puzzleSize) and less pre-filled. Floors matter —
-  // a 7×7 with almost no givens stops being a puzzle and starts being a search.
-  PUZZLE_GIVEN_FRACTION: 0.45, // share of cells pre-filled at tier 0
-  PUZZLE_GIVEN_DECAY: 0.03, // subtracted per tier
-  PUZZLE_GIVEN_FLOOR: 0.22,
-  PUZZLE_CLUE_DENSITY: 0.34, // share of adjacent pairs carrying a > or <
-  PUZZLE_CLUE_DECAY: 0.015, // subtracted per tier
-  PUZZLE_CLUE_FLOOR: 0.2,
+  // Grid Surge: ×SURGE_MULT power, lit by profitable Market releases.
   SURGE_MULT: 1.5, // power multiplier while the surge is lit
-  SURGE_MANUAL_SECONDS: 60, // surge added per manual solve
-  SURGE_AUTO_SECONDS: 15, // surge added per auto-solve
+  // A full battery released at +100% profit lights this many seconds; smaller
+  // or thinner trades light their share (see surgeForRelease).
+  SURGE_PROFIT_SECONDS: 600,
   SURGE_CAP_SECONDS: 300,
-  // Auto-solvers: one solve per SOLVER_SECONDS each; ~6 keep the surge lit 24/7
-  SOLVER_SECONDS: 90,
-  SOLVER_REWARD_FACTOR: 0.5, // auto-solves pay this × the manual base
-  SOLVER_BASE_COST: 100, // Credits; scales SOLVER_COST_GROWTH^owned
-  SOLVER_COST_GROWTH: 1.35,
+  // Retired Auto-Solver pricing, kept ONLY so the v10 migration can refund what
+  // players paid for them. Do not use for anything new.
+  LEGACY_SOLVER_BASE_COST: 100,
+  LEGACY_SOLVER_COST_GROWTH: 1.35,
   // Shop boosts (Credits)
   BOOST_MULT: 2,
   BOOST_SECONDS: 900, // 15 min
@@ -119,7 +106,7 @@ export const CONFIG = {
   // Exogenous demand index — the half of the price the player does NOT set.
   // Mean-reverts toward 1 on a random walk, so the market moves on its own
   // ("a live economy") instead of merely echoing the Sell slider. It's also what
-  // the Arbitrage Desk trades against: buy the battery cheap, release it dear.
+  // the Market trades against: buy the battery cheap, release it dear.
   INDEX_MEAN: 1,
   INDEX_VOLATILITY: 0.055, // per sqrt-second of drift
   INDEX_REVERSION: 0.05, // pull back toward the mean, per second
@@ -127,14 +114,24 @@ export const CONFIG = {
   INDEX_MAX: 1.75,
   INDEX_SAMPLE_SECONDS: 3, // chart resolution
   INDEX_HISTORY: 48, // samples kept (≈2.5 min of chart)
-  // The Arbitrage Desk: buy Watts off your own grid, hold, release at a better
-  // price. Skill, not chance — no stake at risk and no forced settlement.
+  // The Market (formerly the Arbitrage Desk): buy Watts off your own grid, hold,
+  // release at a better price. Skill, not chance — no stake at risk and no
+  // forced settlement. Opens with the Dispatch Board. Design: docs/MARKET.md.
   // Battery size, as seconds of current generation — scales across tiers for free.
   RESERVE_CAPACITY_SECONDS: 90,
   // Round-trip loss, as real batteries have. Also stops "buy and instantly sell"
   // from being free, so holding for a genuinely better price is the only edge.
   RESERVE_EFFICIENCY: 0.92,
-  UNLOCK_ARBITRAGE_POWER: 25_000, // the desk opens once the market itself matters
+  // Market upgrades (Credits). Permanent, like Credits themselves.
+  DESK_CELL_STEP: 0.5, // +50% battery capacity per cell level
+  DESK_CELL_MAX_LEVEL: 8,
+  DESK_CELL_BASE_COST: 200,
+  DESK_CELL_COST_GROWTH: 1.8,
+  DESK_CHEM_STEP: 0.01, // +1 point of round-trip efficiency per level
+  DESK_CHEM_MAX_LEVEL: 5, // 92% → 97%: never lossless, so flipping never pays
+  DESK_CHEM_BASE_COST: 400,
+  DESK_CHEM_COST_GROWTH: 2.5,
+  DESK_LOG_SIZE: 8, // trades kept in the Market's log
   // Grid rail: keep at least DEMAND_FRACTION of output on the grid or brown out.
   DEMAND_FRACTION: 0.25, // grid demand as a share of your own generation
   BROWNOUT_SEVERITY: 0.5, // output multiplier bottoms at 1−this when the grid is starved

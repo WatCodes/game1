@@ -51,7 +51,8 @@ describe('ascend', () => {
     const s = readyState();
     s.rp = 777;
     s.credits = 99;
-    s.solvers = 2;
+    s.desk.cellLevel = 2;
+    s.desk.sellAbove = 1.4;
     s.grid = { vLevel: 3, aLevel: 2, rLevel: 1 };
     s.accretion.feedRate = 0.7;
     buyResearch(s, 'unlock-coal-plant'); // 20 RP at tier 0
@@ -66,19 +67,17 @@ describe('ascend', () => {
     expect(s.sources['solar-farm'].owned).toBe(0);
     expect(s.megaproject.id).toBe('continental-interconnect');
     expect(s.megaproject.committed).toBe(0);
-    // Reset: a fresh circuit dealt for the new tier
-    expect(s.puzzle.tier).toBe(1);
-    expect(s.puzzle.solved).toBe(false);
     // Reset: delivery infrastructure and tier twists are era-scoped
     expect(s.grid).toEqual({ vLevel: 0, aLevel: 0, rLevel: 0 });
     expect(s.accretion.feedRate).toBe(0);
-    // Keep: KP (asserted above), research, RP, credits/solvers, stats
+    // Keep: KP (asserted above), research, RP, credits, the Market desk, stats
     expect(s.research['unlock-coal-plant'].purchased).toBe(true);
     expect(s.rp).toBe(rpAfterPurchase);
     // credits are kept, plus the new tier's CR seed grant
     const seed = sourceCost(unitCost(1), CONFIG.COST_GROWTH, 0, CONFIG.ASCEND_SEED_UNITS);
     expect(s.credits).toBeCloseTo(99 + seed);
-    expect(s.solvers).toBe(2);
+    expect(s.desk.cellLevel).toBe(2);
+    expect(s.desk.sellAbove).toBe(1.4);
     expect(s.stats.ascensions).toBe(1);
   });
 

@@ -3,6 +3,9 @@ import { useGameTick } from './hooks/useGameTick';
 import { useGame } from '../store/gameStore';
 import { prime, setHum } from './audio';
 import { initAds } from '../platform/ads';
+import { authenticateGameCenter, submitScores } from '../platform/gameCenter';
+import { leaderboardScores } from '../engine/leaderboards';
+import { game } from '../store/gameStore';
 import { PowerMeter } from './components/PowerMeter';
 import { ResourceBar } from './components/ResourceBar';
 import { SourcesPanel } from './components/SourcesPanel';
@@ -13,6 +16,7 @@ import { ShopPanel } from './components/ShopPanel';
 import { AscendPanel } from './components/AscendPanel';
 import { DataControls } from './components/DataControls';
 import { AchievementsList } from './components/AchievementsList';
+import { LeaderboardsButton } from './components/LeaderboardsButton';
 import { BugReport } from './components/BugReport';
 import { CheatPanel } from './components/CheatPanel';
 import { Toasts } from './components/Toasts';
@@ -73,6 +77,16 @@ export default function App() {
   useEffect(() => {
     initAds();
   }, []);
+
+  // Game Center signs in at launch, as Apple asks — but never over the intro.
+  // A brand-new player's first screen is the game, not Apple's sign-in sheet.
+  // Post anything already earned once it lands. No-ops off iOS.
+  useEffect(() => {
+    if (!introDone) return;
+    void authenticateGameCenter().then((ok) => {
+      if (ok) submitScores(leaderboardScores(game), true);
+    });
+  }, [introDone]);
   useEffect(() => setHum(pps), [pps]);
 
   return (
@@ -172,6 +186,7 @@ export default function App() {
               <>
                 <AscendPanel />
                 <div className="flex flex-col gap-2 px-3 pb-3">
+                  <LeaderboardsButton />
                   <AchievementsList />
                   <DataControls />
                   <BugReport />

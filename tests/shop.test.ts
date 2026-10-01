@@ -5,12 +5,10 @@ import {
   buyDispatchRecharge,
   buyPowerBoost,
   buyRpBoost,
-  buySolver,
   canClaimDaily,
   claimDaily,
   dailyReward,
   dayKey,
-  solverCost,
   tickBoosts,
 } from '../src/engine/shop';
 import { researchRate } from '../src/engine/research';
@@ -61,22 +59,6 @@ describe('daily streak', () => {
     const lateNight = new Date(2026, 5, 1, 23, 59).getTime();
     const nextMorning = new Date(2026, 5, 2, 0, 1).getTime();
     expect(dayKey(lateNight)).not.toBe(dayKey(nextMorning));
-  });
-});
-
-describe('auto-solver purchases', () => {
-  it('cost scales per unit owned', () => {
-    expect(solverCost(0)).toBe(CONFIG.SOLVER_BASE_COST);
-    expect(solverCost(2)).toBe(Math.round(CONFIG.SOLVER_BASE_COST * CONFIG.SOLVER_COST_GROWTH ** 2));
-  });
-
-  it('buying deducts credits; refuses when broke', () => {
-    const s = createInitialState(0);
-    s.credits = CONFIG.SOLVER_BASE_COST;
-    expect(buySolver(s)).toBe(true);
-    expect(s.solvers).toBe(1);
-    expect(s.credits).toBe(0);
-    expect(buySolver(s)).toBe(false);
   });
 });
 

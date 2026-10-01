@@ -37,18 +37,6 @@ export function claimDaily(s: GameState, nowMs: number): Num {
   return reward;
 }
 
-export function solverCost(owned: number): Num {
-  return Math.round(CONFIG.SOLVER_BASE_COST * Math.pow(CONFIG.SOLVER_COST_GROWTH, owned));
-}
-
-export function buySolver(s: GameState): boolean {
-  const cost = solverCost(s.solvers);
-  if (!canAfford(s.credits, cost)) return false;
-  s.credits -= cost;
-  s.solvers += 1;
-  return true;
-}
-
 export function buyPowerBoost(s: GameState): boolean {
   if (!canAfford(s.credits, CONFIG.BOOST_POWER_COST)) return false;
   s.credits -= CONFIG.BOOST_POWER_COST;
@@ -70,7 +58,7 @@ export function buyDispatchRecharge(s: GameState): boolean {
   return true;
 }
 
-/** Global output multiplier from active surge + shop boost. */
+/** Global output multiplier from active surge (Market profits) + shop boost. */
 export function boostPowerMult(s: GameState): number {
   return (s.boosts.surgeLeft > 0 ? CONFIG.SURGE_MULT : 1) * (s.boosts.powerLeft > 0 ? CONFIG.BOOST_MULT : 1);
 }

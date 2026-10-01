@@ -112,8 +112,10 @@ you brown out. Balance is the game.
 
 THE MARKET HAS A MIND OF ITS OWN
 Demand rises and falls whether you're watching or not, and it moves what every Watt
-is worth. Run the battery at the Arbitrage Desk: store power while it's cheap, sell
-it back when it isn't. No timers, no stakes — just your read on the chart.
+is worth. Store power in the battery while it's cheap and sell it back when it
+isn't — close a trade at a profit and the whole grid surges. Set standing orders
+and the cats trade at your prices. No timers, no stakes — just your read on the
+chart.
 
 RAISE A WONDER
 Each era is gated by one signature megaproject — the Temple of Zeus, the Nine
@@ -132,12 +134,6 @@ Power has to be carried, not just made. Transformers and conductors set what you
 grid can deliver; line losses eat the rest. Outgrow your transmission cap and your
 generators are just expensive scenery.
 
-BALANCE THE FEEDERS
-The Works hands you a board of feeders and a handful of constraints: every row and
-column carries each load exactly once, and the marks between them say who outdraws
-whom. Solve one for Credits and a Grid Surge. Or buy Auto-Solvers and let the cats
-work it out.
-
 WHILE YOU'RE AWAY
 The cats keep the grid running. Come back to a full tally of what they earned —
 and the option to double it.
@@ -150,7 +146,8 @@ videos are optional, and if one won't load, you get the bonus anyway.
 Steal the lightning. Light the world.
 ```
 
-**2,560 chars** — comfortably inside 4,000, and short enough that people finish it.
+**2,365 chars** (1.0.3: BALANCE THE FEEDERS removed with the Works, standing orders
+and the profit surge added to the market section) — comfortably inside 4,000.
 
 This said "~1,900" for a long time and was simply wrong: the text was 2,306 before
 BALANCE THE FEEDERS was added. Counted with the hard wraps included, because App
@@ -175,7 +172,7 @@ the rest down.
 | 2 | Dispatch Board expanded | Board open, all three rails non-zero | **Sell it, build with it, or keep the lights on** |
 | 3 | The Wonder | Wonder pop-up, 2–3 stages lit | **Raise a Wonder to climb an era** |
 | 4 | A later age | `?age=5` (Erebus) or a real high-tier save | **Athens to the event horizon** |
-| 5 | Arbitrage Desk | Agora, once the chart has ~30s of history | **Read the market. Time the trade.** |
+| 5 | The Market | Market rail panel, once the chart has ~30s of history and an order is set | **Read the market. Time the trade.** |
 | 6 | While you were away | Backdate a save's `lastSaved` | **The cats keep working** |
 
 **Use a fresh tier-0 save for shots 1–3.** The Athens courtyard and readable early

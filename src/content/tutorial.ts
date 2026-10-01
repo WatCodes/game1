@@ -48,7 +48,7 @@ export const CURRENCY_CARDS: Record<'cr' | 'rp' | 'kp', { title: string; lines: 
     title: 'Credits · CR',
     lines: [
       ['What', 'Money. Everything you buy with it speeds you up.'],
-      ['Earn', 'Sell power on the Dispatch Board, channel the altar, or solve boards in the Works.'],
+      ['Earn', 'Sell power on the Dispatch Board, channel the altar, or trade at the Market.'],
       ['Raise', 'More generation, a higher sell share, and selling when the market price is high.'],
       ['Spend', 'Power sources, grid upgrades and the Agora.'],
     ],

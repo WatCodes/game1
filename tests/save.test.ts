@@ -8,6 +8,7 @@ import {
   hasSaveFailed,
   hydrate,
   importSave,
+  legacySolverRefund,
   loadBackup,
   loadFromStorage,
   migrate,
@@ -32,19 +33,22 @@ function playedState() {
   s.sellPct = 0.5; // 0.5 + 0.35 = 0.85 ≤ 1
   s.market.saturation = 1.2;
   s.credits = 321;
-  s.solvers = 2;
-  s.solverProgress = 0.4;
   s.boosts.surgeLeft = 45;
+  s.desk.cellLevel = 2;
+  s.desk.chemLevel = 1;
+  s.desk.sellAbove = 1.3;
+  s.desk.buyBelow = 0.8;
+  s.desk.sellArmed = false;
+  s.desk.trades = 4;
+  s.desk.wins = 3;
+  s.desk.lifetimeProfit = 120.5;
+  s.desk.log = [{ kind: 'release', watts: 50, price: 1.2, profit: 12, byOrder: true }];
   s.daily = { lastClaimDay: '2026-7-5', streak: 3 };
   s.achievements = ['first-spark', 'first-rack'];
   s.grid = { vLevel: 2, aLevel: 1, rLevel: 1 };
   s.launchWindow = { active: true, timeLeft: 12, nextIn: 0 };
   s.accretion = { feedRate: 0.6, heat: 0.3 };
   s.relay = { researchAllocation: 0.25 };
-  // Dirty a blank feeder so the round trip has a partly-filled board to carry.
-  const blank = s.puzzle.givens.findIndex((g) => !g);
-  s.puzzle.cells[blank] = 1;
-  s.puzzle.moves = 5;
   s.lastSaved = 555_000;
   return s;
 }
@@ -67,8 +71,7 @@ describe('round trip', () => {
     expect(restored.market.saturation).toBeCloseTo(1.2);
     expect(restored.lastSaved).toBe(555_000);
     expect(restored.credits).toBe(321);
-    expect(restored.solvers).toBe(2);
-    expect(restored.solverProgress).toBe(0.4);
+    expect(restored.desk).toEqual(s.desk);
     expect(restored.boosts.surgeLeft).toBe(45);
     expect(restored.daily).toEqual({ lastClaimDay: '2026-7-5', streak: 3 });
     expect(restored.achievements).toEqual(['first-spark', 'first-rack']);
@@ -76,8 +79,6 @@ describe('round trip', () => {
     expect(restored.launchWindow).toEqual({ active: true, timeLeft: 12, nextIn: 0 });
     expect(restored.accretion).toEqual({ feedRate: 0.6, heat: 0.3 });
     expect(restored.relay).toEqual({ researchAllocation: 0.25 });
-    expect(restored.puzzle.cells).toEqual(s.puzzle.cells);
-    expect(restored.puzzle.moves).toBe(5);
   });
 
   it('rebuilds the saved tier, not tier 0', () => {
@@ -118,13 +119,13 @@ describe('migration', () => {
     expect(migrated.routePct).toBe(0);
     expect(migrated.stats.lifetimePower).toBe(500);
     expect(migrated.stats.ascensions).toBe(0);
-    expect(migrated.stats.puzzlesSolved).toBe(0);
+    expect('puzzlesSolved' in migrated.stats).toBe(false);
     expect(migrated.dispatch).toEqual({ charge: 0, peakLeft: 0, nextPeakIn: 240 });
     // v7: the old 100 W bank converts to CR and the Watt bank retires to 0
     expect(migrated.credits).toBe(100 * CONFIG.BASE_PRICE);
     expect(migrated.power).toBe(0);
     expect(migrated.sellPct).toBeCloseTo(0.6);
-    expect(migrated.puzzle).toBeNull();
+    expect('puzzle' in migrated).toBe(false);
   });
 
   it('upgrades a v7 save without disturbing a run in progress (v8: demand index)', () => {
@@ -164,7 +165,7 @@ describe('migration', () => {
     expect(m.market.index).toBe(CONFIG.INDEX_MEAN);
     // Everything the player actually earned is untouched.
     expect(m.market.saturation).toBe(0.8);
-    expect(m.credits).toBe(5000);
+    expect(m.credits).toBe(5000 + legacySolverRefund(2)); // v10: its two Auto-Solvers refunded
     expect(m.kp).toBe(12);
     expect(m.grid).toEqual({ vLevel: 2, aLevel: 3, rLevel: 1 });
     expect(m.stats.lifetimePower).toBe(9e6);
@@ -173,7 +174,7 @@ describe('migration', () => {
     expect(s.market.index).toBe(CONFIG.INDEX_MEAN);
     expect(s.market.indexHistory).toEqual([]);
     expect(s.reserve).toEqual({ stored: 0, avgPrice: 0 });
-    expect(s.credits).toBe(5000);
+    expect(s.credits).toBe(5000 + legacySolverRefund(2));
   });
 
   it('refunds a futures stake left open when the wager mechanic was removed (v8→v9)', () => {
@@ -232,39 +233,60 @@ describe('migration', () => {
     // 210k / 350k = 60% → stages 1–3 worth of progress stays reachable
     expect(restored.megaproject.stagesAuthorized).toBe(4);
     expect(restored.megaproject.committed).toBe(210_000);
-    // v3 additions get sane defaults, including a freshly dealt board
+    // v3 additions get sane defaults
     expect(restored.credits).toBe(100 * CONFIG.BASE_PRICE); // v7 power→CR
-    expect(restored.puzzle.cells.length).toBe(restored.puzzle.size ** 2);
   });
 
-  it('discards a Lights Out board and deals a fresh one, keeping everything else', () => {
-    // A save written before Feeder Balance: same SAVE_VERSION, but the board
-    // carries the old shape (boolean cells, no givens or clue arrays). There is
-    // no migration for this by design — the validator rejects it and hydrate
-    // deals fresh, which is why a mechanic swap needs no version bump.
+  it('upgrades a v9 save: the Works closes and Auto-Solvers are refunded (v10)', () => {
+    // The shape 1.0.1 players are on: a board mid-solve, six solvers, a count.
     const s = playedState();
     const save = JSON.parse(JSON.stringify(serialize(s))) as Record<string, unknown>;
-    save.puzzle = {
-      tier: 0,
-      size: 4,
-      cells: new Array(16).fill(false), // booleans, not load levels
-      moves: 9,
-      par: 4,
-      solved: false,
-    };
+    save.version = 9;
+    delete save.desk;
+    save.puzzle = { tier: 0, size: 4, cells: new Array(16).fill(0), moves: 3, par: 6, solved: false };
+    save.solvers = 6;
+    save.solverProgress = 0.7;
+    (save.stats as Record<string, unknown>).puzzlesSolved = 140;
 
-    const restored = hydrate(validateSave(save));
+    const migrated = validateSave(save);
+    for (const gone of ['puzzle', 'solvers', 'solverProgress']) expect(gone in migrated).toBe(false);
+    expect('puzzlesSolved' in migrated.stats).toBe(false);
 
-    // The board is replaced wholesale...
-    expect(restored.puzzle.cells.every((c) => typeof c === 'number')).toBe(true);
-    expect(restored.puzzle.givens).toHaveLength(restored.puzzle.size ** 2);
-    expect(restored.puzzle.across).toHaveLength(restored.puzzle.size * (restored.puzzle.size - 1));
-    expect(restored.puzzle.moves).toBe(0); // not the stale 9
-    // ...and nothing else in the save is collateral damage.
-    expect(restored.credits).toBe(s.credits);
-    expect(restored.solvers).toBe(s.solvers);
-    expect(restored.stats.puzzlesSolved).toBe(s.stats.puzzlesSolved);
+    const restored = hydrate(migrated);
+    // 100 + 135 + 182 + 246 + 332 + 448: every solver at the price it was sold at.
+    const paid = [0, 1, 2, 3, 4, 5].reduce(
+      (n, k) => n + Math.round(CONFIG.LEGACY_SOLVER_BASE_COST * CONFIG.LEGACY_SOLVER_COST_GROWTH ** k),
+      0,
+    );
+    expect(legacySolverRefund(6)).toBe(paid);
+    expect(restored.credits).toBe(s.credits + paid);
+    // A fresh desk, and nothing else in the save is collateral damage.
+    expect(restored.desk.cellLevel).toBe(0);
+    expect(restored.desk.buyBelow).toBeNull();
     expect(restored.daily).toEqual({ lastClaimDay: '2026-7-5', streak: 3 });
+    expect(restored.achievements).toEqual(['first-spark', 'first-rack']);
+    expect(restored.stats.lifetimePower).toBe(s.stats.lifetimePower);
+  });
+
+  it('keeps a Works record earned before v10, so its +1% is not stripped', () => {
+    const save = JSON.parse(JSON.stringify(serialize(playedState()))) as Record<string, unknown>;
+    save.version = 9;
+    save.achievements = ['switchyard-cadet', 'self-playing'];
+    const restored = hydrate(validateSave(save));
+    expect(restored.achievements).toEqual(['switchyard-cadet', 'self-playing']);
+  });
+
+  it('refuses a crossed or malformed desk from a save', () => {
+    const save = JSON.parse(JSON.stringify(serialize(playedState()))) as Record<string, unknown>;
+    save.desk = { cellLevel: 999, chemLevel: -3, buyBelow: 2, sellAbove: 1, log: 'nope', trades: 'x', bestTrade: NaN };
+    const restored = hydrate(validateSave(save));
+    expect(restored.desk.cellLevel).toBe(CONFIG.DESK_CELL_MAX_LEVEL);
+    expect(restored.desk.chemLevel).toBe(0);
+    expect(restored.desk.buyBelow).toBeNull(); // the crossed side is dropped
+    expect(restored.desk.sellAbove).toBe(1);
+    expect(restored.desk.log).toEqual([]);
+    expect(restored.desk.trades).toBe(0);
+    expect(restored.desk.bestTrade).toBe(0);
   });
 
   it('upgrades a v2 save: puzzle/shop economy seeded with defaults', () => {
@@ -287,10 +309,8 @@ describe('migration', () => {
     const restored = hydrate(validateSave(v2));
     expect(restored.grid.vLevel).toBeGreaterThanOrEqual(0); // sentinel resolved
     expect(restored.credits).toBe(100 * CONFIG.BASE_PRICE); // v7 power→CR
-    expect(restored.solvers).toBe(0);
     expect(restored.daily).toEqual({ lastClaimDay: '', streak: 0 });
     expect(restored.boosts).toEqual({ surgeLeft: 0, powerLeft: 0, rpLeft: 0 });
-    expect(restored.puzzle.tier).toBe(1); // dealt for the saved tier
     expect(restored.sources['solar-farm'].owned).toBe(4);
   });
 

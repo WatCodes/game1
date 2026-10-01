@@ -52,7 +52,7 @@ const BEATS: Beat[] = [
     r: 130,
     cat: 'left-[calc(88%-104px)] top-[calc(58%+10px)]',
     bubbleTop: '150px',
-    copy: <>The Lab, the Wonder, the Works, the Agora. Everything else lives on that rail.</>,
+    copy: <>The Lab, the Wonder, the Market, the Agora. Everything else lives on that rail.</>,
   },
   {
     x: '50%',

@@ -31,8 +31,11 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: 'type-one', name: 'Type I', desc: 'Reach the Age of Dominion.', check: (s) => s.tier >= 2 },
   { id: 'star-cager', name: 'Star Cager', desc: 'Reach the Age of Helios.', check: (s) => s.tier >= 4 },
   { id: 'type-three', name: 'Type III', desc: 'Reach the Age of Constellations.', check: (s) => s.tier >= 6 },
-  { id: 'switchyard-cadet', name: 'Switchyard Cadet', desc: 'Balance 10 grids.', check: (s) => s.stats.puzzlesSolved >= 10 },
-  { id: 'master-electrician', name: 'Master Electrician', desc: 'Balance 100 grids.', check: (s) => s.stats.puzzlesSolved >= 100 },
+  // These three were the Works' records. The ids are kept, not the names: saves
+  // store earned ids, and each record is +1% output, so a new id would quietly
+  // strip that bonus from everyone who earned the old one.
+  { id: 'switchyard-cadet', name: 'Floor Trader', desc: 'Close 10 trades at a profit.', check: (s) => s.desk.wins >= 10 },
+  { id: 'master-electrician', name: 'Market Maker', desc: 'Close 100 trades at a profit.', check: (s) => s.desk.wins >= 100 },
   { id: 'always-on', name: 'Always On', desc: 'Hold a 7-day connection streak.', check: (s) => s.daily.streak >= 7 },
-  { id: 'self-playing', name: 'Self-Playing', desc: 'Run 6 Auto-Solvers at once.', check: (s) => s.solvers >= 6 },
+  { id: 'self-playing', name: 'Self-Playing', desc: 'Have 25 standing orders filled.', check: (s) => s.desk.ordersFilled >= 25 },
 ];

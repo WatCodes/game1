@@ -74,13 +74,13 @@ export const HELP_SECTIONS: HelpSection[] = [
     ],
   },
   {
-    id: 'works',
-    title: 'The Works',
+    id: 'market',
+    title: 'The Market',
     body: [
-      'A board of feeders. Every row and column carries each load once, and a mark between two feeders opens toward the bigger draw.',
-      'Tap a feeder to cycle its load. Clashes turn red as you go.',
-      'Solving pays Credits and lights the Grid Surge. Re-dealing is free. Auto-Solvers from the Agora grind boards in the background.',
-      'Entirely optional — nothing is gated behind it.',
+      'Demand drifts on its own. Store power in the battery while it’s cheap, and release it when it isn’t.',
+      'Batteries lose a little on the round trip, so only a real rise pays. There is no clock — hold as long as you like.',
+      'Selling at a profit lights the Grid Surge: ×1.5 power, longer for bigger wins.',
+      'Standing orders trade at your prices while you play. They rest while you’re away.',
     ],
   },
   {
@@ -89,7 +89,6 @@ export const HELP_SECTIONS: HelpSection[] = [
     body: [
       'Credits buy speed, never progress. Everything here is a shortcut.',
       'The daily tribute grows on a streak. Miss one day and it is forgiven; miss two and it resets.',
-      'The Arbitrage Desk stores Watts and sells them back later. Demand drifts on its own, storage loses a little in the round trip, and there is no clock — hold as long as you like.',
     ],
   },
   {

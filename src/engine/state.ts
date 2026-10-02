@@ -22,7 +22,6 @@ export function defaultDesk(): DeskState {
     ordersFilled: 0,
     lifetimeProfit: 0,
     bestTrade: 0,
-    bestReturn: 0,
   };
 }
 

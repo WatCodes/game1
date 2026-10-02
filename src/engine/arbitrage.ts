@@ -129,8 +129,6 @@ export function releaseReserve(s: GameState, watts?: Num, byOrder = false): Rele
   if (profit > 0) s.desk.wins += 1;
   s.desk.lifetimeProfit += profit;
   s.desk.bestTrade = Math.max(s.desk.bestTrade, profit);
-  // Free Watts (basis 0, from a malformed save) have no meaningful return.
-  if (basis > 0) s.desk.bestReturn = Math.max(s.desk.bestReturn, profit / basis);
   record(s, { kind: 'release', watts: amount, price, profit, byOrder });
   return { watts: amount, price, proceeds, profit, surge };
 }

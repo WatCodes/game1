@@ -6,7 +6,12 @@ own image in App Store Connect.
 | Leaderboard | ID | Score | Why this one |
 |---|---|---|---|
 | **Kardashev Points** | `electriccats.kp` | Lifetime KP, whole number | The game's own measure of how far you've climbed. It never goes down. |
-| **Best Trade** | `electriccats.besttrade` | Best single Market release, profit ÷ cost, in tenths of a percent (523 = 52.3%) | Skill rather than grind, and independent of era. A new player can top it. |
+| **Ascension Level** | `electriccats.ascension` | The age you've reached (= ascensions completed) | The simplest "how far have you climbed" — everyone understands it. |
+
+**Best Trade was dropped (2026-10-02).** It was created in App Store Connect as
+`electriccats.besttrade` before Wyatt chose an ascension board instead. It is
+never attached to a version and the game never sends to it, so players never see
+it — and Apple never lets that ID be reused, so don't try.
 
 The real-world Kardashev formula (log₁₀ W) was considered and rejected. The game's
 era labels ("Type I" at the Age of Dominion) don't match it in actual watts, so that
@@ -35,9 +40,6 @@ Rules the code keeps:
 - **Scores post when they improve,** at most every 5 minutes, and unthrottled when the
   app is backgrounded. Each board's last-sent best is stored in UI storage
   (`kardashev:ui:gc-sent`), not in the save.
-- `desk.bestReturn` is capped at `LEADERBOARD_MAX_RETURN` (×20) on load, so a
-  hand-edited save can't post an impossible score. Real play tops out around ×7: the
-  index range (0.55–1.75) × saturation (up to 2.5) × efficiency.
 
 ## Privacy
 
@@ -58,28 +60,17 @@ archive with `App.entitlements` will fail to sign until this is done.
    the new capability. Download it and double-click to install. Signing is manual, so
    the name must stay exactly "Electric Cats App Store".
 
-**2. App Store Connect: create the leaderboards.**
-Electric Cats → **Features** (or Services) → **Game Center** → Leaderboards → **+** →
-Classic Leaderboard:
+**2. App Store Connect: create the leaderboards. — DONE 2026-10-02.**
+Distribution → App Store → Growth & Marketing → **Game Center**. Both are Classic,
+Integer, Best Score, High to Low, with an English (U.S.) localization:
+`electriccats.kp` ("Kardashev Points", suffix ` KP`) and `electriccats.ascension`
+("Ascension Level"). The IDs must match `LEADERBOARD_*_ID` in
+`src/content/config.ts` exactly.
 
-| Field | Kardashev Points | Best Trade |
-|---|---|---|
-| Reference name | Kardashev Points | Best Trade |
-| Leaderboard ID | `electriccats.kp` | `electriccats.besttrade` |
-| Score format type | Integer | Fixed Point, **1** decimal place |
-| Score submission | Best Score | Best Score |
-| Sort order | High to Low | High to Low |
-| Score range (optional) | 1 – 9,007,199,254,740,991 | 1 – 20,000 |
-| Localization: name | Kardashev Points | Best Trade |
-| Localization: score suffix | ` KP` | `%` |
-
-The IDs must match `LEADERBOARD_KP_ID` / `LEADERBOARD_BEST_TRADE_ID` in
-`src/content/config.ts` exactly. **They can't be changed or reused once created.**
-
-**3. On the 1.0.3 version page:** tick **Game Center** and add both leaderboards
+**3. On the 1.0.3 version page:** tick **Game Center** and add **Kardashev Points** and **Ascension Level** (not Best Trade)
 before submitting. Leaderboards that aren't attached to a version stay invisible to
 players.
 
 **4. Test on TestFlight.** TestFlight builds use the Game Center sandbox
-automatically. Sign in when the sheet appears after the intro, make a profitable
-Market trade, background the app, then open ASCEND → LEADERBOARDS.
+automatically. Sign in when the sheet appears after the intro, ascend once (the dev cheat
+panel isn't in release builds, so play to it or use an imported save), background the app, then open ASCEND → LEADERBOARDS.

@@ -5,21 +5,22 @@ import { CONFIG } from '../content/config';
  * What this save would post to each Game Center leaderboard. Design:
  * docs/GAME_CENTER.md.
  *
- * Pure and integer-valued: Game Center scores are int64, and both boards are
- * set up in App Store Connect to read these integers back as the right thing
- * (whole KP, and a percentage with one decimal). A score of 0 means "nothing
- * to post yet" — nobody should appear on a board for having done nothing.
+ * Pure and integer-valued: Game Center scores are int64. A score of 0 means
+ * "nothing to post yet" — nobody should appear on a board for having done
+ * nothing, so a player shows up once they've ascended.
  */
 export interface LeaderboardScores {
   [id: string]: number;
 }
 
+const whole = (n: number): number =>
+  Number.isFinite(n) ? Math.min(Number.MAX_SAFE_INTEGER, Math.floor(Math.max(0, n))) : 0;
+
 export function leaderboardScores(s: GameState): LeaderboardScores {
-  const kp = Number.isFinite(s.kp) ? Math.min(Number.MAX_SAFE_INTEGER, Math.floor(Math.max(0, s.kp))) : 0;
-  const ret = Math.max(0, Math.min(CONFIG.LEADERBOARD_MAX_RETURN, s.desk.bestReturn));
   return {
-    [CONFIG.LEADERBOARD_KP_ID]: kp,
-    // 0.523 → 523 → shown as "52.3%"
-    [CONFIG.LEADERBOARD_BEST_TRADE_ID]: Math.round(ret * 1000),
+    [CONFIG.LEADERBOARD_KP_ID]: whole(s.kp),
+    // The tier, not stats.ascensions: they agree in play, and the tier is what
+    // the game shows ("Age of Dominion"), so the board can't disagree with it.
+    [CONFIG.LEADERBOARD_ASCENSION_ID]: whole(s.tier),
   };
 }

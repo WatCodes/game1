@@ -9,9 +9,8 @@ own image in App Store Connect.
 | **Ascension Level** | `electriccats.ascension` | The age you've reached (= ascensions completed) | The simplest "how far have you climbed" — everyone understands it. |
 
 **Best Trade was dropped (2026-10-02).** It was created in App Store Connect as
-`electriccats.besttrade` before Wyatt chose an ascension board instead. It is
-never attached to a version and the game never sends to it, so players never see
-it — and Apple never lets that ID be reused, so don't try.
+`electriccats.besttrade` before Wyatt chose an ascension board instead, then
+deleted the same day. Apple never lets that ID be reused, so don't try.
 
 The real-world Kardashev formula (log₁₀ W) was considered and rejected. The game's
 era labels ("Type I" at the Age of Dominion) don't match it in actual watts, so that

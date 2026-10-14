@@ -128,6 +128,7 @@ Athens. The colonies. The whole world. Orbit. The sun. A black hole. The galaxy.
 Spacetime itself. Ascend and you trade your buildout for permanent multipliers,
 then do it all again, faster — and each age has its own sky, its own architecture,
 and its own cats.
+Then see where you rank on the Game Center leaderboards.
 
 MIND THE PHYSICS
 Power has to be carried, not just made. Transformers and conductors set what your
